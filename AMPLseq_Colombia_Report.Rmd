@@ -1,0 +1,1210 @@
+---
+title: "AMPLseq Tutorial"
+author: "Paulo"
+date: "2022-09-27"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+  chunk_output_type: console
+---
+
+The purpose of this tutorial is to introduce researchers in the
+laboratory of genomic and evolutionary biology of malaria parasites at
+Harvard university in the analysis of genotyping information generated
+through amplicon sequencing (also called Microhaplotype genotyping).
+This tutorial will cover:
+
+1.  Importing and handling tables in CIGAR format in R environment.
+
+2.  Adding or generating metadata.
+
+3.  Performance of the genotyping process.
+
+4.  Monitoring transmission intensity.
+
+5.  Measuring geographic connectivity.
+
+6.  Molecular surveillance of drug resistance.
+
+In this tutorial we will use a Colombian data set as a example. These
+samples comes from a colaboration with the group of Caucaseco, which has
+collected samples of *P. falciparum* from 2019 to 2022 in three
+municipalities located in the pacific coast of Colombia.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Importing and handling tables in CIGAR format in R environment
+
+Our first step will be to call all required packages in the R
+environment:
+
+```{r 'Loading required packages'}
+
+if(!require(adegenet)){
+  install.packages("adegenet")
+  require(adegenet)
+}
+
+if(!require(ade4)){
+  install.packages("ade4")
+  require(ade4)
+}
+
+if(!require(poppr)){
+  install.packages("poppr")
+  require(poppr)
+}
+
+if(!require(dplyr)){
+  install.packages("dplyr")
+  require(dplyr)
+}
+
+if(!require(magrittr)){
+  install.packages("magrittr")
+  require(magrittr)
+}
+
+if(!require(tidyr)){
+  install.packages("tidyr")
+  require(tidyr)
+}
+
+if(!require(ggplot2)){
+  install.packages("ggplot2")
+  require(ggplot2)
+}
+
+if(!require(cowplot)){
+  install.packages("cowplot")
+  require(cowplot)
+}
+
+if(!require(paneljudge)){
+  install.packages("paneljudge")
+  require(paneljudge)
+}
+
+if(!require(vegan)){
+  install.packages("vegan")
+  require(vegan)
+}
+
+if(!require(parallel)){
+  install.packages("parallel")
+  require(parallel)
+}
+
+if(!require(ape)){
+  install.packages("ape")
+  require(ape)
+}
+
+if(!require(pegas)){
+  install.packages("pegasn")
+  require(pegas)
+}
+
+if(!require(RColorBrewer)){
+  install.packages("RColorBrewer")
+  require(RColorBrewer)
+}
+
+```
+
+As we mentioned earlier, this tutorial start with .tsv table in CIGAR
+format that has been generated with a previous pipeline created in the
+lab. The output if this pipeline has the following structure:
+
+$\begin{array}{c|c:c:c:c:c:c} \text{sampleID}&Gene_1,Allele_1&Gene_1,Allele_2&...&Gene_1,Allele_k&... & Gene_m, Allele_{k_m}\\ \hline ID_1 & \text{Read counts} &&& \\ \hdashline ... &&&&\\ \hdashline ID_n &&&& \end{array}$
+
+Where the $Allele$ is coded in CIGAR format, typing "." for the
+reference allele, $[0-9]*[A,T,C,G]$ for each point mutation observed,
+and $[0-9]*[D,I]=[A,T,C,G]*$ for indels (Insertion and Deletions).
+
+These CIGAR tables are stored in the server of the lab using the
+following path structure:
+
+***"STUDYNAME/RUNNAME/dada2/run_dada2/CIGARVariants.out.tsv"***
+
+As this structure is mantained across all studies in the lab, we have
+created a function called *fx_read_cigar_tables* that only requires two
+arguments: *paths* (name of the folder of the study or the STUDYNAME),
+and *sample_id_pattern* (a pattern string in the IDs of the samples that
+differentiate them from controls). For this particular example, the path
+will be ***"colombia/"*** , while the pattern will be ***"SP"***.
+
+```{r 'Uploading data sets'}
+
+source("fx_read_cigar_tables.R")
+cigar_table = fx_read_cigar_tables(paths = "colombia/", sample_id_pattern = "SP")
+
+```
+
+## Adding Metadata
+
+Metadata can come from different sources, sometimes the sample ID
+incorporate metadata in their coding system, other times metadata can be
+stored in a different table, having one column specifying the sample ID.
+In the case of the Colombian data set, we will perform the analysis at
+the level of Municipality and in intervals of three months starting from
+the first day of collection of samples. The information of sampling
+location of the samples is incorporated in the sample_id code, while the
+time of collection is in a separate table.
+
+```{r 'Adding Population'}
+# Adding pop source code to metadata----
+cigar_table[["metadata"]][["Country"]] = NA
+cigar_table[["metadata"]][cigar_table[["metadata"]][["typeofSamp"]] == "Controls",][["Country"]] = "Controls"
+cigar_table[["metadata"]][grepl("SP", cigar_table[["metadata"]][["samples"]]),][["Country"]] = "Colombia"
+
+# Adding pop source code to metadata----
+cigar_table[["metadata"]][["pop_code"]] = NA
+cigar_table[["metadata"]][cigar_table[["metadata"]][["typeofSamp"]] == "Controls",][["pop_code"]] = "Controls"
+cigar_table[["metadata"]][grepl("SP", cigar_table[["metadata"]][["samples"]]),][["pop_code"]] = substr(cigar_table[["metadata"]][grepl("SP", cigar_table[["metadata"]][["samples"]]),][["samples"]], 1, 9)
+
+# Correcting sample "SP001254204"----
+
+cigar_table[["metadata"]][cigar_table[["metadata"]][["pop_code"]] == "SP0012542",][["pop_code"]] = "SP0101254"
+
+cigar_table[["metadata"]][["Population"]] = NA
+
+cigar_table[["metadata"]][cigar_table[["metadata"]][["pop_code"]] == "SP0101254",][["Population"]] = "Buenaventura"
+cigar_table[["metadata"]][cigar_table[["metadata"]][["pop_code"]] == "SP0112286",][["Population"]] = "Quibdo"
+cigar_table[["metadata"]][cigar_table[["metadata"]][["pop_code"]] == "SP0126288",][["Population"]] = "Guapi"
+
+
+# removing allele PF3D7_1302900,1G----
+# this polymorphism is always present as a minor allele in polygenomic samples, increasing the proportion of polygenomic infections to up to 27%
+
+cigar_table[["cigar_table"]] = cigar_table[["cigar_table"]][,!grepl("PF3D7_1302900,1G", colnames(cigar_table[["cigar_table"]]))]
+cigar_table[["cigar_table"]] = cigar_table[["cigar_table"]][,!grepl("PF3D7_0612900,215A", colnames(cigar_table[["cigar_table"]]))]
+
+
+# removing locius PvDHFR----
+# this loci belongs to P. vivax
+
+cigar_table[["cigar_table"]] = cigar_table[["cigar_table"]][,!grepl("PvDHFR", colnames(cigar_table[["cigar_table"]]))]
+
+```
+
+```{r 'Map of study sites'}
+#library(sp)
+#library(raster)
+#library(maptools)
+library(GADMTools)
+#library(rgdal)
+#library(rlist)
+#library(gstat)
+#library(dismo)
+
+
+# Step 1: Get all shape files from LAC countries at national level----
+# SpatialPolygonsDataFrame at country level (level = 0)
+
+
+col0.spldf <- gadm_sp_loadCountries("COL",level = 0, basefile = "./GADMTools/world.rds.files/rds0/")
+col1.spldf <- gadm_sp_loadCountries("COL",level = 1, basefile = "./GADMTools/world.rds.files/rds1/")
+col2.spldf <- gadm_sp_loadCountries("COL",level = 2, basefile = "./GADMTools/world.rds.files/rds2/")
+
+localities = data.frame(Localities = factor(c("Guapí",
+                                              "Buenaventura",
+                                              "Quibdó"), levels = c("Guapí",
+                                                                    "Buenaventura",
+                                                                    "Quibdó")),
+                        long = -70,
+                        lat = c(10, 12, 14),
+                        colors = c("gold3",
+                                   "dodgerblue3",
+                                   "firebrick3"))
+
+# Step 3: plot the map
+
+
+## Polygon dot plot of observed G6PDd frequency by LAC country----
+plot_study_sites = ggplot() +
+  geom_polygon(data=col0.spldf$spdf, aes(x=long, y=lat, group = group), fill = "floralwhite", color = "gray40", size=.3) +
+  geom_polygon(data=col2.spldf[["spdf"]][col2.spldf[["spdf"]][["NAME_2"]] == "Quibdó",], aes(x=long, y=lat, group = group), fill = "firebrick3", color = "gray40", size=.3) +
+  geom_polygon(data=col2.spldf[["spdf"]][col2.spldf[["spdf"]][["NAME_2"]] == "Buenaventura",], aes(x=long, y=lat, group = group), fill = "dodgerblue3", color = "gray40", size=.3) +
+  geom_polygon(data=col2.spldf[["spdf"]][col2.spldf[["spdf"]][["NAME_2"]] == "Guapí",], aes(x=long, y=lat, group = group), fill = "gold3", color = "gray40", size=.3) +
+  geom_point(data=localities, aes(x=long, y=lat, color=Localities), size = 5) +
+  geom_label(data=localities, aes(x=long + c(1.3, 2.3, 1.5), y=lat, label = Localities)) +
+  theme_bw()+
+  labs(title = "Study sites in Colombia",
+       x = "Longitude",
+       y = "Latitude")+
+  scale_x_continuous(limits = c(-80, -65))+
+  scale_y_continuous(limits = c(-5, 15))+
+  scale_color_manual(values = localities$colors)+
+  theme(legend.position = "none",
+        text = element_text(size = 10),
+        axis.text = element_text(size = 10),
+        title = element_text(size = 10))+
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 12))
+
+```
+
+Then we will upload a metadata table from an external source
+
+```{r 'Adding collection data'}
+
+metadata2 = read.csv("11July22 download.csv")
+
+metadata2[["Population"]] = NA
+
+metadata2[grepl("SP0101254", metadata2[["Código"]]),][["Population"]] = "Buenaventura"
+metadata2[grepl("SP0112286", metadata2[["Código"]]),][["Population"]] = "Quibdo"
+metadata2[grepl("SP0126288", metadata2[["Código"]]),][["Population"]] = "Guapi"
+
+metadata2[['collection_date']] = substr(metadata2$X2.3..Fecha.de.reclutamiento., 1, 7)
+metadata2[is.na(metadata2[['collection_date']]),][['collection_date']] = metadata2[which(is.na(metadata2[['collection_date']])) + 1,][['collection_date']]
+
+metadata2[["group"]] = ifelse(metadata2$Código %in% (metadata$samples), "AMPseq", "noAMPseq")
+
+dates = c(paste(rep(2020, 4),c(paste0("0",8:9),10:12), sep ="-"),
+          paste(rep(2021, 12),c(paste0("0",1:9),10:12), sep ="-"),
+          paste(rep(2022, 2),c(paste0("0",1:2)), sep ="-"))
+
+```
+
+```{r 'Ploting the number of collected samples by Municipality over time'}
+plot_temporal_collection_of_samples = metadata2 %>% filter(!is.na(Population)) %>% group_by(Population, collection_date) %>%
+  summarise(nsamples= n())%>%
+  ggplot(aes(x = collection_date, y = nsamples, fill = factor(Population,
+                                                              levels = c("Quibdo",
+                                                                         "Buenaventura",
+                                                                         "Guapi"))))+
+  geom_col()+
+  theme_bw()+
+  scale_fill_manual(values = c("firebrick3", "dodgerblue3", "gold3"))+
+  facet_wrap(.~factor(Population,
+                      levels = c("Quibdo",
+                                 "Buenaventura",
+                                 "Guapi")),
+             strip.position = "top", ncol = 1)+
+  labs(y = "Collected samples by PCD",
+       x = "Months")+
+  theme(axis.text = element_text(size = 12),
+        axis.text.x = element_text(angle = 315, vjust = 0),
+        axis.title = element_text(size = 12),
+        strip.text = element_text(size = 12),
+        legend.position =  "none")+
+  scale_alpha_manual(values = c(1,.6))+
+  scale_x_discrete(limits = dates)
+
+plot_study_areas = ggdraw()+
+  draw_plot(plot_study_sites,
+            x = 0,
+            y = 0,
+            width = .5,
+            height = 1)+
+  draw_plot(plot_temporal_collection_of_samples,
+            x = .5,
+            y = 0,
+            width = .5,
+            height = 1)
+
+ggsave("plot_study_areas.png",
+       plot_study_areas,
+       device = "png",
+       units = "in",
+       width = 10,
+       height = 5,
+       dpi = 320)
+
+```
+
+## Performance of the genotyping process
+
+```{r "Generating a loci-abundance table"}
+# (alleles and abundance will be in cells)
+
+source("fx_cigar2loci_abd.R")
+
+markers = read.csv("markers.csv")
+
+ampseq = fx_cigar2loci_abd(cigar_table, markers = markers)
+
+```
+
+### Amplification rate by locus
+
+```{r 'Filtering loci of low amplification rate'}
+
+source("fx_loci_amplification_rate.R")
+
+ampseq = fx_loci_amplification_rate(ampseq, threshold = .65)
+```
+
+```{r 'Ploting loci performance'}
+
+chr_lengths <- c(640851,
+                 947102,
+                 1067971,
+                 1200490,
+                 1343557,
+                 1418242,
+                 1445207,
+                 1472805,
+                 1541735,
+                 1687656,
+                 2038340,
+                 2271494,
+                 2925236,
+                 3291936)
+
+# Plot Amplification rate per loci ----
+
+ampseq$plots$amplification_rate_per_locus = ggplot()+
+  geom_segment(data = data.frame(x = 0, y = 1:14, xend =chr_lengths, yend = 1:14),
+               aes(x=x, y=y, xend=xend, yend=yend), alpha = .5)+
+  
+  geom_point(data = data.frame(Position = markers$pos,
+                               Amplification_rate = 
+                                 ampseq$discarded_loci$loci_performance$loci_ampl_rate,
+                               Chr = as.integer(gsub("(Pf3D7_)|(_v3)", "", markers$chromosome))),
+             aes(x = Position, y = Chr, color = Amplification_rate),
+             pch = "|", size = 5)+
+  theme_bw()+
+  labs(title = "Amplification rate by locus",
+       x = "Chromosome position",
+       y = "Chromosome",
+       color = NULL)+
+  theme(legend.position = c(.9,.4))+
+  scale_y_continuous(breaks = 1:14)+
+  scale_color_continuous(type = "viridis")
+
+plot_locus_amplificatin_rate = ggdraw()+
+  draw_plot(ampseq$plots$amplification_rate_per_locus+
+              theme(axis.text = element_text(size = 12),
+                    axis.title = element_text(size = 12),
+                    legend.text = element_text(size = 12)),
+            x = 0,
+            y = 0,
+            width = 1,
+            height = .5)+
+  draw_plot(ampseq$plots$all_loci_amplification_rate+
+              theme(axis.text = element_text(size = 12),
+                    axis.title = element_text(size = 12)),
+            x = 0,
+            y = .5,
+            width = 1,
+            height = .5)
+
+plot_locus_amplificatin_rate
+
+ggsave("plot_locus_amplificatin_rate.png",
+       plot_locus_amplificatin_rate,
+       device = "png",
+       units = "in",
+       width = 7,
+       height = 7,
+       dpi = 320)
+```
+
+### Amplification rate by sample
+
+```{r 'Filtering samples of low amplification rate'}
+
+source("fx_sample_amplification_rate.R")
+
+ampseq = fx_sample_amplification_rate(ampseq)
+
+ampseq$plots$samples_amplification_rate+
+         theme(axis.text = element_text(size = 12),
+               axis.title = element_text(size = 12))
+
+# ggsave("plot_sample_amplificatin_rate.png",
+#        ampseq$plots$samples_amplification_rate+
+#          theme(axis.text = element_text(size = 12),
+#                axis.title = element_text(size = 12)),
+#        device = "png",
+#        units = "in",
+#        width = 7,
+#        height = 3.5,
+#        dpi = 320)
+```
+
+### Complexity of infection and Genetic diversity by locus
+
+```{r "Defining clonality of the samples"}
+
+source("fx_get_polygenomic.R")
+ampseq = fx_get_polygenomic(ampseq_object = ampseq, strata = "Population")
+
+
+
+```
+
+```{r 'getting genetic diversity by loci'}
+
+source("fx_loci_diversity.R")
+
+ampseq$loci_performance = cbind(ampseq$loci_performance,fx_loci_diversity(ampseq$loci_abd_table, variance = TRUE))
+```
+
+```{r 'Plot proportion of poluclonal infections and cardinality per locus'}
+# Plot Proportion of polygenomic infections detected per loci ----
+
+plot_prop_poly_per_locus = ggplot()+
+  geom_segment(data = data.frame(x = 0, y = 1:14, xend =chr_lengths, yend = 1:14),
+               aes(x=x, y=y, xend=xend, yend=yend), alpha = .5)+
+  geom_point(data = data.frame(Position = ampseq$markers$pos,
+                               Prop_of_polygenomic = ampseq$loci_performance$prop_poly_detected,
+                               Chr = as.integer(gsub("(Pf3D7_)|(_v3)", "", ampseq$markers$chromosome))),
+             aes(x = Position, y = Chr, color = Prop_of_polygenomic),
+             pch = "|", size = 5)+
+  theme_bw()+
+  labs(title = "Poportion of polyclonal infections detected",
+       x = "Chromosome position",
+       y = "Chromosome",
+       color = NULL)+
+  theme(legend.position = c(.9,.4))+
+  scale_y_continuous(breaks = 1:14)+
+  scale_color_continuous(type = "viridis")+
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 12),
+        legend.text = element_text(size = 12))
+
+ggsave("plot_prop_poly_per_locus.png",
+       plot_prop_poly_per_locus,
+       device = "png",
+       units = "in",
+       width = 7,
+       height = 3.5,
+       dpi = 320)
+
+# Plot Cardinality per loci ----
+
+plot_cardinality_per_locus = ggplot()+
+  geom_segment(data = data.frame(x = 0, y = 1:14, xend =chr_lengths, yend = 1:14),
+               aes(x=x, y=y, xend=xend, yend=yend), alpha = .5)+
+  geom_point(data = data.frame(Position = ampseq$markers$pos,
+                               eff_cardinality = ampseq$loci_performance$na.e,
+                               Chr = as.integer(gsub("(Pf3D7_)|(_v3)", "", ampseq$markers$chromosome))),
+             aes(x = Position, y = Chr, color = eff_cardinality),
+             pch = "|", size = 5)+
+  theme_bw()+
+  labs(title = "Effective cardinality",
+       x = "Chromosome position",
+       y = "Chromosome",
+       color = NULL)+
+  theme(legend.position = c(.9,.4))+
+  scale_y_continuous(breaks = 1:14)+
+  scale_color_continuous(type = "viridis")+
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 12),
+        legend.text = element_text(size = 12))
+
+ggsave("plot_cardinality_per_locus.png",
+       plot_cardinality_per_locus,
+       device = "png",
+       units = "in",
+       width = 7,
+       height = 3.5,
+       dpi = 320)
+```
+
+## Measuring geographic connectivity
+
+```{r}
+# generating the loci_object----
+
+source("fx_ampseq2loci.R")
+
+loci_object = fx_ampseq2loci(ampseq)
+
+```
+
+```{r}
+# measuring relatedness----
+source("fx_get_relatedness.R")
+
+pairwise_relatedness = fx_pairwise_relatedness(loci_object)
+
+pairwise_dist = as.dist((1 - pairwise_relatedness)*100)
+
+hist(pairwise_relatedness)
+
+```
+
+```{r 'Permanova'}
+
+# PERMANOVA by population
+
+permanova_result = adonis2(pairwise_dist ~ Population, data = ampseq$metadata, parallel = 8)
+
+```
+
+```{r 'Connectivity'}
+pairwise_relatednes_l = data.frame(Yi = rownames(pairwise_relatedness), pairwise_relatedness)
+
+pairwise_relatednes_l %<>% pivot_longer(cols = all_of(names(pairwise_relatednes_l)[-1]),
+                                        names_to = "Yj",
+                                        values_to = "r")
+
+pairwise_relatednes_l = pairwise_relatednes_l[!is.na(pairwise_relatednes_l$r),]
+
+pairwise_relatednes_l %<>% mutate(
+  Population_Yi = case_when(
+    Yi %in% ampseq$metadata[ampseq$metadata$Population == "Buenaventura",][["samples"]] ~ "Buenaventura",
+    Yi %in% ampseq$metadata[ampseq$metadata$Population == "Quibdo",][["samples"]] ~ "Quibdo",
+    Yi %in% ampseq$metadata[ampseq$metadata$Population == "Guapi",][["samples"]] ~ "Guapi"
+  ),
+  Population_Yj = case_when(
+    Yj %in% ampseq$metadata[ampseq$metadata$Population == "Buenaventura",][["samples"]] ~ "Buenaventura",
+    Yj %in% ampseq$metadata[ampseq$metadata$Population == "Quibdo",][["samples"]] ~ "Quibdo",
+    Yj %in% ampseq$metadata[ampseq$metadata$Population == "Guapi",][["samples"]] ~ "Guapi"
+  )
+)
+
+pairwise_relatednes_l %<>% mutate(
+  Pop_comparisson = case_when(
+    Population_Yi == "Buenaventura" & Population_Yj == "Buenaventura" ~ "Buenaventura",
+    Population_Yi == "Quibdo" & Population_Yj == "Quibdo" ~ "Quibdo",
+    Population_Yi == "Guapi" & Population_Yj == "Guapi" ~ "Guapi",
+    (Population_Yi == "Buenaventura" & Population_Yj == "Quibdo") |
+      (Population_Yj == "Buenaventura" & Population_Yi == "Quibdo") ~ "Q vs B",
+    (Population_Yi == "Buenaventura" & Population_Yj == "Guapi") |
+      (Population_Yj == "Buenaventura" & Population_Yi == "Guapi") ~ "B vs G",
+    (Population_Yi == "Guapi" & Population_Yj == "Quibdo") |
+      (Population_Yj == "Guapi" & Population_Yi == "Quibdo") ~ "Q vs G"
+  ))
+
+pairwise_relatednes_l %<>% mutate(Type_of_comparisson = case_when(
+  grepl(" vs ",Pop_comparisson) ~ "Between",
+  !grepl(" vs ",Pop_comparisson) ~ "Within"
+))
+
+```
+
+```{r 'highly related haplotypes'}
+
+library(Hmisc)
+
+plot_frac_highly_related = pairwise_relatednes_l %>%
+  group_by(Pop_comparisson) %>% 
+  dplyr::summarise(freq = sum(r>=.99),
+                   n = n()) %>% group_by(Pop_comparisson)%>%
+  mutate(prop = binconf(freq,
+                        n,
+                        alpha = 0.05,
+                        method = "exact")[1],
+         lower = binconf(freq,
+                         n,
+                         alpha = 0.05,
+                         method = "exact")[2],
+         upper = binconf(freq,
+                         n,
+                         alpha = 0.05,
+                         method = "exact")[3])%>%
+  ggplot(aes(x = factor(Pop_comparisson, levels = c(
+    "Quibdo",
+    "Buenaventura",
+    "Guapi",
+    "Q vs B",
+    "Q vs G",
+    "B vs G"
+  )), y = prop, fill = factor(Pop_comparisson, levels = c(
+    "Quibdo",
+    "Buenaventura",
+    "Guapi",
+    "Q vs B",
+    "Q vs G",
+    "B vs G"
+  )))) + 
+  geom_col(alpha = .85)+
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = .2)+
+  scale_fill_manual(values = c("firebrick3", "dodgerblue3", "gold3", "gray90", "gray70", "gray50"))+
+  theme_bw()+
+  labs(y = "Fraccion de pares de muestras\naltamente relacionadas (IBD > 0.99)")+
+  theme(axis.text = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        axis.title.x = element_blank(),
+        strip.text = element_text(size = 12),
+        legend.position = "none")
+
+
+ggsave("plot_frac_highly_related.png",
+       plot_frac_highly_related,
+       device = "png",
+       units = "in",
+       width = 7,
+       height = 5,
+       dpi = 320)
+```
+
+```{r 'Network'}
+source("fx_plot_network.R")
+
+network_popmean = fx_plot_network(pairwise_long_matrix = pairwise_relatednes_l,
+                                  variable = "r",
+                                  cols = c("Yi", "Yj"),
+                                  threshold = mean(pairwise_relatedness, na.rm =T),
+                                  metadata = ampseq$metadata,
+                                  sample_id = "samples",
+                                  group_by = "Population",
+                                  levels = c("Quibdo", "Buenaventura", "Guapi"),
+                                  colors = c("firebrick3", "dodgerblue3", "gold3"))
+
+network_ibd90 = fx_plot_network(pairwise_long_matrix = pairwise_relatednes_l,
+                                variable = "r",
+                                cols = c("Yi", "Yj"),
+                                threshold = .9,
+                                metadata = ampseq$metadata,
+                                sample_id = "samples",
+                                group_by = "Population",
+                                levels = c("Quibdo", "Buenaventura", "Guapi"),
+                                colors = c("firebrick3", "dodgerblue3", "gold3"))
+
+network_ibd95 = fx_plot_network(pairwise_long_matrix = pairwise_relatednes_l,
+                                variable = "r",
+                                cols = c("Yi", "Yj"),
+                                threshold = .95,
+                                metadata = ampseq$metadata,
+                                sample_id = "samples",
+                                group_by = "Population",
+                                levels = c("Quibdo", "Buenaventura", "Guapi"),
+                                colors = c("firebrick3", "dodgerblue3", "gold3"))
+
+network_ibd99 = fx_plot_network(pairwise_long_matrix = pairwise_relatednes_l,
+                                variable = "r",
+                                cols = c("Yi", "Yj"),
+                                threshold = .99,
+                                metadata = ampseq$metadata,
+                                sample_id = "samples",
+                                group_by = "Population",
+                                levels = c("Quibdo", "Buenaventura", "Guapi"),
+                                colors = c("firebrick3", "dodgerblue3", "gold3"))
+
+
+fx_plot_network(pairwise_long_matrix = pairwise_relatednes_l,
+                variable = "r",
+                cols = c("Yi", "Yj"),
+                threshold = .95,
+                metadata = ampseq$metadata,
+                sample_id = "samples",
+                group_by = "Pop_Sampling_period",
+                levels = c("Quibdo_First 10 months", "Quibdo_Last 9 months",
+                           "Buenaventura_First 10 months", "Buenaventura_Last 9 months",
+                           "Guapi_First 10 months", "Guapi_Last 9 months"),
+                colors = c("firebrick4", "firebrick1",
+                           "dodgerblue4", "dodgerblue1",
+                           "gold3", "gold1"))
+
+fx_plot_network(pairwise_long_matrix = pairwise_relatednes_l,
+                variable = "r",
+                cols = c("Yi", "Yj"),
+                threshold = .99,
+                metadata = ampseq$metadata,
+                sample_id = "samples",
+                group_by = "Pop_Sampling_period",
+                levels = c("Quibdo_First 10 months", "Quibdo_Last 9 months",
+                           "Buenaventura_First 10 months", "Buenaventura_Last 9 months",
+                           "Guapi_First 10 months", "Guapi_Last 9 months"),
+                colors = c("firebrick4", "firebrick1",
+                           "dodgerblue4", "dodgerblue1",
+                           "gold3", "gold1"))
+```
+
+## Monitoring transmission intensity
+
+### Complexity of infection and transmission
+
+```{r 'Sample size and proportion of polyclonal infections'}
+
+plot_poly_by_pop = ampseq[["pop_summary"]] %>% ggplot(aes(x = factor(pop, levels = c("Quibdo", "Buenaventura", "Guapi", "Colombia", "Guyana")),
+                                                          y = prop_poly,
+                                                          fill = factor(pop, levels = c("Quibdo", "Buenaventura", "Guapi", "Colombia", "Guyana"))))+
+  geom_col(alpha = .6) +
+  geom_errorbar(aes(ymin = prop_poly_lower, ymax = prop_poly_upper), width = .2)+
+  theme_bw() +
+  labs(title = "Frecuencia de infecciones policlonales",
+       y = "Frecuencia") +
+  scale_size(range = c(3, 6)) +
+  scale_fill_manual(values = c("firebrick3", "dodgerblue3", "gold3", "gray30", "gray70"))+
+  scale_y_continuous(limits = c(0, 0.3))+
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_blank(),
+        legend.position = "none")
+
+source("log_scale_histogram.R")
+
+plot_log_coi_by_pop = log_scale_histogram(data = rbind(ampseq$metadata, ampseq_guyana$metadata),
+                                          var = "coi", binwidth = 1, group_by = "Population",
+                                          levels = c("Quibdo", "Buenaventura", "Guapi", "Guyana"), x_label = "COI",
+                                          fill_color = c("firebrick3", "dodgerblue3", "gold3", "gray70"),
+                                          y_breaks = c(1, 10, 100, 400), ncol = 4)+
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 12),
+        strip.text = element_text(size = 12)) +
+  labs(y = "# de muestras")
+
+plot_log_NPolyLoci_by_pop = log_scale_histogram(data = rbind(ampseq$metadata[ampseq$metadata$NPolyLoci != 0,],
+                                                             ampseq_guyana$metadata[ampseq_guyana$metadata$NPolyLoci != 0,]),
+                                                var = "NPolyLoci", binwidth = 1, group_by = "Population",
+                                                levels = c("Quibdo", "Buenaventura", "Guapi", "Guyana"), x_label = "Number of heterozygous loci per sample",
+                                                fill_color = c("firebrick3", "dodgerblue3", "gold3", "gray70"),
+                                                y_breaks = c(1, 5,10, 30), ncol = 4)+
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 12),
+        strip.text = element_text(size = 12)) +
+  labs(y = "# de muestras",
+       x = "# de loci heterocigotos por muestra")
+```
+
+```{r}
+plot_log_poly_by_pop_map = ggdraw()+
+  draw_plot(plot_study_sites,
+            x = 0,
+            y = 0,
+            width = .5,
+            height = 1)+
+  draw_plot(plot_log_coi_by_pop,
+            x = .5,
+            y = 0,
+            width = .5,
+            height = .33)+
+  draw_plot(plot_log_NPolyLoci_by_pop,
+            x = .5,
+            y = .33,
+            width = .5,
+            height = .33)+
+  draw_plot(plot_poly_by_pop,
+            x = .5,
+            y = .66,
+            width = .5,
+            height = .33)   
+
+ggsave("plot_log_poly_by_pop_map.png",
+       plot_log_poly_by_pop_map,
+       device = "png",
+       units = "in",
+       width = 10,
+       height = 5,
+       dpi = 320)
+
+```
+
+#### Temporal variation of complexity of infection
+
+```{r 'temporal change'}
+
+ampseq$metadata = merge(ampseq$metadata, metadata2[,c("Código","X2.3..Fecha.de.reclutamiento.", "X2.9..Fecha.inicio.de.síntomas")],
+                        by.x = "samples", by.y = "Código", all.x = T)
+
+ampseq$metadata[['collection_date']] = substr(ampseq$metadata$X2.3..Fecha.de.reclutamiento., 1, 7)
+
+ampseq$metadata[is.na(ampseq$metadata[['collection_date']]),][['collection_date']] = ampseq$metadata[which(is.na(ampseq$metadata[['collection_date']])) + 1,][['collection_date']]
+
+
+plot_temporal_sequenced_samples =
+  metadata2 %>% filter(!is.na(Population)) %>% group_by(Population, group, collection_date) %>%
+  summarise(nsamples= n())%>%
+  ggplot(aes(x = collection_date,
+             y = nsamples,
+             fill = factor(Population,
+                           levels = c("Quibdo",
+                                      "Buenaventura",
+                                      "Guapi")),
+             alpha = group)) +
+  geom_col()+
+  theme_bw()+
+  scale_fill_manual(values = c("firebrick3", "dodgerblue3", "gold3"))+
+  facet_wrap(.~factor(Population,
+                      levels = c("Quibdo",
+                                 "Buenaventura",
+                                 "Guapi")),
+             strip.position = "top", ncol = 1)+
+  labs(y = "Muestras colectadas por DPC",
+       x = "Meses")+
+  theme(axis.text = element_text(size = 12),
+        axis.text.x = element_text(angle = 315, vjust = 0),
+        axis.title = element_text(size = 12),
+        strip.text = element_text(size = 12),
+        legend.position =  "none")+
+  scale_alpha_manual(values = c(1,.6))+
+  scale_x_discrete(limits = dates)
+
+
+ggsave("plot_temporal_sequenced_samples.png",
+       plot_temporal_sequenced_samples,
+       device = "png",
+       units = "in",
+       width = 10,
+       height = 5,
+       dpi = 320)
+
+
+ampseq$metadata[["Sampling_period"]] = ifelse(ampseq$metadata$collection_date %in% dates[1:10], "First 10 months", "Last 9 months")
+
+ampseq$metadata[["Pop_Sampling_period"]] = paste(ampseq$metadata$Population, ampseq$metadata$Sampling_period, sep = "_")
+
+fx_get_polygenomic(ampseq_object = ampseq, strata = "Pop_Sampling_period", update_popsummary = F)[-1,]%>%
+  ggplot(aes(x = factor(pop,
+                        levels = c(
+                          "Quibdo_First 10 months",
+                          "Quibdo_Last 9 months",
+                          "Buenaventura_First 10 months",
+                          "Buenaventura_Last 9 months",
+                          "Guapi_First 10 months",
+                          "Guapi_Last 9 months"
+                        )),
+             y = prop_poly,
+             ymin = prop_poly_lower,
+             ymax = prop_poly_upper,
+             fill = factor(pop,
+                           levels = c(
+                             "Quibdo_First 10 months",
+                             "Quibdo_Last 9 months",
+                             "Buenaventura_First 10 months",
+                             "Buenaventura_Last 9 months",
+                             "Guapi_First 10 months",
+                             "Guapi_Last 9 months"
+                           ))))+
+  geom_col()+
+  geom_errorbar(width = .2)+
+  theme_bw()+
+  scale_fill_manual(values = c("firebrick4", "firebrick1","dodgerblue4","dodgerblue1", "gold3", "gold1"))+
+  labs(y = "Frecuencia de infecciones policlonales",
+       x = "Area de estudio y periodo de muestreo")+
+  theme(axis.text = element_text(size = 12),
+        #axis.text.x = element_text(angle = 315, vjust = 0),
+        axis.title = element_text(size = 12),
+        strip.text = element_text(size = 12),
+        legend.position =  "none")
+```
+
+### Haplotypic and genetic diversity and transmission
+
+```{r 'getting genetic diversity by pop'}
+
+source("fx_pop_diversity.R")
+
+
+ampseq[["pop_summary"]] = cbind(ampseq[["pop_summary"]],fx_pop_diversity(ampseq_object = ampseq, strata = "Population")[-1])
+ampseq_guyana$pop_summary[1,1] = "Guyana"
+
+ampseq[["pop_summary"]] = rbind(ampseq[["pop_summary"]], ampseq_guyana$pop_summary[1,])
+ampseq$pop_summary[1,1] = "Colombia"
+
+```
+
+```{r 'Pop diversity'}
+
+plot_div_by_pop = ampseq[["pop_summary"]]%>%
+  pivot_longer(cols= all_of(c("Effective.richness",
+                              "Shannon",
+                              "Hexp")),
+               names_to = "metric", values_to = "value")%>%
+  ggplot(aes(x = factor(pop, levels = c("Quibdo", "Buenaventura", "Guapi", "Colombia", "Guyana")),
+             y = value,
+             color = factor(pop, levels = c("Quibdo", "Buenaventura", "Guapi", "Colombia", "Guyana")),
+             size = Richness))+
+  geom_point(alpha = .6) +
+  facet_wrap(~factor(metric,
+                     levels = c("Effective.richness",
+                                "Shannon",
+                                "Hexp")),
+             scales = "free_y",
+             ncol = 1) +
+  theme_bw() +
+  scale_color_manual(values = c("firebrick3", "dodgerblue3", "gold3", "gray30", "gray70"))+
+  labs(title = "Haplotypic and genetic diversity",
+       y = "Value",
+       x = "Population",
+       color = "Population")+
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 12),
+        strip.text = element_text(size = 12))
+
+
+plot_div_by_pop_map = ggdraw()+
+  draw_plot(plot_study_sites,
+            x = 0,
+            y = .1,
+            width = .4,
+            height = .8)+
+  draw_plot(plot_div_by_pop,
+            x = .4,
+            y = 0,
+            width = .6,
+            height = 1)
+
+ggsave("plot_div_by_pop_map.png",
+       plot_div_by_pop_map,
+       device = "png",
+       units = "in",
+       width = 12,
+       height = 6,
+       dpi = 320)
+```
+
+### Relatedness and Transmission
+
+```{r 'Grouping samples by periods and months'}
+# Relatedness and transmission----
+# by study and period---
+
+pairwise_relatednes_l %<>% mutate(
+  Pop_period_Yi = case_when(
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period == "Buenaventura_First 10 months",][["samples"]] ~ "Buenaventura_First 10 months",
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period == "Buenaventura_Last 9 months",][["samples"]] ~ "Buenaventura_Last 9 months",
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period == "Quibdo_First 10 months",][["samples"]] ~ "Quibdo_First 10 months",
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period == "Quibdo_Last 9 months",][["samples"]] ~ "Quibdo_Last 9 months",
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period == "Guapi_First 10 months",][["samples"]] ~ "Guapi_First 10 months",
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period == "Guapi_Last 9 months",][["samples"]] ~ "Guapi_Last 9 months"
+  ),
+  Pop_period_Yj = case_when(
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period == "Buenaventura_First 10 months",][["samples"]] ~ "Buenaventura_First 10 months",
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period == "Buenaventura_Last 9 months",][["samples"]] ~ "Buenaventura_Last 9 months",
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period == "Quibdo_First 10 months",][["samples"]] ~ "Quibdo_First 10 months",
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period == "Quibdo_Last 9 months",][["samples"]] ~ "Quibdo_Last 9 months",
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period == "Guapi_First 10 months",][["samples"]] ~ "Guapi_First 10 months",
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period == "Guapi_Last 9 months",][["samples"]] ~ "Guapi_Last 9 months"
+  )
+)
+
+pairwise_relatednes_l %<>% mutate(
+  Type_Pop_period_comparisson = case_when(
+    Pop_period_Yi ==  Pop_period_Yj ~ "Within",
+    Pop_period_Yi !=  Pop_period_Yj ~ "Between"
+  ))
+
+
+pairwise_relatednes_l %<>% mutate(
+  Pop_period_comparisson = case_when(
+    Type_Pop_period_comparisson == "Within" ~ Pop_period_Yi,
+    Type_Pop_period_comparisson == "Between" ~ paste(Pop_period_Yi, Pop_period_Yj, sep = " vs ")
+  ))
+
+
+# by study and period every 3 months---
+
+
+ampseq$metadata$Sampling_period_3months = NA
+ampseq$metadata[ampseq$metadata$collection_date %in% dates[1:3],][["Sampling_period_3months"]] = "Aug - Oct, 2020"
+ampseq$metadata[ampseq$metadata$collection_date %in% dates[4:6],][["Sampling_period_3months"]] = "Nov, 2020 - Jan, 2021"
+ampseq$metadata[ampseq$metadata$collection_date %in% dates[7:9],][["Sampling_period_3months"]] = "Feb - Apr, 2021"
+ampseq$metadata[ampseq$metadata$collection_date %in% dates[10:12],][["Sampling_period_3months"]] = "May - Jul, 2021"
+ampseq$metadata[ampseq$metadata$collection_date %in% dates[13:15],][["Sampling_period_3months"]] = "Aug - Oct, 2021"
+ampseq$metadata[ampseq$metadata$collection_date %in% dates[16:19],][["Sampling_period_3months"]] = "Nov, 2021 - Feb, 2022"
+
+
+ampseq$metadata[["Pop_Sampling_period_3months"]] = paste(ampseq$metadata$Population, ampseq$metadata$Sampling_period_3months, sep = "_")
+
+
+pairwise_relatednes_l %<>% mutate(
+  Pop_period_3months_Yi = case_when(
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Buenaventura_Aug - Oct, 2020",][["samples"]] ~ "Buenaventura_Aug - Oct, 2020",
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Buenaventura_Nov, 2020 - Jan, 2021",][["samples"]] ~ "Buenaventura_Nov, 2020 - Jan, 2021",
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Buenaventura_Feb - Apr, 2021",][["samples"]] ~ "Buenaventura_Feb - Apr, 2021",
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Buenaventura_May - Jul, 2021",][["samples"]] ~ "Buenaventura_May - Jul, 2021",
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Buenaventura_Aug - Oct, 2021",][["samples"]] ~ "Buenaventura_Aug - Oct, 2021",
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Buenaventura_Nov, 2021 - Feb, 2022",][["samples"]] ~ "Buenaventura_Nov, 2021 - Feb, 2022",
+    
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Quibdo_Aug - Oct, 2020",][["samples"]] ~ "Quibdo_Aug - Oct, 2020",
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Quibdo_Nov, 2020 - Jan, 2021",][["samples"]] ~ "Quibdo_Nov, 2020 - Jan, 2021",
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Quibdo_Feb - Apr, 2021",][["samples"]] ~ "Quibdo_Feb - Apr, 2021",
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Quibdo_May - Jul, 2021",][["samples"]] ~ "Quibdo_May - Jul, 2021",
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Quibdo_Aug - Oct, 2021",][["samples"]] ~ "Quibdo_Aug - Oct, 2021",
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Quibdo_Nov, 2021 - Feb, 2022",][["samples"]] ~ "Quibdo_Nov, 2021 - Feb, 2022",
+    
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Guapi_Aug - Oct, 2020",][["samples"]] ~ "Guapi_Aug - Oct, 2020",
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Guapi_Nov, 2020 - Jan, 2021",][["samples"]] ~ "Guapi_Nov, 2020 - Jan, 2021",
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Guapi_Feb - Apr, 2021",][["samples"]] ~ "Guapi_Feb - Apr, 2021",
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Guapi_May - Jul, 2021",][["samples"]] ~ "Guapi_May - Jul, 2021",
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Guapi_Aug - Oct, 2021",][["samples"]] ~ "Guapi_Aug - Oct, 2021",
+    Yi %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Guapi_Nov, 2021 - Feb, 2022",][["samples"]] ~ "Guapi_Nov, 2021 - Feb, 2022"
+  ),
+  Pop_period_3months_Yj = case_when(
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Buenaventura_Aug - Oct, 2020",][["samples"]] ~ "Buenaventura_Aug - Oct, 2020",
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Buenaventura_Nov, 2020 - Jan, 2021",][["samples"]] ~ "Buenaventura_Nov, 2020 - Jan, 2021",
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Buenaventura_Feb - Apr, 2021",][["samples"]] ~ "Buenaventura_Feb - Apr, 2021",
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Buenaventura_May - Jul, 2021",][["samples"]] ~ "Buenaventura_May - Jul, 2021",
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Buenaventura_Aug - Oct, 2021",][["samples"]] ~ "Buenaventura_Aug - Oct, 2021",
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Buenaventura_Nov, 2021 - Feb, 2022",][["samples"]] ~ "Buenaventura_Nov, 2021 - Feb, 2022",
+    
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Quibdo_Aug - Oct, 2020",][["samples"]] ~ "Quibdo_Aug - Oct, 2020",
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Quibdo_Nov, 2020 - Jan, 2021",][["samples"]] ~ "Quibdo_Nov, 2020 - Jan, 2021",
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Quibdo_Feb - Apr, 2021",][["samples"]] ~ "Quibdo_Feb - Apr, 2021",
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Quibdo_May - Jul, 2021",][["samples"]] ~ "Quibdo_May - Jul, 2021",
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Quibdo_Aug - Oct, 2021",][["samples"]] ~ "Quibdo_Aug - Oct, 2021",
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Quibdo_Nov, 2021 - Feb, 2022",][["samples"]] ~ "Quibdo_Nov, 2021 - Feb, 2022",
+    
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Guapi_Aug - Oct, 2020",][["samples"]] ~ "Guapi_Aug - Oct, 2020",
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Guapi_Nov, 2020 - Jan, 2021",][["samples"]] ~ "Guapi_Nov, 2020 - Jan, 2021",
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Guapi_Feb - Apr, 2021",][["samples"]] ~ "Guapi_Feb - Apr, 2021",
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Guapi_May - Jul, 2021",][["samples"]] ~ "Guapi_May - Jul, 2021",
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Guapi_Aug - Oct, 2021",][["samples"]] ~ "Guapi_Aug - Oct, 2021",
+    Yj %in% ampseq$metadata[ampseq$metadata$Pop_Sampling_period_3months == "Guapi_Nov, 2021 - Feb, 2022",][["samples"]] ~ "Guapi_Nov, 2021 - Feb, 2022"
+  )
+)
+
+pairwise_relatednes_l %<>% mutate(
+  Type_Pop_period_3months_comparisson = case_when(
+    Pop_period_3months_Yi ==  Pop_period_3months_Yj ~ "Within",
+    Pop_period_3months_Yi !=  Pop_period_3months_Yj ~ "Between"
+  ))
+
+
+pairwise_relatednes_l %<>% mutate(
+  Pop_period_3months_comparisson = case_when(
+    Type_Pop_period_3months_comparisson == "Within" ~ Pop_period_3months_Yi,
+    Type_Pop_period_3months_comparisson == "Between" ~ paste(Pop_period_3months_Yi, Pop_period_3months_Yj, sep = " vs ")
+  ))
+
+```
+
+```{r '2 periods'}
+pairwise_relatednes_l$Pop_period_comparisson
+
+pairwise_relatednes_l %>%
+  group_by(Pop_period_comparisson) %>% 
+  dplyr::summarise(freq = sum(r>=.99),
+                   n = n()) %>% group_by(Pop_period_comparisson)%>%
+  mutate(prop = binconf(freq,
+                        n,
+                        alpha = 0.05,
+                        method = "exact")[1],
+         lower = binconf(freq,
+                         n,
+                         alpha = 0.05,
+                         method = "exact")[2],
+         upper = binconf(freq,
+                         n,
+                         alpha = 0.05,
+                         method = "exact")[3])%>%
+  filter(Pop_period_comparisson %in% c("Quibdo_First 10 months",
+                                       "Quibdo_Last 9 months",
+                                       "Buenaventura_First 10 months",
+                                       "Buenaventura_Last 9 months",
+                                       "Guapi_First 10 months",
+                                       "Guapi_Last 9 months")) %>%
+  ggplot(aes(x = factor(Pop_period_comparisson, levels = c("Quibdo_First 10 months",
+                                                           "Quibdo_Last 9 months",
+                                                           "Buenaventura_First 10 months",
+                                                           "Buenaventura_Last 9 months",
+                                                           "Guapi_First 10 months",
+                                                           "Guapi_Last 9 months")),
+             y = prop, fill = factor(Pop_period_comparisson, levels = c("Quibdo_First 10 months",
+                                                                        "Quibdo_Last 9 months",
+                                                                        "Buenaventura_First 10 months",
+                                                                        "Buenaventura_Last 9 months",
+                                                                        "Guapi_First 10 months",
+                                                                        "Guapi_Last 9 months")
+                                     ))) + 
+  geom_col(alpha = .85)+
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = .2)+
+  scale_fill_manual(values = c("firebrick4", "firebrick1", "dodgerblue4", "dodgerblue1", "gold3", "gold1"))+
+  theme_bw()+
+  labs(y = "Fraccion de pares de muestras\naltamente relacionadas (IBD > 0.99)")+
+  theme(axis.text = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        axis.title.x = element_blank(),
+        strip.text = element_text(size = 12),
+        legend.position = "none")
+```
+
+```{r '3 months intervals'}
+pairwise_relatednes_l$Pop_period_3months_comparisson
+
+write.csv(pairwise_relatednes_l, "pairwise_relatednes_l.csv")
+write.csv(pairwise_relatedness, "pairwise_relatednes_dist_matrix.csv")
+
+
+poplevels = c(
+  "Quibdo_Aug - Oct, 2020",
+  "Quibdo_Nov, 2020 - Jan, 2021",
+  "Quibdo_Feb - Apr, 2021",
+  "Quibdo_May - Jul, 2021",
+  "Quibdo_Aug - Oct, 2021",
+  "Quibdo_Nov, 2021 - Feb, 2022",
+  
+"Buenaventura_Aug - Oct, 2020",
+"Buenaventura_Nov, 2020 - Jan, 2021",
+"Buenaventura_Feb - Apr, 2021",
+"Buenaventura_May - Jul, 2021",
+"Buenaventura_Aug - Oct, 2021",
+"Buenaventura_Nov, 2021 - Feb, 2022",
+
+"Guapi_Aug - Oct, 2020",
+"Guapi_Nov, 2020 - Jan, 2021",
+"Guapi_Feb - Apr, 2021",
+"Guapi_May - Jul, 2021",
+"Guapi_Aug - Oct, 2021",
+"Guapi_Nov, 2021 - Feb, 2022"
+)
+
+dateslevels = c("Aug - Oct, 2020",
+               "Nov, 2020 - Jan, 2021",
+               "Feb - Apr, 2021",
+               "May - Jul, 2021",
+               "Aug - Oct, 2021",
+               "Nov, 2021 - Feb, 2022")
+
+
+popcolors = c(brewer.pal(6,"Reds"),
+              brewer.pal(5,"Blues"),
+              brewer.pal(7,"YlGn"))
+
+pairwise_relatednes_l %>%
+  group_by(Pop_period_3months_comparisson) %>% 
+  dplyr::summarise(freq = sum(r>=.99),
+                   n = n()) %>% group_by(Pop_period_3months_comparisson)%>%
+  mutate(prop = binconf(freq,
+                        n,
+                        alpha = 0.05,
+                        method = "exact")[1],
+         lower = binconf(freq,
+                         n,
+                         alpha = 0.05,
+                         method = "exact")[2],
+         upper = binconf(freq,
+                         n,
+                         alpha = 0.05,
+                         method = "exact")[3])%>%
+  filter(Pop_period_3months_comparisson %in% poplevels)%>%
+  mutate(Pop_comparisson = gsub("_.+","",Pop_period_3months_comparisson),
+         Dates = gsub(".+_","",Pop_period_3months_comparisson))%>%
+  ggplot(aes(x = factor(Dates, levels = dateslevels),
+             y = prop, fill = factor(Pop_period_3months_comparisson, levels = poplevels
+             ))) + 
+  geom_col(alpha = .85)+
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = .2)+
+  scale_fill_manual(values = popcolors)+
+  theme_bw()+
+  labs(y = "Fraccion de pares de muestras\naltamente relacionadas (IBD > 0.99)")+
+  theme(axis.text = element_text(size = 12),
+        axis.text.x = element_text(angle = 315, vjust = 0),
+        axis.title.y = element_text(size = 12),
+        axis.title.x = element_blank(),
+        strip.text = element_text(size = 12),
+        legend.position = "none")+
+  facet_wrap(~factor(Pop_comparisson, levels = c("Quibdo",
+                                                 "Buenaventura",
+                                                 "Guapi")), ncol = 1)
+
+
+fx_plot_network(pairwise_long_matrix = pairwise_relatednes_l,
+                variable = "r",
+                cols = c("Yi", "Yj"),
+                threshold = .99,
+                metadata = ampseq$metadata,
+                sample_id = "samples",
+                group_by = "Pop_Sampling_period_3months",
+                levels = poplevels,
+                colors = popcolors)
+```
+
+## Molecular surveillance of drug resistance
+
+```{r}
+
+drug_resistance = ampseq$metadata
+
+```
