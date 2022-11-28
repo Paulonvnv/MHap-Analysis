@@ -9,11 +9,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-The purpose of this tutorial is to introduce researchers in the
-laboratory of genomic and evolutionary biology of malaria parasites at
-Harvard university in the analysis of genotyping information generated
-through amplicon sequencing (also called Microhaplotype genotyping).
-This tutorial will cover:
+The purpose of this tutorial is to introduce researchers at the laboratory of genomic and evolutionary biology of malaria parasites at Harvard university in the analysis of genotyping information generated through amplicon sequencing (also called Microhaplotype genotyping). This tutorial will cover:
 
 1.  Importing and handling tables in CIGAR format in R environment.
 
@@ -21,16 +17,13 @@ This tutorial will cover:
 
 3.  Performance of the genotyping process.
 
-4.  Monitoring transmission intensity.
+4.  Molecular surveillance of drug resistance.
 
-5.  Measuring geographic connectivity.
+5.  Monitoring transmission intensity.
 
-6.  Molecular surveillance of drug resistance.
+6.  Measuring geographic connectivity.
 
-In this tutorial we will use a Colombian data set as a example. These
-samples comes from a colaboration with the group of Caucaseco, which has
-collected samples of *P. falciparum* from 2019 to 2022 in three
-municipalities located in the pacific coast of Colombia.
+In this tutorial we will use a Colombian data set as a example. These samples comes from a colaboration with the group of Caucaseco, which has collected samples of *P. falciparum* from 2019 to 2022 in three municipalities located in the pacific coast of Colombia.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -38,8 +31,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Importing and handling tables in CIGAR format in R environment
 
-Our first step will be to call all required packages in the R
-environment:
+Our first step will be to call all required packages in the R environment:
 
 ```{r 'Loading required packages'}
 
@@ -115,100 +107,135 @@ if(!require(RColorBrewer)){
 
 ```
 
-As we mentioned earlier, this tutorial start with .tsv table in CIGAR
-format that has been generated with a previous pipeline created in the
-lab. The output if this pipeline has the following structure:
+As we mentioned earlier, this tutorial start with .tsv table in CIGAR format that has been generated with a previous pipeline created in the lab. The output of this pipeline has the following structure:
 
 $\begin{array}{c|c:c:c:c:c:c} \text{sampleID}&Gene_1,Allele_1&Gene_1,Allele_2&...&Gene_1,Allele_k&... & Gene_m, Allele_{k_m}\\ \hline ID_1 & \text{Read counts} &&& \\ \hdashline ... &&&&\\ \hdashline ID_n &&&& \end{array}$
 
-Where the $Allele$ is coded in CIGAR format, typing "." for the
-reference allele, $[0-9]*[A,T,C,G]$ for each point mutation observed,
-and $[0-9]*[D,I]=[A,T,C,G]*$ for indels (Insertion and Deletions).
+Where the $Allele$ is coded in CIGAR format, typing "." for the reference allele, $[0-9]*[A,T,C,G]$ for each point mutation observed, and $[0-9]*[D,I]=[A,T,C,G]*$ for indels (Insertion and Deletions).
 
-These CIGAR tables are stored in the server of the lab using the
-following path structure:
+These CIGAR tables are stored in the server of the lab using the following path structure:
 
-***"STUDYNAME/RUNNAME/dada2/run_dada2/CIGARVariants.out.tsv"***
+`"STUDYNAME/RUNNAME/dada2/run_dada2/CIGARVariants.out.tsv"`
 
-As this structure is mantained across all studies in the lab, we have
-created a function called *fx_read_cigar_tables* that only requires two
-arguments: *paths* (name of the folder of the study or the STUDYNAME),
-and *sample_id_pattern* (a pattern string in the IDs of the samples that
-differentiate them from controls). For this particular example, the path
-will be ***"colombia/"*** , while the pattern will be ***"SP"***.
+As this structure is maintained across all studies in the lab, we have created a function called `fx_read_cigar_tables` that only requires two arguments: `paths` (name of the folder of the study or the `STUDYNAME`), and `sample_id_pattern` (a pattern string in the IDs of the samples that differentiate them from controls). For this particular example, the path will be `"colombia/"` , while the pattern will be `"SP"`.
 
 ```{r 'Uploading data sets'}
 
 source("fx_read_cigar_tables.R")
-cigar_table = fx_read_cigar_tables(paths = "colombia/", sample_id_pattern = "SP")
+cigar_object = fx_read_cigar_tables(paths = "colombia/", sample_id_pattern = "SP")
 
 ```
 
+This function generates a list containing two data.frames, 1) a `cigar_table`, where genotyping information is stored in cigar format; and 2) a `metadata` table with 3 variables (columns), `samples` which contains samples Id's, `run` which contains the run number (useful for comparing performance across batches of samples), and `typeofSamp` which differentiates between controls and samples of interest. In order to view these tables use `View(cigar_table$cigar_table)` or `View(cigar_table$metadata)`
+
 ## Adding Metadata
 
-Metadata can come from different sources, sometimes the sample ID
-incorporate metadata in their coding system, other times metadata can be
-stored in a different table, having one column specifying the sample ID.
-In the case of the Colombian data set, we will perform the analysis at
-the level of Municipality and in intervals of three months starting from
-the first day of collection of samples. The information of sampling
-location of the samples is incorporated in the sample_id code, while the
-time of collection is in a separate table.
+Metadata would come from different sources, sometimes the sample ID incorporates metadata in their coding system, other times metadata can be stored in a different table, having one column specifying the sample ID. In the case of the Colombian data set, we will perform the analysis at the level of Municipality and in intervals of three months starting from the first day of collection of samples. The information of sampling location of the samples is incorporated in the sample_id code, while the time of collection is in a separate table. Thus for sampling location all codes starting with **"SP0101254"** come from **"Buenaventura"**, samples starting with **"SP0112286"** come from **"Quibdo"**, and samples starting with **"SP0126288"** come from **"Guapi"**. In this data set, there is one sample that has an spelling error in its code, the code is `"SP001254204"`, and we are going to replace it with `"SP012542004"`. Then, to define sampling location we are going to create a new variable in our `metadata` table called `Population` using the function `mutate`.
 
 ```{r 'Adding Population'}
-# Adding pop source code to metadata----
-cigar_table[["metadata"]][["Country"]] = NA
-cigar_table[["metadata"]][cigar_table[["metadata"]][["typeofSamp"]] == "Controls",][["Country"]] = "Controls"
-cigar_table[["metadata"]][grepl("SP", cigar_table[["metadata"]][["samples"]]),][["Country"]] = "Colombia"
-
-# Adding pop source code to metadata----
-cigar_table[["metadata"]][["pop_code"]] = NA
-cigar_table[["metadata"]][cigar_table[["metadata"]][["typeofSamp"]] == "Controls",][["pop_code"]] = "Controls"
-cigar_table[["metadata"]][grepl("SP", cigar_table[["metadata"]][["samples"]]),][["pop_code"]] = substr(cigar_table[["metadata"]][grepl("SP", cigar_table[["metadata"]][["samples"]]),][["samples"]], 1, 9)
 
 # Correcting sample "SP001254204"----
+cigar_object[["metadata"]][cigar_object[["metadata"]][["samples"]] == "SP001254204",][["samples"]] = "SP0101254204"
+rownames(cigar_object$cigar_table) = cigar_object[["metadata"]][["samples"]]
 
-cigar_table[["metadata"]][cigar_table[["metadata"]][["pop_code"]] == "SP0012542",][["pop_code"]] = "SP0101254"
+# Adding Population data----
 
-cigar_table[["metadata"]][["Population"]] = NA
+cigar_object[["metadata"]] %<>% mutate(Population = case_when(
+  grepl('SP0101254',samples) ~ 'Buenaventura',
+  grepl('SP0112286',samples) ~ 'Quibdo',
+  grepl('SP0126288',samples) ~ 'Guapi'
+))
+```
 
-cigar_table[["metadata"]][cigar_table[["metadata"]][["pop_code"]] == "SP0101254",][["Population"]] = "Buenaventura"
-cigar_table[["metadata"]][cigar_table[["metadata"]][["pop_code"]] == "SP0112286",][["Population"]] = "Quibdo"
-cigar_table[["metadata"]][cigar_table[["metadata"]][["pop_code"]] == "SP0126288",][["Population"]] = "Guapi"
-
+Moreover, there are some artifacts that `dada2` pipeline doesn't resolve well like the generation of chimeras (artificial fusion of two different haplotypes during the PCR amplification) in polyclonal samples. That is the case of the alleles `PF3D7_1302900,1G` and `PF3D7_0612900,215A` that are observed in polyclonal infections only. So we are going to proceed to remove both alleles from our `cigar_table`. Additionally, `PvDHFR` locus was amplified in order to detect mixed infections with *Plasmodium vivax*, so we are going to remove this locus too.
+```{r 'Removing artifacts and Pvivax control locus'}
 
 # removing allele PF3D7_1302900,1G----
 # this polymorphism is always present as a minor allele in polygenomic samples, increasing the proportion of polygenomic infections to up to 27%
 
-cigar_table[["cigar_table"]] = cigar_table[["cigar_table"]][,!grepl("PF3D7_1302900,1G", colnames(cigar_table[["cigar_table"]]))]
-cigar_table[["cigar_table"]] = cigar_table[["cigar_table"]][,!grepl("PF3D7_0612900,215A", colnames(cigar_table[["cigar_table"]]))]
+cigar_object[["cigar_table"]] = cigar_object[["cigar_table"]][,!grepl("PF3D7_1302900,1G", colnames(cigar_object[["cigar_table"]]))]
+cigar_object[["cigar_table"]] = cigar_object[["cigar_table"]][,!grepl("PF3D7_0612900,215A", colnames(cigar_object[["cigar_table"]]))]
 
 
-# removing locius PvDHFR----
+# removing locus PvDHFR----
 # this loci belongs to P. vivax
 
-cigar_table[["cigar_table"]] = cigar_table[["cigar_table"]][,!grepl("PvDHFR", colnames(cigar_table[["cigar_table"]]))]
+cigar_object[["cigar_table"]] = cigar_object[["cigar_table"]][,!grepl("PvDHFR", colnames(cigar_object[["cigar_table"]]))]
 
 ```
 
-```{r 'Map of study sites'}
-#library(sp)
-#library(raster)
-#library(maptools)
+Then we will upload a metadata table from an external source. For this purpose we are going to import the file called `metadata.csv` into our R environment. From this table we want to extract the date of beginning of symptoms (`date_of_symp`) to include it in our analysis. Unfortunately, not all sampled individuals has answered that question in the survey, for that reason we are going to impute that information using the date of collection of the sample. Then, we are going to collapse information at the level of month (`month_of_symp`), and we are going to merge our current `metadata` with the `metadata` from the external source. Finally, we are going to impute missing month dates using the month date from a sample located one row above (sample collected just before the sample with missing information). 
+
+```{r 'Adding collection data'}
+
+external_metadata = read.csv("metadata.csv")
+
+external_metadata %<>% mutate(
+  samples = Código,
+  Population = case_when(
+  grepl('SP0101254',samples) ~ 'Buenaventura',
+  grepl('SP0112286',samples) ~ 'Quibdo',
+  grepl('SP0126288',samples) ~ 'Guapi'),
+  date_of_symp = case_when(
+    X2.9..Fecha.inicio.de.síntomas != "" ~ X2.9..Fecha.inicio.de.síntomas,
+    X2.9..Fecha.inicio.de.síntomas == "" ~ X2.3..Fecha.de.reclutamiento.
+ ))
+
+external_metadata %<>% select(samples, Population, date_of_symp)
+external_metadata %<>% mutate(month_of_symp = substr(date_of_symp, 1, 7))
+external_metadata[["group"]] = ifelse(external_metadata$samples %in% cigar_object$metadata$samples, "AMPseq", "noAMPseq")
+
+# Merging metadata
+cigar_object$metadata = merge(cigar_object$metadata, external_metadata[,c('samples', 'date_of_symp', 'month_of_symp')], by = 'samples', all.x = TRUE)
+
+# Imputing missing data with the previous observation
+cigar_object$metadata[which(is.na(cigar_object$metadata$month_of_symp) & cigar_object$metadata$typeofSamp == 'Samples'),][['month_of_symp']] = cigar_object$metadata[which(is.na(cigar_object$metadata$month_of_symp) & cigar_object$metadata$typeofSamp == 'Samples')-1,][['month_of_symp']]
+
+```
+
+```{r 'Ploting the number of collected samples by Municipality over time', echo=FALSE}
+dates = c(paste(rep(2020, 4),c(paste0("0",8:9),10:12), sep ="-"),
+          paste(rep(2021, 12),c(paste0("0",1:9),10:12), sep ="-"),
+          paste(rep(2022, 2),c(paste0("0",1:2)), sep ="-"))
+
+plot_temporal_collection_of_samples = external_metadata %>%
+  filter(!is.na(Population)) %>%
+  group_by(Population, month_of_symp) %>%
+  summarise(nsamples= n())%>%
+  ggplot(aes(x = month_of_symp, y = nsamples, fill = factor(Population,
+                                                              levels = c("Quibdo",
+                                                                         "Buenaventura",
+                                                                         "Guapi"))))+
+  geom_col()+
+  theme_bw()+
+  scale_fill_manual(values = c("firebrick3", "dodgerblue3", "gold3"))+
+  facet_wrap(.~factor(Population,
+                      levels = c("Quibdo",
+                                 "Buenaventura",
+                                 "Guapi")),
+             strip.position = "top", ncol = 1)+
+  labs(y = "Collected samples by PCD",
+       x = "Months")+
+  theme(axis.text = element_text(size = 12),
+        axis.text.x = element_text(angle = 315, vjust = 0),
+        axis.title = element_text(size = 12),
+        strip.text = element_text(size = 12),
+        legend.position =  "none")+
+  scale_alpha_manual(values = c(1,.6))+
+  scale_x_discrete(limits = dates)
+
+```
+
+```{r 'Map of study sites', echo=FALSE}
 library(GADMTools)
-#library(rgdal)
-#library(rlist)
-#library(gstat)
-#library(dismo)
 
-
-# Step 1: Get all shape files from LAC countries at national level----
+# Step 1: Get all shape files from LAC countries at national level
 # SpatialPolygonsDataFrame at country level (level = 0)
 
-
 col0.spldf <- gadm_sp_loadCountries("COL",level = 0, basefile = "./GADMTools/world.rds.files/rds0/")
-col1.spldf <- gadm_sp_loadCountries("COL",level = 1, basefile = "./GADMTools/world.rds.files/rds1/")
+#col1.spldf <- gadm_sp_loadCountries("COL",level = 1, basefile = "./GADMTools/world.rds.files/rds1/")
 col2.spldf <- gadm_sp_loadCountries("COL",level = 2, basefile = "./GADMTools/world.rds.files/rds2/")
+
 
 localities = data.frame(Localities = factor(c("Guapí",
                                               "Buenaventura",
@@ -222,7 +249,6 @@ localities = data.frame(Localities = factor(c("Guapí",
                                    "firebrick3"))
 
 # Step 3: plot the map
-
 
 ## Polygon dot plot of observed G6PDd frequency by LAC country----
 plot_study_sites = ggplot() +
@@ -248,54 +274,7 @@ plot_study_sites = ggplot() +
 
 ```
 
-Then we will upload a metadata table from an external source
-
-```{r 'Adding collection data'}
-
-metadata2 = read.csv("11July22 download.csv")
-
-metadata2[["Population"]] = NA
-
-metadata2[grepl("SP0101254", metadata2[["Código"]]),][["Population"]] = "Buenaventura"
-metadata2[grepl("SP0112286", metadata2[["Código"]]),][["Population"]] = "Quibdo"
-metadata2[grepl("SP0126288", metadata2[["Código"]]),][["Population"]] = "Guapi"
-
-metadata2[['collection_date']] = substr(metadata2$X2.3..Fecha.de.reclutamiento., 1, 7)
-metadata2[is.na(metadata2[['collection_date']]),][['collection_date']] = metadata2[which(is.na(metadata2[['collection_date']])) + 1,][['collection_date']]
-
-metadata2[["group"]] = ifelse(metadata2$Código %in% (metadata$samples), "AMPseq", "noAMPseq")
-
-dates = c(paste(rep(2020, 4),c(paste0("0",8:9),10:12), sep ="-"),
-          paste(rep(2021, 12),c(paste0("0",1:9),10:12), sep ="-"),
-          paste(rep(2022, 2),c(paste0("0",1:2)), sep ="-"))
-
-```
-
-```{r 'Ploting the number of collected samples by Municipality over time'}
-plot_temporal_collection_of_samples = metadata2 %>% filter(!is.na(Population)) %>% group_by(Population, collection_date) %>%
-  summarise(nsamples= n())%>%
-  ggplot(aes(x = collection_date, y = nsamples, fill = factor(Population,
-                                                              levels = c("Quibdo",
-                                                                         "Buenaventura",
-                                                                         "Guapi"))))+
-  geom_col()+
-  theme_bw()+
-  scale_fill_manual(values = c("firebrick3", "dodgerblue3", "gold3"))+
-  facet_wrap(.~factor(Population,
-                      levels = c("Quibdo",
-                                 "Buenaventura",
-                                 "Guapi")),
-             strip.position = "top", ncol = 1)+
-  labs(y = "Collected samples by PCD",
-       x = "Months")+
-  theme(axis.text = element_text(size = 12),
-        axis.text.x = element_text(angle = 315, vjust = 0),
-        axis.title = element_text(size = 12),
-        strip.text = element_text(size = 12),
-        legend.position =  "none")+
-  scale_alpha_manual(values = c(1,.6))+
-  scale_x_discrete(limits = dates)
-
+```{r 'Plot of number of collected samples by Municipality over time whit map', echo=FALSE, warning=FALSE, message=FALSE, fig.width=10, fig.height=5, fig.cap='Figure 1: Number of collected samples by Municipality over time'}
 plot_study_areas = ggdraw()+
   draw_plot(plot_study_sites,
             x = 0,
@@ -316,9 +295,15 @@ ggsave("plot_study_areas.png",
        height = 5,
        dpi = 320)
 
+plot_study_areas
 ```
-
 ## Performance of the genotyping process
+
+A first step in analyzing the genotypic data is to measure the performance of the genotyping process in terms of the proportion of samples amplified by each locus (amplification rate by locus) and the proportion of loci amplified per each sample (amplification rate per sample). In order to perform that task, we are going to convert our cigar_table to a more manageable format called loci_abd format, where amplicons or genes are going to be in columns, samples in rows, and the allele in cigar format is going to be in each cell of the matrix together with the read count of that allele in the sample.
+
+$\begin{array}{c|c:c:c:c} \text{sampleID}&Gene_1&Gene_2&...& Gene_m\\ \hline ID_1 & Allele_{i_{i \in Alleles_{Gene_1}}}\text{:Read count} &&& \\ \hdashline ... &&&&\\ \hdashline ID_n &&&& \end{array}$
+
+For that purpose we are going to use the function `fx_cigar2loci_abd.R`. This function requires 4 arguments. First a `cigar_object` (containing the cigar_table and the metadata). Then `markers`, which is a table with the set of markers and their names (in a column named `amplicon`). This argument is optional, and in case is `NULL`, the name of the amplicons will be extracted from the columns in the `cigar_object`. The next arguments are `min_abd` and `min_ratio`, which are the minimum abundance (minimum read count) required to call an allele and the minimum ratio between the minor and major alleles in a polyclonal sample. By default these two arguments are 10 and 0.1 respectively. This function automatically differentiate between controls and samples of interest, and its output is a list with 6 slots: `loci_abd_table` where the genotypic information of the samples of interest is stored in a loci_abd format; the `metadata` of the samples of interest; `control` with all the information of the controls; `markers` containing the information of the markers such as the chromosome location; and two empty slots required for the next steps which are `loci_performance` and `pop_summary`.
 
 ```{r "Generating a loci-abundance table"}
 # (alleles and abundance will be in cells)
@@ -327,11 +312,13 @@ source("fx_cigar2loci_abd.R")
 
 markers = read.csv("markers.csv")
 
-ampseq = fx_cigar2loci_abd(cigar_table, markers = markers)
+ampseq = fx_cigar2loci_abd(cigar_object, markers = markers, min_abd = 10, min_ratio = .1)
 
 ```
 
 ### Amplification rate by locus
+
+Once the data has been converted to the loci_abd format, we can use the function `fx_loci_amplification_rate` to measure the proportion of samples that have been amplified by each 
 
 ```{r 'Filtering loci of low amplification rate'}
 
@@ -342,41 +329,7 @@ ampseq = fx_loci_amplification_rate(ampseq, threshold = .65)
 
 ```{r 'Ploting loci performance'}
 
-chr_lengths <- c(640851,
-                 947102,
-                 1067971,
-                 1200490,
-                 1343557,
-                 1418242,
-                 1445207,
-                 1472805,
-                 1541735,
-                 1687656,
-                 2038340,
-                 2271494,
-                 2925236,
-                 3291936)
-
 # Plot Amplification rate per loci ----
-
-ampseq$plots$amplification_rate_per_locus = ggplot()+
-  geom_segment(data = data.frame(x = 0, y = 1:14, xend =chr_lengths, yend = 1:14),
-               aes(x=x, y=y, xend=xend, yend=yend), alpha = .5)+
-  
-  geom_point(data = data.frame(Position = markers$pos,
-                               Amplification_rate = 
-                                 ampseq$discarded_loci$loci_performance$loci_ampl_rate,
-                               Chr = as.integer(gsub("(Pf3D7_)|(_v3)", "", markers$chromosome))),
-             aes(x = Position, y = Chr, color = Amplification_rate),
-             pch = "|", size = 5)+
-  theme_bw()+
-  labs(title = "Amplification rate by locus",
-       x = "Chromosome position",
-       y = "Chromosome",
-       color = NULL)+
-  theme(legend.position = c(.9,.4))+
-  scale_y_continuous(breaks = 1:14)+
-  scale_color_continuous(type = "viridis")
 
 plot_locus_amplificatin_rate = ggdraw()+
   draw_plot(ampseq$plots$amplification_rate_per_locus+
@@ -428,6 +381,35 @@ ampseq$plots$samples_amplification_rate+
 #        height = 3.5,
 #        dpi = 320)
 ```
+
+## Molecular surveillance of drug resistance
+
+```{r}
+
+source('fx_haplotypes_respect_to_reference.R')
+
+drug_haplotypes_respect_to_3D7 = fx_haplotypes_respect_to_reference(ampseq)
+
+
+source('fx_drug_resistant_haplotypes.R')
+
+drug_resistant_haplotypes = fx_drug_resistant_haplotypes(ampseq)
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
 
 ### Complexity of infection and Genetic diversity by locus
 
@@ -794,12 +776,9 @@ ggsave("plot_log_poly_by_pop_map.png",
 
 ```{r 'temporal change'}
 
-ampseq$metadata = merge(ampseq$metadata, metadata2[,c("Código","X2.3..Fecha.de.reclutamiento.", "X2.9..Fecha.inicio.de.síntomas")],
-                        by.x = "samples", by.y = "Código", all.x = T)
-
-ampseq$metadata[['collection_date']] = substr(ampseq$metadata$X2.3..Fecha.de.reclutamiento., 1, 7)
-
-ampseq$metadata[is.na(ampseq$metadata[['collection_date']]),][['collection_date']] = ampseq$metadata[which(is.na(ampseq$metadata[['collection_date']])) + 1,][['collection_date']]
+dates = c(paste(rep(2020, 4),c(paste0("0",8:9),10:12), sep ="-"),
+          paste(rep(2021, 12),c(paste0("0",1:9),10:12), sep ="-"),
+          paste(rep(2022, 2),c(paste0("0",1:2)), sep ="-"))
 
 
 plot_temporal_sequenced_samples =
@@ -1201,10 +1180,4 @@ fx_plot_network(pairwise_long_matrix = pairwise_relatednes_l,
                 colors = popcolors)
 ```
 
-## Molecular surveillance of drug resistance
 
-```{r}
-
-drug_resistance = ampseq$metadata
-
-```
