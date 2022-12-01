@@ -463,9 +463,10 @@ loci_object = fx_ampseq2loci(ampseq)
 source("fx_get_relatedness.R")
 
 if(file.exists('pairwise_relatedness_dist_matrix.csv')){
-  pairwise_relatedness = as.matrix(read.csv('pairwise_relatedness_dist_matrix.csv', row.names = 'X'))
+  pairwise_relatedness = as.matrix(read.csv('pairwise_relatedness.csv', row.names = 'X'))
 }else{
   pairwise_relatedness = fx_pairwise_relatedness(loci_object)
+  write.csv(pairwise_relatedness, 'pairwise_relatedness.csv')
 }
 
 ```
