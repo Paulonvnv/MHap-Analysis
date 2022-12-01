@@ -13,7 +13,8 @@ fx_drug_resistant_haplotypes = function(ampseq_object,
                                                      'PF3D7_1343700',
                                                      'PF3D7_1447900'),
                                         gff_file = "reference/3D7/PlasmoDB-59_Pfalciparum3D7.gff",
-                                        fasta_file = "reference/3D7/PlasmoDB-59_Pfalciparum3D7_Genome.fasta"){
+                                        fasta_file = "reference/3D7/PlasmoDB-59_Pfalciparum3D7_Genome.fasta",
+                                        variables = c('samples', 'Population', 'quarter_of_collection')){
   
   drugR_reference_alleles = read.csv(reference_alleles)
   
@@ -374,8 +375,102 @@ fx_drug_resistant_haplotypes = function(ampseq_object,
     }
   }
   
+  
+  mon_aacigar_table = aacigar_table[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) == 0),]
+  
+  poly_aacigar_table = aacigar_table[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) != 0),]
+  
+  poly1 = gsub('\\|([a-z])', '', poly_aacigar_table, ignore.case = T)
+  
+  poly2 = gsub('([a-z]\\|)', '', poly_aacigar_table, ignore.case = T)
+  
+  extended_aacigar_table = rbind(mon_aacigar_table,
+                                 poly1,
+                                 poly2)
+  
+  extended_aacigar_table = data.frame(samples = rownames(extended_aacigar_table), extended_aacigar_table)
+  
+  metadata = ampseq_object$metadata[,variables]
+  
+  names(metadata) = c('samples', 'var1', 'var2')
+  
+  extended_aacigar_table = merge(extended_aacigar_table,
+                                 metadata,
+                                 by = 'samples',
+                                 all.x = TRUE)
+  
+  extended_aacigar_table %<>% pivot_longer(cols = all_of(gene_ids),
+                                           names_to = 'gene_ids',
+                                           values_to = 'haplotype')
+  
+  extended_aacigar_table$gene_names = NA
+  
+  for(gene in 1:length(gene_ids)){
+    extended_aacigar_table[extended_aacigar_table$gene_ids == gene_ids[gene],][['gene_names']] = gene_names[gene]
+    
+  }
+  
+  
+  samples_pop_quarter = extended_aacigar_table %>% group_by(var1, var2)%>%
+    summarise(count = nlevels(as.factor(samples))) 
+  
+  extended_aacigar_table %>% group_by(var1, var2)%>%
+    summarise(count = nlevels(as.factor(samples)))
+  
+  haplotype_counts = extended_aacigar_table %>% group_by(gene_names, var1, var2, haplotype)%>%
+    summarise(count = n())
+  
+  haplotype_counts$freq = NA
+  
+  for(gene in levels(as.factor(haplotype_counts$gene_names))){
+    for(Pop in levels(as.factor(haplotype_counts[haplotype_counts$gene_names == gene,][['var1']]))){
+      for(date in levels(as.factor(haplotype_counts[haplotype_counts$gene_names == gene&
+                                                       haplotype_counts$var1 == Pop,][['var2']]))){
+        
+        haplotype_counts[haplotype_counts$gene_names == gene&
+                           haplotype_counts$var1 == Pop&
+                           haplotype_counts$var2 == date,][['freq']] = haplotype_counts[haplotype_counts$gene_names == gene&
+                                                                                                              haplotype_counts$var1 == Pop&
+                                                                                                              haplotype_counts$var2 == date,][['count']]/
+          samples_pop_quarter[samples_pop_quarter$var1 == Pop&
+                                samples_pop_quarter$var2 == date,][['count']]
+        
+      }
+    }
+  }
+  
+  haplotype_counts %<>% mutate(gene_haplo = paste(gene_names, haplotype, sep = ": "))
+  
+  nhaplo = haplotype_counts %>% group_by(gene_names)%>% summarise(nhaplo = nlevels(as.factor(haplotype))) 
+  
+  max_ncolors = brewer.pal(max(nhaplo$nhaplo), 'Set3')
+  
+  colors = NULL
+  
+  for(n in 1:nrow(nhaplo)){
+    colors = c(colors, max_ncolors[1:nhaplo[n,][['nhaplo']]])
+    
+  }
+  
+  haplo_freq_plot = haplotype_counts%>%
+    ggplot(aes(y = freq, x = var2, fill  = gene_haplo)) +
+    geom_col()+
+    facet_grid(var1 ~ gene_names)+
+    scale_fill_manual(values = colors)+
+    theme_bw()+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5))+
+    labs(y = 'Frequency in population',
+         x = 'Date of Collection',
+         fill = 'Gene: Haplotype')
+  
+  
+  names(haplotype_counts) = c(names(haplotype_counts)[1], variables[2:3], names(haplotype_counts)[-1:-3])
+  
+  
   drug_resistant_haplotypes = list(aacigar_table = aacigar_table,
-                                   phenotype_table = phenotype_table)
+                                   phenotype_table = phenotype_table,
+                                   haplotype_counts =haplotype_counts,
+                                   haplo_freq_plot = haplo_freq_plot)
   
   return(drug_resistant_haplotypes)
   

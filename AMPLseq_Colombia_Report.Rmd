@@ -29,7 +29,7 @@ In this tutorial we will use a Colombian data set as a example. These samples co
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Importing and handling tables in CIGAR format in R environment
+## 1. Importing and handling tables in CIGAR format in R environment
 
 Our first step will be to call all required packages in the R environment:
 
@@ -105,6 +105,12 @@ if(!require(RColorBrewer)){
   require(RColorBrewer)
 }
 
+
+if(!require(GADMTools)){
+  install.packages('GADMTools')
+  require(GADMTools)
+}
+
 ```
 
 As we mentioned earlier, this tutorial start with .tsv table in CIGAR format that has been generated with a previous pipeline created in the lab. The output of this pipeline has the following structure:
@@ -126,11 +132,11 @@ cigar_object = fx_read_cigar_tables(paths = "colombia/", sample_id_pattern = "SP
 
 ```
 
-This function generates a list containing two data.frames, 1) a `cigar_table`, where genotyping information is stored in cigar format; and 2) a `metadata` table with 3 variables (columns), `samples` which contains samples Id's, `run` which contains the run number (useful for comparing performance across batches of samples), and `typeofSamp` which differentiates between controls and samples of interest. In order to view these tables use `View(cigar_table$cigar_table)` or `View(cigar_table$metadata)`
+This function generates a list containing two data.frames, 1) a `cigar_table`, where genotyping information is stored in cigar format; and 2) a `metadata` table with 3 variables (columns), `samples` which contains samples Id's, `run` which contains the run number (useful for comparing performance across batches of samples), and `typeofSamp` which differentiates between controls and samples of interest. In order to view these tables use `View(cigar_table$cigar_table)` or `View(cigar_table$metadata)` in the console.
 
-## Adding Metadata
+## 2. Adding Metadata
 
-Metadata would come from different sources, sometimes the sample ID incorporates metadata in their coding system, other times metadata can be stored in a different table, having one column specifying the sample ID. In the case of the Colombian data set, we will perform the analysis at the level of Municipality and in intervals of three months starting from the first day of collection of samples. The information of sampling location of the samples is incorporated in the sample_id code, while the time of collection is in a separate table. Thus for sampling location all codes starting with **"SP0101254"** come from **"Buenaventura"**, samples starting with **"SP0112286"** come from **"Quibdo"**, and samples starting with **"SP0126288"** come from **"Guapi"**. In this data set, there is one sample that has an spelling error in its code, the code is `"SP001254204"`, and we are going to replace it with `"SP012542004"`. Then, to define sampling location we are going to create a new variable in our `metadata` table called `Population` using the function `mutate`.
+Metadata would come from different sources, sometimes the sample ID incorporates metadata in their coding system, other times metadata can be stored in a different table, having one column specifying the sample ID. In the case of the Colombian data set, we will perform the analysis at the level of Municipality and in intervals of three months starting from the first day of collection of samples. The information of sampling location of the samples is incorporated in the `sample_id code`, while the time of collection is in a separate table. Thus for sampling location all codes starting with **"SP0101254"** come from **"Buenaventura"**, samples starting with **"SP0112286"** come from **"Quibdo"**, and samples starting with **"SP0126288"** come from **"Guapi"**. In this data set, there is one sample that has an spelling error in its code, the code is `"SP001254204"`, and we are going to replace it with `"SP012542004"`. Then, to define sampling location we are going to create a new variable in our `metadata` table called `Population` using the function `mutate`.
 
 ```{r 'Adding Population'}
 
@@ -148,6 +154,7 @@ cigar_object[["metadata"]] %<>% mutate(Population = case_when(
 ```
 
 Moreover, there are some artifacts that `dada2` pipeline doesn't resolve well like the generation of chimeras (artificial fusion of two different haplotypes during the PCR amplification) in polyclonal samples. That is the case of the alleles `PF3D7_1302900,1G` and `PF3D7_0612900,215A` that are observed in polyclonal infections only. So we are going to proceed to remove both alleles from our `cigar_table`. Additionally, `PvDHFR` locus was amplified in order to detect mixed infections with *Plasmodium vivax*, so we are going to remove this locus too.
+
 ```{r 'Removing artifacts and Pvivax control locus'}
 
 # removing allele PF3D7_1302900,1G----
@@ -164,7 +171,7 @@ cigar_object[["cigar_table"]] = cigar_object[["cigar_table"]][,!grepl("PvDHFR", 
 
 ```
 
-Then we will upload a metadata table from an external source. For this purpose we are going to import the file called `metadata.csv` into our R environment. From this table we want to extract the date of beginning of symptoms (`date_of_symp`) to include it in our analysis. Unfortunately, not all sampled individuals has answered that question in the survey, for that reason we are going to impute that information using the date of collection of the sample. Then, we are going to collapse information at the level of month (`month_of_symp`), and we are going to merge our current `metadata` with the `metadata` from the external source. Finally, we are going to impute missing month dates using the month date from a sample located one row above (sample collected just before the sample with missing information). 
+Then we will upload a metadata table from an external source. For this purpose we are going to import the file called `metadata.csv` into our R environment. From this table we want to extract the date of beginning of symptoms (`date_of_symp`) to include it in our analysis. Unfortunately, not all sampled individuals has answered that question in the survey, for that reason we are going to impute that information using the date of collection of the sample. Then, we are going to collapse information at the level of month (`month_of_symp`), and we are going to merge our current `metadata` with the `metadata` from the external source. Finally, we are going to impute missing month dates using the month date from a sample located one row above (sample collected just before the sample with missing information).
 
 ```{r 'Adding collection data'}
 
@@ -176,20 +183,27 @@ external_metadata %<>% mutate(
   grepl('SP0101254',samples) ~ 'Buenaventura',
   grepl('SP0112286',samples) ~ 'Quibdo',
   grepl('SP0126288',samples) ~ 'Guapi'),
-  date_of_symp = case_when(
-    X2.9..Fecha.inicio.de.síntomas != "" ~ X2.9..Fecha.inicio.de.síntomas,
-    X2.9..Fecha.inicio.de.síntomas == "" ~ X2.3..Fecha.de.reclutamiento.
- ))
+  date_of_symp = X2.9..Fecha.inicio.de.síntomas,
+  date_of_collection = X2.3..Fecha.de.reclutamiento.
+ )
 
-external_metadata %<>% select(samples, Population, date_of_symp)
-external_metadata %<>% mutate(month_of_symp = substr(date_of_symp, 1, 7))
+external_metadata %<>% select(samples, Population, date_of_collection, date_of_symp)
+external_metadata %<>% mutate(month_of_collection = substr(date_of_collection, 1, 7))
+
+
 external_metadata[["group"]] = ifelse(external_metadata$samples %in% cigar_object$metadata$samples, "AMPseq", "noAMPseq")
 
 # Merging metadata
-cigar_object$metadata = merge(cigar_object$metadata, external_metadata[,c('samples', 'date_of_symp', 'month_of_symp')], by = 'samples', all.x = TRUE)
+cigar_object$metadata = merge(cigar_object$metadata, external_metadata[,c('samples', 'date_of_collection', 'date_of_symp', 'month_of_collection')], by = 'samples', all.x = TRUE)
 
 # Imputing missing data with the previous observation
-cigar_object$metadata[which(is.na(cigar_object$metadata$month_of_symp) & cigar_object$metadata$typeofSamp == 'Samples'),][['month_of_symp']] = cigar_object$metadata[which(is.na(cigar_object$metadata$month_of_symp) & cigar_object$metadata$typeofSamp == 'Samples')-1,][['month_of_symp']]
+cigar_object$metadata[which(is.na(cigar_object$metadata$month_of_collection) & cigar_object$metadata$typeofSamp == 'Samples'),][['month_of_collection']] = cigar_object$metadata[which(is.na(cigar_object$metadata$month_of_collection) & cigar_object$metadata$typeofSamp == 'Samples') - 1,][['month_of_collection']]
+
+cigar_object$metadata[which(is.na(cigar_object$metadata$date_of_collection) & cigar_object$metadata$typeofSamp == 'Samples'),][['date_of_collection']] = cigar_object$metadata[which(is.na(cigar_object$metadata$date_of_collection) & cigar_object$metadata$typeofSamp == 'Samples') - 1,][['date_of_collection']]
+
+# Grouping data by quarters---
+
+cigar_object$metadata$quarter_of_collection = paste(substr(cigar_object$metadata$date_of_collection, 1,4), quarters(as.Date(cigar_object$metadata$date_of_collection)), sep = "-")
 
 ```
 
@@ -200,9 +214,9 @@ dates = c(paste(rep(2020, 4),c(paste0("0",8:9),10:12), sep ="-"),
 
 plot_temporal_collection_of_samples = external_metadata %>%
   filter(!is.na(Population)) %>%
-  group_by(Population, month_of_symp) %>%
+  group_by(Population, month_of_collection) %>%
   summarise(nsamples= n())%>%
-  ggplot(aes(x = month_of_symp, y = nsamples, fill = factor(Population,
+  ggplot(aes(x = month_of_collection, y = nsamples, fill = factor(Population,
                                                               levels = c("Quibdo",
                                                                          "Buenaventura",
                                                                          "Guapi"))))+
@@ -227,13 +241,12 @@ plot_temporal_collection_of_samples = external_metadata %>%
 ```
 
 ```{r 'Map of study sites', echo=FALSE}
-library(GADMTools)
 
 # Step 1: Get all shape files from LAC countries at national level
 # SpatialPolygonsDataFrame at country level (level = 0)
 
 col0.spldf <- gadm_sp_loadCountries("COL",level = 0, basefile = "./GADMTools/world.rds.files/rds0/")
-#col1.spldf <- gadm_sp_loadCountries("COL",level = 1, basefile = "./GADMTools/world.rds.files/rds1/")
+
 col2.spldf <- gadm_sp_loadCountries("COL",level = 2, basefile = "./GADMTools/world.rds.files/rds2/")
 
 
@@ -287,23 +300,26 @@ plot_study_areas = ggdraw()+
             width = .5,
             height = 1)
 
-ggsave("plot_study_areas.png",
-       plot_study_areas,
-       device = "png",
-       units = "in",
-       width = 10,
-       height = 5,
-       dpi = 320)
+# ggsave("plot_study_areas.png",
+#        plot_study_areas,
+#        device = "png",
+#        units = "in",
+#        width = 10,
+#        height = 5,
+#        dpi = 320)
 
 plot_study_areas
 ```
+
+\<p style="font-size:8pt; font-style:italic"\>\*\*Figure 1:\*\* Number of collected samples by Municipality over time.\</p\>
+
 ## Performance of the genotyping process
 
 A first step in analyzing the genotypic data is to measure the performance of the genotyping process in terms of the proportion of samples amplified by each locus (amplification rate by locus) and the proportion of loci amplified per each sample (amplification rate per sample). In order to perform that task, we are going to convert our cigar_table to a more manageable format called loci_abd format, where amplicons or genes are going to be in columns, samples in rows, and the allele in cigar format is going to be in each cell of the matrix together with the read count of that allele in the sample.
 
 $\begin{array}{c|c:c:c:c} \text{sampleID}&Gene_1&Gene_2&...& Gene_m\\ \hline ID_1 & Allele_{i_{i \in Alleles_{Gene_1}}}\text{:Read count} &&& \\ \hdashline ... &&&&\\ \hdashline ID_n &&&& \end{array}$
 
-For that purpose we are going to use the function `fx_cigar2loci_abd.R`. This function requires 4 arguments. First a `cigar_object` (containing the cigar_table and the metadata). Then `markers`, which is a table with the set of markers and their names (in a column named `amplicon`). This argument is optional, and in case is `NULL`, the name of the amplicons will be extracted from the columns in the `cigar_object`. The next arguments are `min_abd` and `min_ratio`, which are the minimum abundance (minimum read count) required to call an allele and the minimum ratio between the minor and major alleles in a polyclonal sample. By default these two arguments are 10 and 0.1 respectively. This function automatically differentiate between controls and samples of interest, and its output is a list with 6 slots: `loci_abd_table` where the genotypic information of the samples of interest is stored in a loci_abd format; the `metadata` of the samples of interest; `control` with all the information of the controls; `markers` containing the information of the markers such as the chromosome location; and two empty slots required for the next steps which are `loci_performance` and `pop_summary`.
+For that purpose we are going to use the function `fx_cigar2loci_abd.R`. This function requires 4 arguments. First a `cigar_object` (containing the cigar_table and the metadata). Then `markers`, which is a table with the set of markers and their names (in a column named `amplicon`). This argument is optional, and in case is `NULL`, the name of the amplicons will be extracted from the columns in the `cigar_object`, but information regarding chormosome location and length of the amplicon will be missing. The next arguments are `min_abd` and `min_ratio`, which are the minimum abundance (minimum read count) required to call an allele and the minimum ratio between the minor and major alleles in a polyclonal sample. By default these two arguments are 10 and 0.1 respectively. This function automatically differentiate between controls and samples of interest, and its output is a `ampseq_object` list with 6 slots: `loci_abd_table` where the genotypic information of the samples of interest is stored in a loci_abd format; the `metadata` of the samples of interest; `controls` with all the information of the controls; `markers` containing the information of the markers such as the chromosome location; and two empty slots required for the next steps which are `loci_performance` and `pop_summary`.
 
 ```{r "Generating a loci-abundance table"}
 # (alleles and abundance will be in cells)
@@ -318,17 +334,19 @@ ampseq = fx_cigar2loci_abd(cigar_object, markers = markers, min_abd = 10, min_ra
 
 ### Amplification rate by locus
 
-Once the data has been converted to the loci_abd format, we can use the function `fx_loci_amplification_rate` to measure the proportion of samples that have been amplified by each 
+Once the data has been converted to the loci_abd format, we can use the function `fx_loci_amplification_rate` to measure the proportion of samples that have been amplified by each amplicon marker. This function requires two arguments, the `ampseq_object` and `threshold`, which defines the minimum proportion of samples that a marker should amplify in order to be keep it for further analysis (default 0.65). All markers below this `threshold` will be discarded.
 
 ```{r 'Filtering loci of low amplification rate'}
 
 source("fx_loci_amplification_rate.R")
 
 ampseq = fx_loci_amplification_rate(ampseq, threshold = .65)
+
 ```
 
-```{r 'Ploting loci performance'}
+Thus in this data set `r ncol(ampseq$loci_abd_table)` loci had an amplification rate above .65, and `r ncol(ampseq$discarded_loci$loci_abd_table)` loci were discarded. All discarded loci are stored in the slot `discarded_loci` within the `ampseq_object`. The discarded loci were: `r paste(colnames(ampseq$discarded_loci$loci_abd_table), collapse = ', ')`.
 
+```{r 'Ploting loci performance'}
 # Plot Amplification rate per loci ----
 
 plot_locus_amplificatin_rate = ggdraw()+
@@ -350,19 +368,22 @@ plot_locus_amplificatin_rate = ggdraw()+
 
 plot_locus_amplificatin_rate
 
-ggsave("plot_locus_amplificatin_rate.png",
-       plot_locus_amplificatin_rate,
-       device = "png",
-       units = "in",
-       width = 7,
-       height = 7,
-       dpi = 320)
+# ggsave("plot_locus_amplificatin_rate.png",
+#        plot_locus_amplificatin_rate,
+#        device = "png",
+#        units = "in",
+#        width = 7,
+#        height = 7,
+#        dpi = 320)
 ```
+
+\<p style="font-size:8pt; font-style:italic"\>\*\*Figure 2:\*\* Proportion of amplified samples per locus. Top figure shows the distribution of the amplification rate (or proportion of amplified samples) of loci, with the number of loci in the y-axis and the amplification rate in the x-axis. Bottom figure shows the the chromosome location of each locus (chromosomes in y-axis and position in the x-axis) and the gradient color represents its amplification rate.\</p\>
 
 ### Amplification rate by sample
 
-```{r 'Filtering samples of low amplification rate'}
+The next step is to measure the proportion of loci amplified per each sample, also called the amplification rate of the samples. For that purpose we are going to use the function `fx_sample_amplification_rate` that also requires only two arguments, the `ampseq_object` and a `threshold`, which is the minimum proportion of loci that a sample should amplified (by default 0.8).
 
+```{r 'Filtering samples of low amplification rate'}
 source("fx_sample_amplification_rate.R")
 
 ampseq = fx_sample_amplification_rate(ampseq)
@@ -370,7 +391,6 @@ ampseq = fx_sample_amplification_rate(ampseq)
 ampseq$plots$samples_amplification_rate+
          theme(axis.text = element_text(size = 12),
                axis.title = element_text(size = 12))
-
 # ggsave("plot_sample_amplificatin_rate.png",
 #        ampseq$plots$samples_amplification_rate+
 #          theme(axis.text = element_text(size = 12),
@@ -381,146 +401,75 @@ ampseq$plots$samples_amplification_rate+
 #        height = 3.5,
 #        dpi = 320)
 ```
+\<p style="font-size:8pt; font-style:italic"\>\*\*Figure 3:\*\* Proportion of amplified loci per sample. The figure shows the distribution of the amplification rate (or proportion of amplified loci) of the samples, with the number of samples in the y-axis and the amplification rate in the x-axis.\</p\>
 
 ## Molecular surveillance of drug resistance
 
-```{r}
+Surveillance of polymorphisms or allelic variants associated with resistance against antimalarials is of the utmost importance in public health. That is why our panel of markers includes 5 genes (9 markers in total, some genes are genotyped by more than one marker) that have polymorphisms associated with antimalarial resistance. In this section we will identify the different haplotypes of these genes present in our data set, and we will determine the frequency of each haplotype in each study area and in each quarter of the year. For this we will use the function `fx_drug_resistant_haplotypes` which has 7 arguments. The first argument is the `ampseq_object`. The second is a table with the reference alleles for each gene, and the polymorphisms associated with resistance. The structure of this table is as follows:
 
-source('fx_haplotypes_respect_to_reference.R')
+$$\begin{array}{c|c:c:c} \text{Chromosome} & \text{Gene_ID} & \text{Description} & \text{Mutation} & \text{Anotation} \\ \text{Pf3D7_04_v3} & \text{PF3D7_0417200} & dhfr & \text{N51I} & \text{Pyrimethamine resistance} \\ ... \end{array}$$
 
-drug_haplotypes_respect_to_3D7 = fx_haplotypes_respect_to_reference(ampseq)
+Where the mutation describes the reference amino acid (sensitive to the drug), the position in the amino acid chain, and finally the amino acid associated with resistance.
 
+The third and fourth arguments refer to the common name of the gene (or the name by which it is identified in the `markers` table in the `ampseq_object`) and the gene ID in the gff file of the referential strain (in this case strain 3D7). The fifth and sixth arguments are the .gff and .fasta files of the genome of the reference strain, and the last argument, `variables`, is a vector that has the columns of the `metadata` table that will be used to define the subpopulations and generate the report graph. For this particular example we will define as `variables = c('samples', 'Population', 'quarter_of_collection')`, where `samples`, is the column that we will use to map the data, `Population` is the column to define the area of study, and `quarter_of_collection` defines the time scale.
 
+The function generates a list with 3 tables and a graph. The first table contains the haplotypes found in each sample (rows) for each gene (columns). Each number in the haplotype indicates a position in the amino acid chain, the letter before the number indicates the reference allele (with sensitive phenotype), and the letter after the number is the allele observed in the sample. If the letters are in capital letters, that allele in that position has been previously reported as resistant, whereas the letters in lower case indicate that it is the first time that said position has been reported as polymorphic. In case the sample is polyclonal, each allele observed is separated by the following symbol `|`, and the order in which they are reported is based on their read count. Null data, that is, sections of the gene that have not been amplified, are completed with the question mark `?`.
+
+The second table contains the inferred phenotype for each sample (rows) for each gene (columns). The third table contains the count of each haplotype in the population (number of times observed) and its frequency in the subpopulation (defined based on geographic and temporal information). It is important to note that polyclonal samples are used for this calculation, so the sum of frequencies may be greater than unity in some cases.
+
+```{r 'Molecular surveillance of drug resistance'}
 source('fx_drug_resistant_haplotypes.R')
 
-drug_resistant_haplotypes = fx_drug_resistant_haplotypes(ampseq)
+drug_resistant_haplotypes = fx_drug_resistant_haplotypes(ampseq,
+                                                         reference_alleles = 'drugR_alleles.csv',
+                                        gene_names = c('PfDHFR',
+                                                       'PfMDR1',
+                                                       'PfDHPS',
+                                                       'PfKelch13',
+                                                       'PF3D7_1447900'),
+                                        gene_ids = c('PF3D7_0417200',
+                                                     'PF3D7_0523000',
+                                                     'PF3D7_0810800',
+                                                     'PF3D7_1343700',
+                                                     'PF3D7_1447900'),
+                                        gff_file = "reference/3D7/PlasmoDB-59_Pfalciparum3D7.gff",
+                                        fasta_file = "reference/3D7/PlasmoDB-59_Pfalciparum3D7_Genome.fasta",
+                                        variables = c('samples', 'Population', 'quarter_of_collection'))
 
+blues = brewer.pal(9, 'Blues')
+reds = brewer.pal(9, 'Reds')
 
-
-
+drug_resistant_haplotypes$haplo_freq_plot+
+  scale_fill_manual(values = c(
+    blues[c(3, 8)], reds[3], # MDR2
+    reds[c(8,5,3)], blues[c(8,3)], # DFHR
+    blues[c(2, 4, 3, 8)], reds[8], # DHPS
+    blues[8], #K13
+    blues[c(2,3)], reds[c(5,3,8)] # MDR1
+  ))
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-### Complexity of infection and Genetic diversity by locus
-
-```{r "Defining clonality of the samples"}
-
-source("fx_get_polygenomic.R")
-ampseq = fx_get_polygenomic(ampseq_object = ampseq, strata = "Population")
-
-
-
-```
-
-```{r 'getting genetic diversity by loci'}
-
-source("fx_loci_diversity.R")
-
-ampseq$loci_performance = cbind(ampseq$loci_performance,fx_loci_diversity(ampseq$loci_abd_table, variance = TRUE))
-```
-
-```{r 'Plot proportion of poluclonal infections and cardinality per locus'}
-# Plot Proportion of polygenomic infections detected per loci ----
-
-plot_prop_poly_per_locus = ggplot()+
-  geom_segment(data = data.frame(x = 0, y = 1:14, xend =chr_lengths, yend = 1:14),
-               aes(x=x, y=y, xend=xend, yend=yend), alpha = .5)+
-  geom_point(data = data.frame(Position = ampseq$markers$pos,
-                               Prop_of_polygenomic = ampseq$loci_performance$prop_poly_detected,
-                               Chr = as.integer(gsub("(Pf3D7_)|(_v3)", "", ampseq$markers$chromosome))),
-             aes(x = Position, y = Chr, color = Prop_of_polygenomic),
-             pch = "|", size = 5)+
-  theme_bw()+
-  labs(title = "Poportion of polyclonal infections detected",
-       x = "Chromosome position",
-       y = "Chromosome",
-       color = NULL)+
-  theme(legend.position = c(.9,.4))+
-  scale_y_continuous(breaks = 1:14)+
-  scale_color_continuous(type = "viridis")+
-  theme(axis.text = element_text(size = 12),
-        axis.title = element_text(size = 12),
-        legend.text = element_text(size = 12))
-
-ggsave("plot_prop_poly_per_locus.png",
-       plot_prop_poly_per_locus,
-       device = "png",
-       units = "in",
-       width = 7,
-       height = 3.5,
-       dpi = 320)
-
-# Plot Cardinality per loci ----
-
-plot_cardinality_per_locus = ggplot()+
-  geom_segment(data = data.frame(x = 0, y = 1:14, xend =chr_lengths, yend = 1:14),
-               aes(x=x, y=y, xend=xend, yend=yend), alpha = .5)+
-  geom_point(data = data.frame(Position = ampseq$markers$pos,
-                               eff_cardinality = ampseq$loci_performance$na.e,
-                               Chr = as.integer(gsub("(Pf3D7_)|(_v3)", "", ampseq$markers$chromosome))),
-             aes(x = Position, y = Chr, color = eff_cardinality),
-             pch = "|", size = 5)+
-  theme_bw()+
-  labs(title = "Effective cardinality",
-       x = "Chromosome position",
-       y = "Chromosome",
-       color = NULL)+
-  theme(legend.position = c(.9,.4))+
-  scale_y_continuous(breaks = 1:14)+
-  scale_color_continuous(type = "viridis")+
-  theme(axis.text = element_text(size = 12),
-        axis.title = element_text(size = 12),
-        legend.text = element_text(size = 12))
-
-ggsave("plot_cardinality_per_locus.png",
-       plot_cardinality_per_locus,
-       device = "png",
-       units = "in",
-       width = 7,
-       height = 3.5,
-       dpi = 320)
-```
+\<p style="font-size:8pt; font-style:italic"\>\*\*Figure 4:\*\* Frequency of haplotypes of genes associated with drug resistance. y-axis shows the frequency in the sub-population, x-axis shows the quarter of the year where the sample was collected, rows panles corresponds to the three study areas, and column panels represents each genotyped gene. Colors were assigned based on the possible phenotype, dark blue indicates sensitive, while dark red indicates resistance. Light colors where assigned for incomplete information.\</p\>
 
 ## Measuring geographic connectivity
 
-```{r}
+```{r 'generating the loci_object'}
 # generating the loci_object----
-
 source("fx_ampseq2loci.R")
-
 loci_object = fx_ampseq2loci(ampseq)
-
 ```
 
-```{r}
+```{r 'Estimating relatedness'}
 # measuring relatedness----
 source("fx_get_relatedness.R")
 
-pairwise_relatedness = fx_pairwise_relatedness(loci_object)
-
-pairwise_dist = as.dist((1 - pairwise_relatedness)*100)
-
-hist(pairwise_relatedness)
-
-```
-
-```{r 'Permanova'}
-
-# PERMANOVA by population
-
-permanova_result = adonis2(pairwise_dist ~ Population, data = ampseq$metadata, parallel = 8)
+if(file.exists('pairwise_relatedness_dist_matrix.csv')){
+  pairwise_relatedness = as.matrix(read.csv('pairwise_relatedness_dist_matrix.csv', row.names = 'X'))
+}else{
+  pairwise_relatedness = fx_pairwise_relatedness(loci_object)
+}
 
 ```
+
 
 ```{r 'Connectivity'}
 pairwise_relatednes_l = data.frame(Yi = rownames(pairwise_relatedness), pairwise_relatedness)
@@ -694,6 +643,90 @@ fx_plot_network(pairwise_long_matrix = pairwise_relatednes_l,
 ```
 
 ## Monitoring transmission intensity
+
+### Complexity of infection and Genetic diversity by locus
+
+```{r "Defining clonality of the samples"}
+
+source("fx_get_polygenomic.R")
+ampseq = fx_get_polygenomic(ampseq_object = ampseq, strata = "Population")
+
+
+
+```
+
+```{r 'getting genetic diversity by loci'}
+
+source("fx_loci_diversity.R")
+
+ampseq$loci_performance = cbind(ampseq$loci_performance,fx_loci_diversity(ampseq$loci_abd_table, variance = TRUE))
+```
+
+```{r 'Plot proportion of poluclonal infections and cardinality per locus'}
+# Plot Proportion of polygenomic infections detected per loci ----
+
+plot_prop_poly_per_locus = ggplot()+
+  geom_segment(data = data.frame(x = 0, y = 1:14, xend =chr_lengths, yend = 1:14),
+               aes(x=x, y=y, xend=xend, yend=yend), alpha = .5)+
+  geom_point(data = data.frame(Position = ampseq$markers$pos,
+                               Prop_of_polygenomic = ampseq$loci_performance$prop_poly_detected,
+                               Chr = as.integer(gsub("(Pf3D7_)|(_v3)", "", ampseq$markers$chromosome))),
+             aes(x = Position, y = Chr, color = Prop_of_polygenomic),
+             pch = "|", size = 5)+
+  theme_bw()+
+  labs(title = "Poportion of polyclonal infections detected",
+       x = "Chromosome position",
+       y = "Chromosome",
+       color = NULL)+
+  theme(legend.position = c(.9,.4))+
+  scale_y_continuous(breaks = 1:14)+
+  scale_color_continuous(type = "viridis")+
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 12),
+        legend.text = element_text(size = 12))
+
+ggsave("plot_prop_poly_per_locus.png",
+       plot_prop_poly_per_locus,
+       device = "png",
+       units = "in",
+       width = 7,
+       height = 3.5,
+       dpi = 320)
+
+# Plot Cardinality per loci ----
+
+plot_cardinality_per_locus = ggplot()+
+  geom_segment(data = data.frame(x = 0, y = 1:14, xend =chr_lengths, yend = 1:14),
+               aes(x=x, y=y, xend=xend, yend=yend), alpha = .5)+
+  geom_point(data = data.frame(Position = ampseq$markers$pos,
+                               eff_cardinality = ampseq$loci_performance$na.e,
+                               Chr = as.integer(gsub("(Pf3D7_)|(_v3)", "", ampseq$markers$chromosome))),
+             aes(x = Position, y = Chr, color = eff_cardinality),
+             pch = "|", size = 5)+
+  theme_bw()+
+  labs(title = "Effective cardinality",
+       x = "Chromosome position",
+       y = "Chromosome",
+       color = NULL)+
+  theme(legend.position = c(.9,.4))+
+  scale_y_continuous(breaks = 1:14)+
+  scale_color_continuous(type = "viridis")+
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 12),
+        legend.text = element_text(size = 12))
+
+ggsave("plot_cardinality_per_locus.png",
+       plot_cardinality_per_locus,
+       device = "png",
+       units = "in",
+       width = 7,
+       height = 3.5,
+       dpi = 320)
+```
+
+
+
+
 
 ### Complexity of infection and transmission
 
@@ -1179,5 +1212,3 @@ fx_plot_network(pairwise_long_matrix = pairwise_relatednes_l,
                 levels = poplevels,
                 colors = popcolors)
 ```
-
-
