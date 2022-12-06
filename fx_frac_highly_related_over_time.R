@@ -1,9 +1,9 @@
 
-fx_plot_frac_highly_related = function(relatedness_matrix = pairwise_relatedness,
-                                      metadata = ampseq$metadata,
-                                      Population = 'Population',
-                                      fill_color = c("dodgerblue3",  "firebrick3", "gold3", "gray50", "gray50", "gray50"),
-                                      threshold = 0.99){
+fx_plot_frac_highly_related_over_time = function(relatedness_matrix = pairwise_relatedness,
+                                       metadata = ampseq$metadata,
+                                       Population = c('Population', 'quarter_of_collection'),
+                                       fill_color = c("dodgerblue3",  "firebrick3", "gold3", "gray50", "gray50", "gray50"),
+                                       threshold = 0.99){
   
   pairwise_relatednes_l = data.frame(Yi = rownames(relatedness_matrix), relatedness_matrix)
   
