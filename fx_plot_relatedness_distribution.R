@@ -14,7 +14,7 @@ fx_plot_relatedness_distribution = function(relatedness_matrix = pairwise_relate
   
   pairwise_relatednes_l %<>% filter(Yi != Yj)
   
-  pairwise_relatednes_l$Pop_comparisson = apply(pairwise_relatednes_l, 1, function(x){
+  pairwise_relatednes_l$Pop_comparison = apply(pairwise_relatednes_l, 1, function(x){
     
     ifelse(metadata[metadata[['samples']] == x['Yi'],][[Population]] == 
        metadata[metadata[['samples']] == x['Yj'],][[Population]],
@@ -25,8 +25,8 @@ fx_plot_relatedness_distribution = function(relatedness_matrix = pairwise_relate
   
   
   pairwise_relatednes_l %<>% mutate(Type_of_comparisson = case_when(
-    grepl("-",Pop_comparisson) ~ "Between",
-    !grepl("-",Pop_comparisson) ~ "Within"
+    grepl("-",Pop_comparison) ~ "Between",
+    !grepl("-",Pop_comparison) ~ "Within"
   ))
   
   pairwise_relatednes_l$Pop_comparisson = factor(pairwise_relatednes_l$Pop_comparisson,
@@ -36,7 +36,7 @@ fx_plot_relatedness_distribution = function(relatedness_matrix = pairwise_relate
                                                        c('Within', 'Between'))
   
   plot_pairwise_relatedness_distribution = pairwise_relatednes_l %>%
-    ggplot(aes(x = r, fill = Pop_comparisson)) +
+    ggplot(aes(x = r, fill = Pop_comparison)) +
     geom_histogram(position = "stack", alpha = .7)+
     geom_vline(xintercept = mean(pairwise_relatednes_l$r), linetype = 2)+
     scale_fill_manual(values = fill_color)+
