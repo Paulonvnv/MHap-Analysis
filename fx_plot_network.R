@@ -1,7 +1,5 @@
 
-fx_plot_network = function(pairwise_long_matrix,
-                        variable,
-                        cols,
+fx_plot_network = function(relatedness_matrix,  
                         threshold,
                         metadata,
                         sample_id,
@@ -9,16 +7,31 @@ fx_plot_network = function(pairwise_long_matrix,
                         levels,
                         colors){
   
+  
+  
+  pairwise_relatednes_l = data.frame(Yi = rownames(relatedness_matrix), relatedness_matrix)
+  
+  pairwise_relatednes_l %<>% pivot_longer(cols = all_of(names(pairwise_relatednes_l)[-1]),
+                                          names_to = "Yj",
+                                          values_to = "r")
+  
+  pairwise_relatednes_l = pairwise_relatednes_l[!is.na(pairwise_relatednes_l$r),]
+  
+  pairwise_relatednes_l %<>% filter(Yi != Yj)
+  
+  variable = 'r'
+  cols = c("Yi", "Yj")
+  
   library(igraph)
   
   edges = NULL
   
-  selected_edges <- pairwise_long_matrix[pairwise_long_matrix[[variable]] >= threshold,][,cols]
+  selected_edges <- pairwise_relatednes_l[pairwise_relatednes_l[[variable]] >= threshold,][,cols]
   for(edge in 1:nrow(selected_edges)){
     edges = c(edges,unlist(selected_edges[edge,]))
   }
   
-  isolates = unique(unlist(pairwise_long_matrix[,cols]))[!(unique(unlist(pairwise_long_matrix[,cols])) %in% unique(edges))]
+  isolates = unique(unlist(pairwise_relatednes_l[,cols]))[!(unique(unlist(pairwise_relatednes_l[,cols])) %in% unique(edges))]
   
   network_object = graph(edges = edges, isolates = isolates, directed=F)
   
