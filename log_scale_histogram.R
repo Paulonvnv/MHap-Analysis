@@ -12,9 +12,6 @@ log_scale_histogram = function(data, var, binwidth, group_by, levels, x_label, f
   
   data = data[, c(var, group_by)]
   
-  data[is.infinite(data[["var"]]),]
-  
-  class(data[["var"]])
   names(data) = c("variable", "groups")
   
   bins = seq(min(data[["variable"]]), max(data[["variable"]]) + binwidth, binwidth)

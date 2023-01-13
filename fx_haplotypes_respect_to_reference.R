@@ -181,112 +181,172 @@ fx_haplotypes_respect_to_reference = function(ampseq_object,
           dna_alleles = NULL
           aa_alleles = NULL
           
-          for(allele in alleles){ # for each allele
+          
+          if(clone == "."){ # if allele equals to wild type
             
-            if(allele == "."){ # if allele equals to wild type
+            codons = "."
+            
+            }else{
+              
+              codons = data.frame(alleles = gsub('[0-9]','',alleles), cds_position = sapply(alleles, function(allele){
+                
+                # position in the mhap
+                mhap_position = as.integer(gsub('[ATCGDI=//.]+', '', allele))
+                
+                # variant or nucleotide found
+                mhap_variant = gsub('[0-9]+', '', allele)
+                
+                # calculate position in the CDS
+                
+                cds_position = markers_of_interest[markers_of_interest$amplicon == amplicon,'start_cds'] + mhap_position - 1
+                
+              }))
+              
+              
+              # Identify nucleotide in the reference strain
+              codons$ref_variant = sapply(1:nrow(codons), function(x){
+                as.character(subseq(ref_seqs[which(names(ref_seqs) ==
+                  markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
+                                                start = codons[x, 'cds_position'],
+                                                end = codons[x,'cds_position']))})
+              
+              # calculate the aminoacid position
+              codons$aa_position = ceiling(codons$cds_position/3)
+              codons$first_nucleotide = 3*codons$aa_position - 2
+              codons$last_nucleotide = 3*codons$aa_position
+              
+            }
+          
+        if(length(codons) > 1){
+          
+          list_of_codons = unique(codons$aa_position)
+          
+        }else{
+            list_of_codons = codons
+
+        }
+        
+          
+          for(codon in list_of_codons){ # for each allele
+            
+            if(codon == "."){ # if allele equals to wild type
               
               dna_alleles = c(dna_alleles, 'c.(=)')
               aa_alleles = c(aa_alleles, 'p.(=)')
               
             }else{ # if allele different than the wild type
               
-              # position in the mhap
-              mhap_position = as.integer(gsub('[ATCGDI=//.]+', '', allele))
-              
-              # variant or nucleotide found
-              mhap_variant = gsub('[0-9]+', '', allele)
-              
-              # calculate position in the CDS
-              
-              cds_position = markers_of_interest[markers_of_interest$amplicon == amplicon,'start_cds'] + mhap_position - 1
-              
-              # Identify nucleotide in the reference strain
-              ref_variant = as.character(subseq(ref_seqs[which(names(ref_seqs) ==
-                                                                 markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
-                                                start = cds_position,
-                                                end = cds_position))
-              
-              # calculate the aminoacid position
-              aa_position = ceiling(cds_position/3)
-              
-              # calculate the position of the first and last nucleotide of the codon
-              first_nucleotide = 3*aa_position - 2
-              last_nucleotide = 3*aa_position
-              
               # get the reference amino acid variant
               ref_aa_variant = ifelse(markers_of_interest[markers_of_interest$amplicon == amplicon,'strand'] == "+",
-                                      as.character(translate(subseq(ref_seqs[which(names(ref_seqs)==markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
-                                                                    start = first_nucleotide,
-                                                                    end = last_nucleotide))),
-                                      as.character(translate(reverseComplement(subseq(ref_seqs[which(names(ref_seqs)==markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
-                                                                                      start = first_nucleotide,
-                                                                                      end = last_nucleotide)))))
+                                      as.character(Biostrings::translate(subseq(ref_seqs[which(names(ref_seqs)==markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
+                                                                    start = unique(codons[codons$aa_position == codon,][['first_nucleotide']]),
+                                                                    end = unique(codons[codons$aa_position == codon,][['last_nucleotide']])))),
+                                      as.character(Biostrings::translate(reverseComplement(subseq(ref_seqs[which(names(ref_seqs)==markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
+                                                                                      start = unique(codons[codons$aa_position == codon,][['first_nucleotide']]),
+                                                                                      end = unique(codons[codons$aa_position == codon,][['last_nucleotide']]))))))
               
-              mhap_aa_variant = if(cds_position - first_nucleotide == 0){
-                
-                ifelse(markers_of_interest[markers_of_interest$amplicon == amplicon,'strand'] == "+",
-                       as.character(translate(DNAString(paste0(
-                         mhap_variant,
-                         as.character(subseq(ref_seqs[which(names(ref_seqs)==markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
-                                             start = first_nucleotide + 1,
-                                             end = first_nucleotide + 2)))))),
-                       as.character(translate(reverseComplement(DNAString(paste0(
-                         mhap_variant,
-                         as.character(subseq(ref_seqs[which(names(ref_seqs)==markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
-                                             start = first_nucleotide + 1,
-                                             end = first_nucleotide + 2)))))))
-                )
-                
-              }else if(cds_position - first_nucleotide == 1){
-                
-                ifelse(markers_of_interest[markers_of_interest$amplicon == amplicon,'strand'] == "+",
-                       as.character(translate(DNAString(paste0(
-                         as.character(subseq(ref_seqs[which(names(ref_seqs)==markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
-                                             start = first_nucleotide,
-                                             end = first_nucleotide)),
-                         mhap_variant,
-                         as.character(subseq(ref_seqs[which(names(ref_seqs)==markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
-                                             start = first_nucleotide + 2,
-                                             end = first_nucleotide + 2))
-                       )))),
-                       as.character(translate(reverseComplement(DNAString(paste0(
-                         as.character(subseq(ref_seqs[which(names(ref_seqs)==markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
-                                             start = first_nucleotide,
-                                             end = first_nucleotide)),
-                         mhap_variant,
-                         as.character(subseq(ref_seqs[which(names(ref_seqs)==markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
-                                             start = first_nucleotide + 2,
-                                             end = first_nucleotide + 2))
-                       )))))
-                       
-                )
-                
-                
-              }else if(cds_position - first_nucleotide == 2){
-                ifelse(markers_of_interest[markers_of_interest$amplicon == amplicon,'strand'] == "+",
-                       as.character(translate(DNAString(paste0(
-                         as.character(subseq(ref_seqs[which(names(ref_seqs)==markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
-                                             start = first_nucleotide,
-                                             end = first_nucleotide + 1)),
-                         mhap_variant)))),
-                       as.character(translate(reverseComplement(DNAString(paste0(
-                         as.character(subseq(ref_seqs[which(names(ref_seqs)==markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
-                                             start = first_nucleotide,
-                                             end = first_nucleotide + 1)),
-                         mhap_variant)))))
-                )
-                
+              
+              codon_positons = unique(codons[codons$aa_position == codon,][['first_nucleotide']]):unique(codons[codons$aa_position == codon,][['last_nucleotide']])
+              
+              positions_from_ref = codon_positons[!(unique(codons[codons$aa_position == codon,][['first_nucleotide']]):unique(codons[codons$aa_position == codon,][['last_nucleotide']]) %in% 
+                    codons[codons$aa_position == codon,][['cds_position']])]
+              
+              positions_from_ref_df = NULL
+              
+              for(positions_from_ref1 in  positions_from_ref){
+                positions_from_ref_df = rbind(positions_from_ref_df,
+                      data.frame(alleles = as.character(subseq(ref_seqs[which(names(ref_seqs)==markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
+                                                         start = positions_from_ref1,
+                                                         end = positions_from_ref1)),
+                           cds_position = positions_from_ref1))
               }
               
+              
+              sample_codon = rbind(codons[codons$aa_position == codon,c('alleles', 'cds_position')],
+                                   positions_from_ref_df
+              )
+              
+              sample_codon = sample_codon[order(sample_codon$cds_position),]
+              
+              mhap_aa_variant = as.character(Biostrings::translate(DNAString(paste0(sample_codon$alleles, collapse = ""))))
+        
+              
+              # 
+              # 
+              # mhap_aa_variant = if(cds_position - first_nucleotide == 0){
+              #   
+              #   ifelse(markers_of_interest[markers_of_interest$amplicon == amplicon,'strand'] == "+",
+              #          as.character(translate(DNAString(paste0(
+              #            mhap_variant,
+              #            as.character(subseq(ref_seqs[which(names(ref_seqs)==markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
+              #                                start = first_nucleotide + 1,
+              #                                end = first_nucleotide + 2)))))),
+              #          as.character(translate(reverseComplement(DNAString(paste0(
+              #            mhap_variant,
+              #            as.character(subseq(ref_seqs[which(names(ref_seqs)==markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
+              #                                start = first_nucleotide + 1,
+              #                                end = first_nucleotide + 2)))))))
+              #   )
+              #   
+              # }else if(cds_position - first_nucleotide == 1){
+              #   
+              #   ifelse(markers_of_interest[markers_of_interest$amplicon == amplicon,'strand'] == "+",
+              #          as.character(translate(DNAString(paste0(
+              #            as.character(subseq(ref_seqs[which(names(ref_seqs)==markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
+              #                                start = first_nucleotide,
+              #                                end = first_nucleotide)),
+              #            mhap_variant,
+              #            as.character(subseq(ref_seqs[which(names(ref_seqs)==markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
+              #                                start = first_nucleotide + 2,
+              #                                end = first_nucleotide + 2))
+              #          )))),
+              #          as.character(translate(reverseComplement(DNAString(paste0(
+              #            as.character(subseq(ref_seqs[which(names(ref_seqs)==markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
+              #                                start = first_nucleotide,
+              #                                end = first_nucleotide)),
+              #            mhap_variant,
+              #            as.character(subseq(ref_seqs[which(names(ref_seqs)==markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
+              #                                start = first_nucleotide + 2,
+              #                                end = first_nucleotide + 2))
+              #          )))))
+              #          
+              #   )
+              #   
+              #   
+              # }else if(cds_position - first_nucleotide == 2){
+              #   ifelse(markers_of_interest[markers_of_interest$amplicon == amplicon,'strand'] == "+",
+              #          as.character(translate(DNAString(paste0(
+              #            as.character(subseq(ref_seqs[which(names(ref_seqs)==markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
+              #                                start = first_nucleotide,
+              #                                end = first_nucleotide + 1)),
+              #            mhap_variant)))),
+              #          as.character(translate(reverseComplement(DNAString(paste0(
+              #            as.character(subseq(ref_seqs[which(names(ref_seqs)==markers_of_interest[markers_of_interest$amplicon == amplicon,'gene_ids'])],
+              #                                start = first_nucleotide,
+              #                                end = first_nucleotide + 1)),
+              #            mhap_variant)))))
+              #   )
+              #   
+              # }
+            
+              
+              
+              
+              
               if(markers_of_interest[markers_of_interest$amplicon == amplicon,'strand'] == "+"){
-                dna_alleles = c(dna_alleles, paste0('c.', cds_position, ref_variant, '>', mhap_variant))
-                aa_alleles = c(aa_alleles, paste0(ref_aa_variant, aa_position, mhap_aa_variant))
+                dna_alleles = c(dna_alleles, paste(paste0('c.',codons[codons$aa_position == codon,][['cds_position']],
+                                                          codons[codons$aa_position == codon,][['ref_variant']],
+                                                          '>',
+                                                          codons[codons$aa_position == codon,][['alleles']]), collapse = " "))
+                aa_alleles = c(aa_alleles, paste0(ref_aa_variant, codon, mhap_aa_variant))
               }else{
-                dna_alleles = c(dna_alleles, paste0('c.',
-                                                    markers_of_interest[markers_of_interest$amplicon == amplicon,'ref_length'] - cds_position + 1,
-                                                    ref_variant, '>', mhap_variant))
+                dna_alleles = c(dna_alleles, paste(paste0('c.',
+                                                          markers_of_interest[markers_of_interest$amplicon == amplicon,'ref_length'] - 
+                                                            codons[codons$aa_position == codon,][['cds_position']] + 1,
+                                                          codons[codons$aa_position == codon,][['ref_variant']], '>',
+                                                          codons[codons$aa_position == codon,][['alleles']]), collapse = ' '))
                 aa_alleles = c(aa_alleles, paste0(ref_aa_variant,
-                                                  ceiling((markers_of_interest[markers_of_interest$amplicon == amplicon,'ref_length'] - cds_position + 1)/3),
+                                                  ceiling((markers_of_interest[markers_of_interest$amplicon == amplicon,'ref_length'] - 3*codon + 1)/3),
                                                   mhap_aa_variant))
                 
               }

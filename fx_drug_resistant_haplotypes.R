@@ -16,13 +16,15 @@ fx_drug_resistant_haplotypes = function(ampseq_object,
                                         fasta_file = "reference/3D7/PlasmoDB-59_Pfalciparum3D7_Genome.fasta",
                                         variables = c('samples', 'Population', 'quarter_of_collection')){
   
+  
+  # Call reference alleles
   drugR_reference_alleles = read.csv(reference_alleles)
   
   drugR_reference_alleles['reference'] = gsub('[0-9]+[A-Z]$', '', drugR_reference_alleles$Mutation)
   drugR_reference_alleles['mutant'] = gsub('^[A-Z][0-9]+', '', drugR_reference_alleles$Mutation)
   drugR_reference_alleles['position'] = gsub('^[A-Z]', '', gsub('[A-Z]$', '', drugR_reference_alleles$Mutation))
   
-  
+  # Define haplotypes respect to a reference genome
   source('fx_haplotypes_respect_to_reference.R')
   
   haplotypes_respect_to_reference = fx_haplotypes_respect_to_reference(ampseq,
@@ -53,7 +55,7 @@ fx_drug_resistant_haplotypes = function(ampseq_object,
   
   for(gene in unique(drugR_reference_alleles$Gene_Id)){ # For each gene
     
-    for(amplicon in drug_markers[drug_markers$gene_ids == gene, 'amplicon']){
+    for(amplicon in drug_markers[drug_markers$gene_ids == gene, 'amplicon']){ # for each amplicon in the gene
       
       if(amplicon %in% colnames(loci_aa_table)){
         
@@ -113,6 +115,7 @@ fx_drug_resistant_haplotypes = function(ampseq_object,
           sample_clones = loci_aa_table[sample,
                                         amplicon]
           
+          
           if(!is.na(sample_clones)){
             
             clones = unlist(strsplit(sample_clones, ' / '))
@@ -144,7 +147,7 @@ fx_drug_resistant_haplotypes = function(ampseq_object,
                     
                     sample_alleles = c(sample_alleles,
                                        as.character(
-                                         translate(
+                                         Biostrings::translate(
                                            subseq(
                                              ref_seqs[grep(gene,names(ref_seqs))],
                                              start = as.numeric(position)*3 - 2,
@@ -154,7 +157,7 @@ fx_drug_resistant_haplotypes = function(ampseq_object,
                     
                     sample_alleles = c(sample_alleles,
                                        as.character(
-                                         translate(
+                                         Biostrings::translate(
                                            reverseComplement(
                                              subseq(
                                                ref_seqs[grep(gene,names(ref_seqs))],
@@ -179,7 +182,7 @@ fx_drug_resistant_haplotypes = function(ampseq_object,
                     
                     sample_alleles = c(sample_alleles,
                                        as.character(
-                                         translate(
+                                         Biostrings::translate(
                                            subseq(
                                              ref_seqs[grep(gene,names(ref_seqs))],
                                              start = as.numeric(position)*3 - 2,
@@ -189,7 +192,7 @@ fx_drug_resistant_haplotypes = function(ampseq_object,
                     
                     sample_alleles = c(sample_alleles,
                                        as.character(
-                                         translate(
+                                         Biostrings::translate(
                                            reverseComplement(
                                              subseq(
                                                ref_seqs[grep(gene,names(ref_seqs))],
@@ -247,7 +250,7 @@ fx_drug_resistant_haplotypes = function(ampseq_object,
                 
                 reference_alleles = c(reference_alleles,
                                       as.character(
-                                        translate(
+                                        Biostrings::translate(
                                           subseq(
                                             ref_seqs[grep(gene,names(ref_seqs))],
                                             start = as.numeric(position)*3 - 2,
@@ -257,7 +260,7 @@ fx_drug_resistant_haplotypes = function(ampseq_object,
                 
                 reference_alleles = c(reference_alleles,
                                       as.character(
-                                        translate(
+                                        Biostrings::translate(
                                           reverseComplement(
                                             subseq(
                                               ref_seqs[grep(gene,names(ref_seqs))],
@@ -371,7 +374,6 @@ fx_drug_resistant_haplotypes = function(ampseq_object,
         
       }
       
-      
     }
   }
   
@@ -414,11 +416,24 @@ fx_drug_resistant_haplotypes = function(ampseq_object,
   samples_pop_quarter = extended_aacigar_table %>% group_by(var1, var2)%>%
     summarise(count = nlevels(as.factor(samples))) 
   
-  extended_aacigar_table %>% group_by(var1, var2)%>%
-    summarise(count = nlevels(as.factor(samples)))
+  samples_pop_quarter %<>% mutate(var1 = case_when(
+    is.na(var1) ~ paste(variables[2], 'missing'),
+    !is.na(var1) ~ var1),
+    var2 = case_when(
+      is.na(var2) ~ paste(variables[3], 'missing'),
+      !is.na(var2) ~ var2)
+  )
   
   haplotype_counts = extended_aacigar_table %>% group_by(gene_names, var1, var2, haplotype)%>%
     summarise(count = n())
+  
+  haplotype_counts %<>% mutate(var1 = case_when(
+    is.na(var1) ~ paste(variables[2], 'missing'),
+    !is.na(var1) ~ var1),
+    var2 = case_when(
+      is.na(var2) ~ paste(variables[3], 'missing'),
+      !is.na(var2) ~ var2)
+    )
   
   haplotype_counts$freq = NA
   
