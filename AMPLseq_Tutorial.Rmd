@@ -448,7 +448,8 @@ drug_resistant_haplotypes = fx_drug_resistant_haplotypes(ampseq,
                                                      'PF3D7_1447900'),
                                         gff_file = "reference/3D7/PlasmoDB-59_Pfalciparum3D7.gff",
                                         fasta_file = "reference/3D7/PlasmoDB-59_Pfalciparum3D7_Genome.fasta",
-                                        variables = c('samples', 'Population', 'quarter_of_collection'))
+                                        variables = c('samples', 'Population', 'quarter_of_collection'), na.var.rm = TRUE,
+                                        filters = c('Population;Buenaventura,Quibdo,Guapi',                               'quarter_of_collection;2020-Q4,2021-Q1,2021-Q2,2021-Q3,2021-Q4'))
 
 ```
 

@@ -15,6 +15,8 @@ fx_drug_resistant_haplotypes = function(ampseq_object,
                                         gff_file = "reference/3D7/PlasmoDB-59_Pfalciparum3D7.gff",
                                         fasta_file = "reference/3D7/PlasmoDB-59_Pfalciparum3D7_Genome.fasta",
                                         variables = c('samples', 'Population', 'quarter_of_collection'),
+                                        filters = c('Population;Buenaventura,Quibdo,Guapi',
+                                                    'quarter_of_collection;2020-Q4,2021-Q1,2021-Q2,2021-Q3,2021-Q4'),
                                         na.var.rm = FALSE){
   
   
@@ -413,7 +415,6 @@ fx_drug_resistant_haplotypes = function(ampseq_object,
     
   }
   
-  
   samples_pop_quarter = extended_aacigar_table %>% group_by(var1, var2)%>%
     summarise(count = nlevels(as.factor(samples))) 
   
@@ -446,6 +447,20 @@ fx_drug_resistant_haplotypes = function(ampseq_object,
                                                 (!is.na(haplotype_counts$var2)|
                                                    grepl('NA',haplotype_counts$var2)),]
   }
+  
+  if(!is.null(filters)){
+    filters = strsplit(filters,';')
+    for(temp_filter in 1:length(filters)){
+      if(which(variables == filters[[temp_filter]][1]) == 2){
+        haplotype_counts %<>% filter(var1 %in% strsplit(filters[[temp_filter]][2],',')[[1]])
+        samples_pop_quarter %<>% filter(var1 %in% strsplit(filters[[temp_filter]][2],',')[[1]])
+      }else if(which(variables == filters[[temp_filter]][1]) == 3){
+        haplotype_counts %<>% filter(var2 %in% strsplit(filters[[temp_filter]][2],',')[[1]])
+        samples_pop_quarter %<>% filter(var2 %in% strsplit(filters[[temp_filter]][2],',')[[1]])
+      }
+    }
+  }
+  
   
   haplotype_counts$freq = NA
   
