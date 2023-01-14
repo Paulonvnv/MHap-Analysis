@@ -415,38 +415,26 @@ fx_drug_resistant_haplotypes = function(ampseq_object,
     
   }
   
+  
+  if(na.var.rm){
+    extended_aacigar_table = extended_aacigar_table[!is.na(extended_aacigar_table$var1)|
+                                                      (!is.na(extended_aacigar_table$var2)|
+                                                         grepl('NA',extended_aacigar_table$var2)),]
+  }else{
+    extended_aacigar_table %<>% mutate(var1 = case_when(
+      is.na(var1) ~ paste(variables[2], 'missing'),
+      !is.na(var1) ~ var1),
+      var2 = case_when(
+        is.na(var2)|grepl('NA',var2) ~ paste(variables[3], 'missing'),
+        (!is.na(var2))&(!grepl('NA',var2)) ~ var2))
+  }
+  
+  
   samples_pop_quarter = extended_aacigar_table %>% group_by(var1, var2)%>%
     summarise(count = nlevels(as.factor(samples))) 
   
-  if(na.var.rm){
-    samples_pop_quarter %<>% mutate(var1 = case_when(
-      is.na(var1) ~ paste(variables[2], 'missing'),
-      !is.na(var1) ~ var1),
-      var2 = case_when(
-        is.na(var2)|grepl('NA',var2) ~ paste(variables[3], 'missing'),
-        (!is.na(var2))&(!grepl('NA',var2)) ~ var2))
-  }else{
-    samples_pop_quarter = samples_pop_quarter[!is.na(samples_pop_quarter$var1)|
-                                                (!is.na(samples_pop_quarter$var2)|
-                                                   grepl('NA',samples_pop_quarter$var2)),]
-  }
-  
-  
   haplotype_counts = extended_aacigar_table %>% group_by(gene_names, var1, var2, haplotype)%>%
     summarise(count = n())
-  
-  if(na.var.rm){
-    haplotype_counts %<>% mutate(var1 = case_when(
-      is.na(var1) ~ paste(variables[2], 'missing'),
-      !is.na(var1) ~ var1),
-      var2 = case_when(
-        is.na(var2)|grepl('NA',var2) ~ paste(variables[3], 'missing'),
-        (!is.na(var2))&(!grepl('NA',var2)) ~ var2))
-  }else{
-    haplotype_counts = haplotype_counts[!is.na(haplotype_counts$var1)|
-                                                (!is.na(haplotype_counts$var2)|
-                                                   grepl('NA',haplotype_counts$var2)),]
-  }
   
   if(!is.null(filters)){
     filters = strsplit(filters,';')
