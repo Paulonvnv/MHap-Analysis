@@ -24,17 +24,25 @@ fx_plot_relatedness_distribution = function(relatedness_matrix = pairwise_relate
                    metadata[metadata[['samples']] == x['Yj'],][[Population]])), collapse = "-"))
   })
   
+  pairwise_relatedness_l %<>% mutate(Pop_comparison = case_when(
+    is.na(Pop_comparison) | grepl('NA', Pop_comparison) ~ "missing data",
+    !(is.na(Pop_comparison) | grepl('NA', Pop_comparison)) ~ Pop_comparison
+  ))
   
   pairwise_relatedness_l %<>% mutate(Type_of_comparison = case_when(
     grepl("-",Pop_comparison) ~ "Between",
-    !grepl("-",Pop_comparison) ~ "Within"
+    !grepl("-",Pop_comparison) ~ "Within",
+    Pop_comparison == 'missing data' ~ 'missing data'
   ))
   
+  pairwise_relatedness_l %<>% filter(Pop_comparison != 'missing data', Type_of_comparison != 'missing data')
+  
   pairwise_relatedness_l$Pop_comparison = factor(pairwise_relatedness_l$Pop_comparison,
-                                                 levels = c(sort(unique(metadata[[Population]])),
-                                                            apply(combn(unique(metadata[[Population]]),2), 2, function(x){paste(sort(x), collapse = '-')})))
+                                                 levels = c(sort(unique(metadata[!is.na(metadata[[Population]]),][[Population]])),
+                                                            apply(combn(unique(metadata[!is.na(metadata[[Population]]),][[Population]]),2), 2, function(x){paste(sort(x), collapse = '-')})))
   pairwise_relatedness_l$Type_of_comparison = factor(pairwise_relatedness_l$Type_of_comparison, levels =
                                                        c('Within', 'Between'))
+  
   
   
   if(type_pop_comparison == 'within'){

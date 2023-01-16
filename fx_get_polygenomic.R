@@ -8,15 +8,15 @@ fx_get_polygenomic = function(ampseq_object, strata, update_popsummary = T, na.r
   loci_performance = ampseq_object[["loci_performance"]]
   
   if(na.rm){
-    ampseq_loci_abd_table = ampseq_loci_abd_table[!is.na(metadata[[strata]]) & !grepl('NA',metadata[[strata]]),]
-    metadata = metadata[!is.na(metadata[[strata]]) & !grepl('NA',metadata[[strata]]),]
+    ampseq_loci_abd_table = ampseq_loci_abd_table[!(is.na(metadata[[strata]]) | grepl('NA',metadata[[strata]])),]
+    metadata = metadata[!(is.na(metadata[[strata]]) | grepl('NA',metadata[[strata]])),]
   }else{
-    metadata[is.na(metadata[[strata]]) | !grepl('NA',metadata[[strata]]),][[strata]] = 'missing data'
+    metadata[is.na(metadata[[strata]]) | grepl('NA',metadata[[strata]]),][[strata]] = 'missing data'
   }
   
   if(!is.null(filters)){
-    metadata = metadata[metadata[[strata]] %in% filters,]
     ampseq_loci_abd_table = ampseq_loci_abd_table[metadata[[strata]] %in% filters,]
+    metadata = metadata[metadata[[strata]] %in% filters,]
   }
   
   polygenomic = NULL

@@ -40,6 +40,13 @@ fx_plot_frac_highly_related_over_time = function(relatedness_matrix = pairwise_r
     metadata[metadata[['samples']] == x['Yj'],][[Population[2]]]
   })
   
+  pairwise_relatedness_l %<>% filter(!is.na(Population_Yi),
+                                     !is.na(Population_Yj),
+                                     !is.na(Date_Yi),
+                                     !grepl('NA',Date_Yi),
+                                     !is.na(Date_Yj),
+                                     !grepl('NA',Date_Yj))
+  
   pairwise_relatedness_l %<>% mutate(Pop_Date_Yi = paste(Population_Yi, Date_Yi, sep = "_"),
                                     Pop_Date_Yj = paste(Population_Yj, Date_Yj, sep = "_"))
   
