@@ -504,10 +504,10 @@ source("log_scale_histogram.R")
 
 plot_log_NPolyLoci_by_pop = log_scale_histogram(data = ampseq$metadata[ampseq$metadata$NPolyLoci != 0,],
                                                 var = "NPolyLoci", binwidth = 1, group_by = "Population",
-                                                levels = c("Quibdo", "Buenaventura", "Guapi", "missing data"), x_label = "Number of heterozygous loci per sample",
-                                                fill_color = c("firebrick3", "dodgerblue3", "gold3", "gray70"),
+                                                levels = c("Quibdo", "Buenaventura", "Guapi"), x_label = "Number of heterozygous loci per sample",
+                                                fill_color = c("firebrick3", "dodgerblue3", "gold3"),
                                                 y_breaks = c(1, 5,10, 30), ncol = 4,
-                                                na.rm = FALSE,
+                                                na.rm = TRUE,
                                filters = NULL)+
   theme(axis.text = element_text(size = 12),
         axis.title = element_text(size = 12),
@@ -526,10 +526,10 @@ plot_log_coi_by_pop = log_scale_histogram(data = ampseq$metadata,
                                           var = "coi",
                                           binwidth = 1,
                                           group_by = "Population",
-                                          levels = c("Quibdo", "Buenaventura", "Guapi", "missing data"), x_label = "COI",
+                                          levels = c("Quibdo", "Buenaventura", "Guapi"), x_label = "COI",
                                           fill_color = c("firebrick3", "dodgerblue3", "gold3"),
                                           y_breaks = c(1, 10, 100, 400), ncol = 3,
-                                          na.rm = FALSE,
+                                          na.rm = TRUE,
                                filters = NULL)+
   theme(axis.text = element_text(size = 12),
         axis.title = element_text(size = 12),
@@ -540,16 +540,16 @@ plot_log_coi_by_pop = log_scale_histogram(data = ampseq$metadata,
 
 ```{r 'Proportion of polyclonal infections by sampling location'}
 
-plot_poly_by_pop = ampseq[["pop_summary"]] %>% ggplot(aes(x = factor(pop, levels = c("Quibdo", "Buenaventura", "Guapi", "Total")),
+plot_poly_by_pop = ampseq[["pop_summary"]] %>% filter(pop %in% c("Quibdo", "Buenaventura", "Guapi", "Total")) %>% ggplot(aes(x = factor(pop, levels = c("Quibdo", "Buenaventura", "Guapi", "Total")),
                                                           y = prop_poly,
-                                                          fill = factor(pop, levels = c("Quibdo", "Buenaventura", "Guapi", "missing data","Total"))))+
+                                                          fill = factor(pop, levels = c("Quibdo", "Buenaventura", "Guapi","Total"))))+
   geom_col(alpha = .6) +
   geom_errorbar(aes(ymin = prop_poly_lower, ymax = prop_poly_upper), width = .2)+
   theme_bw() +
   labs(title = "D) Frequency of polyclonal infections",
        y = "Frecuencia") +
   scale_size(range = c(3, 6)) +
-  scale_fill_manual(values = c("firebrick3", "dodgerblue3", "gold3", "gray75","gray30"))+
+  scale_fill_manual(values = c("firebrick3", "dodgerblue3", "gold3","gray30"))+
   scale_y_continuous(limits = c(0, 0.3))+
   theme(axis.text = element_text(size = 12),
         axis.title = element_blank(),
@@ -565,7 +565,7 @@ There were `r plot_poly_by_pop$data %>% filter(pop == 'Total') %>% select(n_poly
 
 ampseq$metadata %<>% mutate(Pop_quarter = paste(Population, quarter_of_collection, sep = '_'))
 
-plot_poly_by_pop_over_time = fx_get_polygenomic(ampseq_object = ampseq, strata = "Pop_quarter", update_popsummary = F, na.rm = TRUE)[-1,]%>%mutate(
+plot_poly_by_pop_over_time = fx_get_polygenomic(ampseq_object = ampseq, strata = "Pop_quarter", update_popsummary = F, na.rm = TRUE, filters = NULL)[-1,]%>%mutate(
   Population = stringr::str_split(pop, '_', simplify = TRUE)[,1],
   Date = stringr::str_split(pop, '_', simplify = TRUE)[,2],
   prop_poly_lower = case_when(
@@ -696,7 +696,7 @@ plot_relatedness_distribution_within = fx_plot_relatedness_distribution(
   relatedness_matrix = pairwise_relatedness,
   metadata = ampseq$metadata,
   Population = 'Population',
-  fill_color = c("dodgerblue3", "gold3", "firebrick3"),
+  fill_color = c("dodgerblue3", "gold3", "firebrick3", 'gray30'),
   type_pop_comparison = 'within'
 )
 
@@ -761,8 +761,8 @@ plot_network = fx_plot_network(relatedness_matrix = pairwise_relatedness,
                                metadata = ampseq$metadata,
                                sample_id = 'samples',
                                group_by = 'Population',
-                               levels = c("Quibdo", "Buenaventura", "Guapi"),
-                               colors = c("firebrick3", "dodgerblue3", "gold3")
+                               levels = c("Quibdo", "Buenaventura", "Guapi", "missing data"),
+                               colors = c("firebrick3", "dodgerblue3", "gold3", "gray75")
                               )
 
 ```

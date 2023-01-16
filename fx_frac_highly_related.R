@@ -6,17 +6,17 @@ fx_plot_frac_highly_related = function(relatedness_matrix = pairwise_relatedness
                                       threshold = 0.99,
                                       type_pop_comparison = 'between'){
   
-  pairwise_relatednes_l = data.frame(Yi = rownames(relatedness_matrix), relatedness_matrix)
+  pairwise_relatedness_l = data.frame(Yi = rownames(relatedness_matrix), relatedness_matrix)
   
-  pairwise_relatednes_l %<>% pivot_longer(cols = all_of(names(pairwise_relatednes_l)[-1]),
+  pairwise_relatedness_l %<>% pivot_longer(cols = all_of(names(pairwise_relatedness_l)[-1]),
                                           names_to = "Yj",
                                           values_to = "r")
   
-  pairwise_relatednes_l = pairwise_relatednes_l[!is.na(pairwise_relatednes_l$r),]
+  pairwise_relatedness_l = pairwise_relatedness_l[!is.na(pairwise_relatedness_l$r),]
   
-  pairwise_relatednes_l %<>% filter(Yi != Yj)
+  pairwise_relatedness_l %<>% filter(Yi != Yj)
   
-  pairwise_relatednes_l$Pop_comparison = apply(pairwise_relatednes_l, 1, function(x){
+  pairwise_relatedness_l$Pop_comparison = apply(pairwise_relatedness_l, 1, function(x){
     
     ifelse(metadata[metadata[['samples']] == x['Yi'],][[Population]] == 
              metadata[metadata[['samples']] == x['Yj'],][[Population]],
@@ -25,20 +25,31 @@ fx_plot_frac_highly_related = function(relatedness_matrix = pairwise_relatedness
                         metadata[metadata[['samples']] == x['Yj'],][[Population]])), collapse = "-"))
   })
   
-  
-  pairwise_relatednes_l %<>% mutate(Type_of_comparison = case_when(
-    grepl("-",Pop_comparison) ~ "Between",
-    !grepl("-",Pop_comparison) ~ "Within"
+  pairwise_relatedness_l %<>% mutate(Pop_comparison = case_when(
+    is.na(Pop_comparison) | grepl('NA', Pop_comparison) ~ "missing data",
+    !(is.na(Pop_comparison) | grepl('NA', Pop_comparison)) ~ Pop_comparison
   ))
   
-  pairwise_relatednes_l$Pop_comparison = factor(pairwise_relatednes_l$Pop_comparison,
-                                                 levels = c(unique(metadata[[Population]]),
-                                                            sort(apply(combn(unique(metadata[[Population]]),2), 2, function(x){paste(sort(x), collapse = '-')}))))
-  pairwise_relatednes_l$Type_of_comparison = factor(pairwise_relatednes_l$Type_of_comparison, levels =
+  # pairwise_relatedness_l[is.na(pairwise_relatedness_l$Pop_comparison),]
+  # pairwise_relatedness_l[grepl('NA',pairwise_relatedness_l$Pop_comparison),]
+  # 
+  # 
+  pairwise_relatedness_l %<>% mutate(Type_of_comparison = case_when(
+    grepl("-",Pop_comparison) ~ "Between",
+    !grepl("-",Pop_comparison) ~ "Within",
+    Pop_comparison == 'missing data' ~ 'missing data'
+  ))
+  
+  pairwise_relatedness_l %<>% filter(Pop_comparison != 'missing data', Type_of_comparison != 'missing data')
+  
+  pairwise_relatedness_l$Pop_comparison = factor(pairwise_relatedness_l$Pop_comparison,
+                                                 levels = c(sort(unique(metadata[!is.na(metadata[[Population]]),][[Population]])),
+                                                            apply(combn(unique(metadata[!is.na(metadata[[Population]]),][[Population]]),2), 2, function(x){paste(sort(x), collapse = '-')})))
+  pairwise_relatedness_l$Type_of_comparison = factor(pairwise_relatedness_l$Type_of_comparison, levels =
                                                        c('Within', 'Between'))
   
   
-  highly_related_table = pairwise_relatednes_l %>%
+  highly_related_table = pairwise_relatedness_l %>%
     group_by(Type_of_comparison, Pop_comparison) %>% 
     dplyr::summarise(freq = sum(r>=threshold),
                      n = n()) %>% group_by(Type_of_comparison, Pop_comparison)%>%
