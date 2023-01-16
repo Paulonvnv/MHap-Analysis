@@ -115,6 +115,11 @@ if(!require(RColorBrewer)){
 #   require(GADMTools)
 # }
 
+if(!require(sp)){
+  install.packages('sp')
+  require(sp)
+}
+
 if(!require(Hmisc)){
   install.packages('Hmisc')
   require(Hmisc)
@@ -488,7 +493,8 @@ In this section we will focus on describing the relationship between the intensi
 ```{r "Defining clonality of the samples"}
 
 source("fx_get_polygenomic.R")
-ampseq = fx_get_polygenomic(ampseq_object = ampseq, strata = "Population")
+ampseq = fx_get_polygenomic(ampseq_object = ampseq, strata = "Population", na.rm = FALSE,
+                            filters = NULL)
 
 ```
 
@@ -498,9 +504,11 @@ source("log_scale_histogram.R")
 
 plot_log_NPolyLoci_by_pop = log_scale_histogram(data = ampseq$metadata[ampseq$metadata$NPolyLoci != 0,],
                                                 var = "NPolyLoci", binwidth = 1, group_by = "Population",
-                                                levels = c("Quibdo", "Buenaventura", "Guapi"), x_label = "Number of heterozygous loci per sample",
+                                                levels = c("Quibdo", "Buenaventura", "Guapi", "missing data"), x_label = "Number of heterozygous loci per sample",
                                                 fill_color = c("firebrick3", "dodgerblue3", "gold3", "gray70"),
-                                                y_breaks = c(1, 5,10, 30), ncol = 3)+
+                                                y_breaks = c(1, 5,10, 30), ncol = 4,
+                                                na.rm = FALSE,
+                               filters = NULL)+
   theme(axis.text = element_text(size = 12),
         axis.title = element_text(size = 12),
         strip.text = element_text(size = 12)) +
@@ -518,9 +526,11 @@ plot_log_coi_by_pop = log_scale_histogram(data = ampseq$metadata,
                                           var = "coi",
                                           binwidth = 1,
                                           group_by = "Population",
-                                          levels = c("Quibdo", "Buenaventura", "Guapi"), x_label = "COI",
+                                          levels = c("Quibdo", "Buenaventura", "Guapi", "missing data"), x_label = "COI",
                                           fill_color = c("firebrick3", "dodgerblue3", "gold3"),
-                                          y_breaks = c(1, 10, 100, 400), ncol = 3)+
+                                          y_breaks = c(1, 10, 100, 400), ncol = 3,
+                                          na.rm = FALSE,
+                               filters = NULL)+
   theme(axis.text = element_text(size = 12),
         axis.title = element_text(size = 12),
         strip.text = element_text(size = 12)) +
@@ -532,14 +542,14 @@ plot_log_coi_by_pop = log_scale_histogram(data = ampseq$metadata,
 
 plot_poly_by_pop = ampseq[["pop_summary"]] %>% ggplot(aes(x = factor(pop, levels = c("Quibdo", "Buenaventura", "Guapi", "Total")),
                                                           y = prop_poly,
-                                                          fill = factor(pop, levels = c("Quibdo", "Buenaventura", "Guapi", "Total"))))+
+                                                          fill = factor(pop, levels = c("Quibdo", "Buenaventura", "Guapi", "missing data","Total"))))+
   geom_col(alpha = .6) +
   geom_errorbar(aes(ymin = prop_poly_lower, ymax = prop_poly_upper), width = .2)+
   theme_bw() +
   labs(title = "D) Frequency of polyclonal infections",
        y = "Frecuencia") +
   scale_size(range = c(3, 6)) +
-  scale_fill_manual(values = c("firebrick3", "dodgerblue3", "gold3", "gray30"))+
+  scale_fill_manual(values = c("firebrick3", "dodgerblue3", "gold3", "gray75","gray30"))+
   scale_y_continuous(limits = c(0, 0.3))+
   theme(axis.text = element_text(size = 12),
         axis.title = element_blank(),
@@ -555,7 +565,7 @@ There were `r plot_poly_by_pop$data %>% filter(pop == 'Total') %>% select(n_poly
 
 ampseq$metadata %<>% mutate(Pop_quarter = paste(Population, quarter_of_collection, sep = '_'))
 
-plot_poly_by_pop_over_time = fx_get_polygenomic(ampseq_object = ampseq, strata = "Pop_quarter", update_popsummary = F)[-1,]%>%mutate(
+plot_poly_by_pop_over_time = fx_get_polygenomic(ampseq_object = ampseq, strata = "Pop_quarter", update_popsummary = F, na.rm = TRUE)[-1,]%>%mutate(
   Population = stringr::str_split(pop, '_', simplify = TRUE)[,1],
   Date = stringr::str_split(pop, '_', simplify = TRUE)[,2],
   prop_poly_lower = case_when(
