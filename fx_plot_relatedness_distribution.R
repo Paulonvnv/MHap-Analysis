@@ -3,7 +3,10 @@ fx_plot_relatedness_distribution = function(relatedness_matrix = pairwise_relate
                                             metadata = ampseq$metadata,
                                             Population = 'Population',
                                             fill_color = c("firebrick3", "firebrick1", "dodgerblue1", "dodgerblue3", "gold1", "gold3"),
-                                            type_pop_comparison = 'within'){## c('within', 'between', 'both')
+                                            type_pop_comparison = 'within',
+                                            ncol = 4,
+                                            pop_levels = NULL
+                                            ){## c('within', 'between', 'both')
   
   pairwise_relatedness_l = data.frame(Yi = rownames(relatedness_matrix), relatedness_matrix)
   
@@ -15,27 +18,51 @@ fx_plot_relatedness_distribution = function(relatedness_matrix = pairwise_relate
   
   pairwise_relatedness_l %<>% filter(Yi != Yj)
   
-  pairwise_relatedness_l$Pop_comparison = apply(pairwise_relatedness_l, 1, function(x){
-    
-    ifelse(metadata[metadata[['samples']] == x['Yi'],][[Population]] == 
-       metadata[metadata[['samples']] == x['Yj'],][[Population]],
-       metadata[metadata[['samples']] == x['Yi'],][[Population]],
-       paste(sort(c(metadata[metadata[['samples']] == x['Yi'],][[Population]],
-                   metadata[metadata[['samples']] == x['Yj'],][[Population]])), collapse = "-"))
-  })
+  pairwise_relatedness_l = merge(pairwise_relatedness_l, metadata[,c('samples', Population)], by.x = 'Yi', by.y = 'samples', all.x = TRUE)
+  
+  names(pairwise_relatedness_l) = c(names(pairwise_relatedness_l)[-4], 'Yi_Population')
+  
+  pairwise_relatedness_l = merge(pairwise_relatedness_l, metadata[,c('samples', Population)], by.x = 'Yj', by.y = 'samples', all.x = TRUE)
+  
+  names(pairwise_relatedness_l) = c(names(pairwise_relatedness_l)[-5], 'Yj_Population')
+  
+  pairwise_relatedness_l %<>% filter(!is.na(Yi_Population), !is.na(Yj_Population))
   
   pairwise_relatedness_l %<>% mutate(Pop_comparison = case_when(
-    is.na(Pop_comparison) | grepl('NA', Pop_comparison) ~ "missing data",
-    !(is.na(Pop_comparison) | grepl('NA', Pop_comparison)) ~ Pop_comparison
+    Yi_Population == Yj_Population ~ Yi_Population,
+    Yi_Population != Yj_Population ~ max(Yi_Population, Yj_Population)
   ))
   
-  pairwise_relatedness_l %<>% mutate(Type_of_comparison = case_when(
-    grepl("-",Pop_comparison) ~ "Between",
-    !grepl("-",Pop_comparison) ~ "Within",
-    Pop_comparison == 'missing data' ~ 'missing data'
-  ))
+  pairwise_relatedness_l$Pop_comparison = apply(pairwise_relatedness_l, 1, function(x){
+    
+    ifelse( x['Yi_Population'] == x['Yj_Population'],
+       x['Yi_Population'],
+       paste(sort(c(x['Yi_Population'], x['Yj_Population'])), collapse = "-"))
+  })
   
-  pairwise_relatedness_l %<>% filter(Pop_comparison != 'missing data', Type_of_comparison != 'missing data')
+  # if(sum(is.na(pairwise_relatedness_l$Pop_comparison)) + sum(grepl('NA', pairwise_relatedness_l$Pop_comparison)) >= 1){
+  #   pairwise_relatedness_l %<>% mutate(Pop_comparison = case_when(
+  #     is.na(Pop_comparison) | grepl('NA', Pop_comparison) ~ "missing data",
+  #     !(is.na(Pop_comparison) | grepl('NA', Pop_comparison)) ~ Pop_comparison
+  #   ))
+  #   
+  #   pairwise_relatedness_l %<>% mutate(Type_of_comparison = case_when(
+  #     grepl("-",Pop_comparison) ~ "Between",
+  #     !grepl("-",Pop_comparison) ~ "Within",
+  #     Pop_comparison == 'missing data' ~ 'missing data'
+  #   ))
+  #   
+  #   pairwise_relatedness_l %<>% filter(Pop_comparison != 'missing data', Type_of_comparison != 'missing data')
+  # }else{
+  #   
+    pairwise_relatedness_l %<>% mutate(Type_of_comparison = case_when(
+      grepl("-",Pop_comparison) ~ "Between",
+      !grepl("-",Pop_comparison) ~ "Within"
+    ))
+    
+  # }
+  
+
   
   pairwise_relatedness_l$Pop_comparison = factor(pairwise_relatedness_l$Pop_comparison,
                                                  levels = c(sort(unique(metadata[!is.na(metadata[[Population]]),][[Population]])),
@@ -48,12 +75,12 @@ fx_plot_relatedness_distribution = function(relatedness_matrix = pairwise_relate
   if(type_pop_comparison == 'within'){
     plot_pairwise_relatedness_distribution = pairwise_relatedness_l %>%
       filter(Type_of_comparison == 'Within')%>%
-      ggplot(aes(x = r, fill = Pop_comparison)) +
+      ggplot(aes(x = r, fill = factor(Pop_comparison, levels = pop_levels))) +
       geom_histogram(position = "stack", alpha = .7)+
       geom_vline(xintercept = mean(pairwise_relatedness_l$r), linetype = 2)+
       scale_fill_manual(values = fill_color)+
       theme_bw()+
-      facet_wrap(~Pop_comparison,
+      facet_wrap(~factor(Pop_comparison, levels = pop_levels), ncol = ncol,
                  scales = "free_y")+
       labs(y = "Count",
            x = "Relatedness",
@@ -65,12 +92,12 @@ fx_plot_relatedness_distribution = function(relatedness_matrix = pairwise_relate
   }else if(type_pop_comparison == 'between'){
     plot_pairwise_relatedness_distribution = pairwise_relatedness_l %>%
       filter(Type_of_comparison == 'Between')%>%
-      ggplot(aes(x = r, fill = Pop_comparison)) +
+      ggplot(aes(x = r, fill = factor(Pop_comparison, levels = pop_levels))) +
       geom_histogram(position = "stack", alpha = .7)+
       geom_vline(xintercept = mean(pairwise_relatedness_l$r), linetype = 2)+
       scale_fill_manual(values = fill_color)+
       theme_bw()+
-      facet_wrap(~Pop_comparison,
+      facet_wrap(~factor(Pop_comparison, levels = pop_levels), ncol = ncol,
                  scales = "free_y")+
       labs(y = "Count",
            x = "Relatedness",

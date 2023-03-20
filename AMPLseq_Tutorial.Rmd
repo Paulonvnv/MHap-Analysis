@@ -42,95 +42,109 @@ Our first step will be to call all required packages in the R environment:
 
 if(!require(adegenet)){
   install.packages("adegenet")
-  require(adegenet)
+  library(adegenet)
+}else{
+  library(adegenet)
 }
 
 if(!require(ade4)){
   install.packages("ade4")
-  require(ade4)
+  library(ade4)
+}else{
+  library(ade4)
 }
 
 if(!require(poppr)){
   install.packages("poppr")
-  require(poppr)
+  library(poppr)
+}else{
+  library(poppr)
 }
 
 if(!require(dplyr)){
   install.packages("dplyr")
-  require(dplyr)
+  library(dplyr)
+}else{
+  library(dplyr)
 }
 
 if(!require(magrittr)){
   install.packages("magrittr")
-  require(magrittr)
+  library(magrittr)
+}else{
+  library(magrittr)
 }
 
 if(!require(tidyr)){
   install.packages("tidyr")
-  require(tidyr)
+  library(tidyr)
+}else{
+  library(tidyr)
 }
 
 if(!require(ggplot2)){
   install.packages("ggplot2")
-  require(ggplot2)
+  library(ggplot2)
+}else{
+  library(ggplot2)
 }
 
 if(!require(cowplot)){
   install.packages("cowplot")
-  require(cowplot)
+  library(cowplot)
+}else{
+  library(cowplot)
 }
 
-# if(!require(paneljudge)){
-#   install.packages("paneljudge")
-#   require(paneljudge)
-# }
 
 if(!require(vegan)){
   install.packages("vegan")
-  require(vegan)
+  library(vegan)
+}else{
+  library(vegan)
 }
 
 if(!require(parallel)){
   install.packages("parallel")
-  require(parallel)
+  library(parallel)
+}else{
+  library(parallel)
 }
 
 if(!require(ape)){
   install.packages("ape")
-  require(ape)
+  library(ape)
+}else{
+  library(ape)
 }
 
 if(!require(pegas)){
   install.packages("pegasn")
-  require(pegas)
+  library(pegas)
+}else{
+  library(pegas)
 }
 
 if(!require(RColorBrewer)){
   install.packages("RColorBrewer")
-  require(RColorBrewer)
-}
-
-# if(!require(GADMTools)){
-#   install.packages('GADMTools')
-#   require(GADMTools)
-# }
-
-if(!require(sp)){
-  install.packages('sp')
-  require(sp)
+  library(RColorBrewer)
+}else{
+  library(RColorBrewer)
 }
 
 if(!require(Hmisc)){
   install.packages('Hmisc')
-  require(Hmisc)
+  library(Hmisc)
+}else{
+  library(Hmisc)
 }
 
 if(!require(ggpubr)){
   install.packages('ggpubr')
-  require(ggpubr)
+  library(ggpubr)
+}else{
+  library(ggpubr)
 }
-
-
 ```
 
 As we mentioned earlier, this tutorial start with .tsv table in CIGAR format that has been generated with a previous pipeline created in the lab. The output of this pipeline has the following structure:
@@ -169,7 +183,8 @@ rownames(cigar_object$cigar_table) = cigar_object[["metadata"]][["samples"]]
 cigar_object[["metadata"]] %<>% mutate(Population = case_when(
   grepl('SP0101254',samples) ~ 'Buenaventura',
   grepl('SP0112286',samples) ~ 'Quibdo',
-  grepl('SP0126288',samples) ~ 'Guapi'
+  grepl('SP0126288',samples) ~ 'Guapi',
+  grepl('SP0152835',samples) ~ 'Tumaco'
 ))
 ```
 
@@ -195,21 +210,32 @@ Then we will upload a metadata table from an external source. For this purpose w
 
 ```{r 'Adding collection data'}
 
-external_metadata = read.csv("metadata.csv")
+external_metadata = read.csv("metadata_feb3_23.csv")
 
 external_metadata %<>% mutate(
   samples = Código,
   Population = case_when(
   grepl('SP0101254',samples) ~ 'Buenaventura',
   grepl('SP0112286',samples) ~ 'Quibdo',
-  grepl('SP0126288',samples) ~ 'Guapi'),
+  grepl('SP0126288',samples) ~ 'Guapi',
+  grepl('SP0152835',samples) ~ 'Tumaco'
+  ),
   date_of_symp = X2.9..Fecha.inicio.de.síntomas,
   date_of_collection = X2.3..Fecha.de.reclutamiento.
  )
 
+
 external_metadata %<>% select(samples, Population, date_of_collection, date_of_symp)
+
+external_metadata[!grepl('(2020)|(2021)|(2022)|(2023)', external_metadata$date_of_collection),][['date_of_collection']] =
+  external_metadata[!grepl('(2020)|(2021)|(2022)|(2023)', external_metadata$date_of_collection),][['date_of_symp']]
+
 external_metadata %<>% mutate(month_of_collection = substr(date_of_collection, 1, 7))
 
+
+external_metadata[external_metadata$month_of_collection == '2023-10',][['date_of_collection']] = '2023-01-01'
+external_metadata[external_metadata$month_of_collection == '2023-10',][['date_of_symp']] = '2023-01-01'
+external_metadata[external_metadata$month_of_collection == '2023-10',][['month_of_collection']] = '2023-01'
 
 external_metadata[["group"]] = ifelse(external_metadata$samples %in% cigar_object$metadata$samples, "AMPseq", "noAMPseq")
 
@@ -228,25 +254,22 @@ cigar_object$metadata$quarter_of_collection = paste(substr(cigar_object$metadata
 ```
 
 ```{r 'Ploting the number of collected samples by Municipality over time', echo=FALSE}
-dates = c(paste(rep(2020, 4),c(paste0("0",8:9),10:12), sep ="-"),
-          paste(rep(2021, 12),c(paste0("0",1:9),10:12), sep ="-"),
-          paste(rep(2022, 2),c(paste0("0",1:2)), sep ="-"))
+
+dates = sort(unique(cigar_object$metadata$month_of_collection))
+pop_levels = c("Quibdo", "Buenaventura", "Guapi", 'Tumaco')
+pop_colors = c("firebrick3", "dodgerblue3", "gold3", "darkseagreen3")
 
 plot_temporal_collection_of_samples = external_metadata %>%
   filter(!is.na(Population)) %>%
   group_by(Population, month_of_collection) %>%
   summarise(nsamples= n())%>%
   ggplot(aes(x = month_of_collection, y = nsamples, fill = factor(Population,
-                                                              levels = c("Quibdo",
-                                                                         "Buenaventura",
-                                                                         "Guapi"))))+
+                                                              levels = pop_levels)))+
   geom_col()+
   theme_bw()+
-  scale_fill_manual(values = c("firebrick3", "dodgerblue3", "gold3"))+
+  scale_fill_manual(values = pop_colors)+
   facet_wrap(.~factor(Population,
-                      levels = c("Quibdo",
-                                 "Buenaventura",
-                                 "Guapi")),
+                      levels = pop_levels),
              strip.position = "top", ncol = 1)+
   labs(title = 'B) # Samples collected over time',
        y = "Collected samples by PCD",
@@ -273,16 +296,20 @@ col0.spldf <- gadm_sp_loadCountries("COL",level = 0, basefile = "./GADMTools/wor
 col2.spldf <- gadm_sp_loadCountries("COL",level = 2, basefile = "./GADMTools/world.rds.files/rds2/")
 
 
-localities = data.frame(Localities = factor(c("Guapí",
+localities = data.frame(Localities = factor(c("Tumaco",
+                                              "Guapí",
                                               "Buenaventura",
-                                              "Quibdó"), levels = c("Guapí",
+                                              "Quibdó"), levels = c("Tumaco",
+                                                                    "Guapí",
                                                                     "Buenaventura",
                                                                     "Quibdó")),
                         long = -70,
-                        lat = c(10, 12, 14),
-                        colors = c("gold3",
+                        lat = c(8, 10, 12, 14),
+                        colors = c("darkseagreen3",
+                                   "gold3",
                                    "dodgerblue3",
-                                   "firebrick3"))
+                                   "firebrick3"
+                                   ))
 
 # Step 3: plot the map
 
@@ -293,8 +320,9 @@ plot_study_sites = ggplot() +
   geom_polygon(data=col2.spldf[["spdf"]][col2.spldf[["spdf"]][["NAME_2"]] == "Quibdó",], aes(x=long, y=lat, group = group), fill = "firebrick3", color = "gray40", size=.3) +
   geom_polygon(data=col2.spldf[["spdf"]][col2.spldf[["spdf"]][["NAME_2"]] == "Buenaventura",], aes(x=long, y=lat, group = group), fill = "dodgerblue3", color = "gray40", size=.3) +
   geom_polygon(data=col2.spldf[["spdf"]][col2.spldf[["spdf"]][["NAME_2"]] == "Guapí",], aes(x=long, y=lat, group = group), fill = "gold3", color = "gray40", size=.3) +
+  geom_polygon(data=col2.spldf[["spdf"]][col2.spldf[["spdf"]][["NAME_2"]] == "Tumaco",], aes(x=long, y=lat, group = group), fill = "darkseagreen3", color = "gray40", size=.3) +
   geom_point(data=localities, aes(x=long, y=lat, color=Localities), size = 5) +
-  geom_label(data=localities, aes(x=long + c(1.3, 2.3, 1.5), y=lat, label = Localities)) +
+  geom_label(data=localities, aes(x=long + c(1.3, 2.3, 1.5, 1.2), y=lat, label = Localities)) +
   theme_bw()+
   labs(title = "A) Study sites in Colombia",
        x = "Longitude",
@@ -453,8 +481,9 @@ drug_resistant_haplotypes = fx_drug_resistant_haplotypes(ampseq,
                                                      'PF3D7_1447900'),
                                         gff_file = "reference/3D7/PlasmoDB-59_Pfalciparum3D7.gff",
                                         fasta_file = "reference/3D7/PlasmoDB-59_Pfalciparum3D7_Genome.fasta",
-                                        variables = c('samples', 'Population', 'quarter_of_collection'), na.var.rm = TRUE,
-                                        filters = c('Population;Buenaventura,Quibdo,Guapi',                               'quarter_of_collection;2020-Q4,2021-Q1,2021-Q2,2021-Q3,2021-Q4'))
+                                        variables = c('samples', 'Population', 'quarter_of_collection'),
+                                        na.var.rm = TRUE,
+                                        filters = c('Population;Buenaventura,Quibdo,Guapi,Tumaco',                               'quarter_of_collection;2020-Q4,2021-Q1,2021-Q2,2021-Q3,2021-Q4,2022-Q1,2022-Q2,2022-Q3'))
 
 ```
 
@@ -466,12 +495,13 @@ blues = brewer.pal(9, 'Blues')
 reds = brewer.pal(9, 'Reds')
 
 drug_resistant_haplotypes$haplo_freq_plot+
+  theme(axis.text.x = element_text(angle = 90))+
   scale_fill_manual(values = c(
-    blues[3], reds[5], blues[8], reds[4], # MDR2
-    reds[c(8,5,3)], blues[c(8,3)], # DFHR
-    blues[c(2, 4, 3, 8)], reds[8], # DHPS
-    blues[8], #K13
-    blues[c(2,3)], reds[c(5,3,8)] # MDR1
+    'gray75',reds[3], blues[c(6,4)], # MDR2
+    reds[c(8,7,2,6)], blues[c(6,5)], # DFHR
+    'gray75',blues[c(2,3,6)], reds[c(5,7)], # DHPS
+    reds[8], blues[6], #K13
+    'gray75',blues[2:3], reds[c(5:8)], blues[2:4], reds[5:9] # MDR1
   ))+
   labs(y = 'Haplotype prevalence in infected individuals')
 
@@ -504,19 +534,15 @@ source("log_scale_histogram.R")
 
 plot_log_NPolyLoci_by_pop = log_scale_histogram(data = ampseq$metadata[ampseq$metadata$NPolyLoci != 0,],
                                                 var = "NPolyLoci", binwidth = 1, group_by = "Population",
-                                                levels = c("Quibdo", "Buenaventura", "Guapi"), x_label = "Number of heterozygous loci per sample",
-                                                fill_color = c("firebrick3", "dodgerblue3", "gold3"),
-                                                y_breaks = c(1, 5,10, 30), ncol = 4,
-                                                na.rm = TRUE,
-                               filters = NULL)+
+                                                levels = pop_levels, x_label = "Number of heterozygous loci per sample",
+                                                fill_color = pop_colors,
+                                                y_breaks = c(1, 5,10, 30), ncol = 4)+
   theme(axis.text = element_text(size = 12),
         axis.title = element_text(size = 12),
         strip.text = element_text(size = 12)) +
   labs(title = 'B) Distribution of # heterozygous loci per sample', 
        y = "# Samples",
        x = "# heterozygous loci per sample")
-
-
 
 ```
 
@@ -526,11 +552,9 @@ plot_log_coi_by_pop = log_scale_histogram(data = ampseq$metadata,
                                           var = "coi",
                                           binwidth = 1,
                                           group_by = "Population",
-                                          levels = c("Quibdo", "Buenaventura", "Guapi"), x_label = "COI",
-                                          fill_color = c("firebrick3", "dodgerblue3", "gold3"),
-                                          y_breaks = c(1, 10, 100, 400), ncol = 3,
-                                          na.rm = TRUE,
-                               filters = NULL)+
+                                          levels = pop_levels, x_label = "COI",
+                                          fill_color = pop_colors,
+                                          y_breaks = c(1, 10, 100, 400), ncol = 4)+
   theme(axis.text = element_text(size = 12),
         axis.title = element_text(size = 12),
         strip.text = element_text(size = 12)) +
@@ -540,22 +564,20 @@ plot_log_coi_by_pop = log_scale_histogram(data = ampseq$metadata,
 
 ```{r 'Proportion of polyclonal infections by sampling location'}
 
-plot_poly_by_pop = ampseq[["pop_summary"]] %>% filter(pop %in% c("Quibdo", "Buenaventura", "Guapi", "Total")) %>% ggplot(aes(x = factor(pop, levels = c("Quibdo", "Buenaventura", "Guapi", "Total")),
+plot_poly_by_pop = ampseq[["pop_summary"]] %>% ggplot(aes(x = factor(pop, levels = c(pop_levels, "Total")),
                                                           y = prop_poly,
-                                                          fill = factor(pop, levels = c("Quibdo", "Buenaventura", "Guapi","Total"))))+
+                                                          fill = factor(pop, levels = c(pop_levels, "Total"))))+
   geom_col(alpha = .6) +
   geom_errorbar(aes(ymin = prop_poly_lower, ymax = prop_poly_upper), width = .2)+
   theme_bw() +
   labs(title = "D) Frequency of polyclonal infections",
        y = "Frecuencia") +
   scale_size(range = c(3, 6)) +
-  scale_fill_manual(values = c("firebrick3", "dodgerblue3", "gold3","gray30"))+
+  scale_fill_manual(values = c(pop_colors, "gray30"))+
   scale_y_continuous(limits = c(0, 0.3))+
   theme(axis.text = element_text(size = 12),
         axis.title = element_blank(),
         legend.position = "none")
-
-
 
 ```
 
@@ -582,9 +604,9 @@ plot_poly_by_pop_over_time = fx_get_polygenomic(ampseq_object = ampseq, strata =
              fill = Population))+
   geom_col()+
   geom_errorbar(width = .2)+
-  facet_wrap(~Population, ncol = 3)+
+  facet_wrap(~Population, ncol = 4)+
   theme_bw()+
-  scale_fill_manual(values = c("dodgerblue3","gold3","firebrick3"))+
+  scale_fill_manual(values = pop_colors)+
   labs(title = 'E) Temporal change of the proportion of polyclonal infections',
        y = "Polyclonal infections",
        x = "Date of sampling")+
@@ -696,8 +718,10 @@ plot_relatedness_distribution_within = fx_plot_relatedness_distribution(
   relatedness_matrix = pairwise_relatedness,
   metadata = ampseq$metadata,
   Population = 'Population',
-  fill_color = c("dodgerblue3", "gold3", "firebrick3", 'gray30'),
-  type_pop_comparison = 'within'
+  fill_color = pop_colors,
+  type_pop_comparison = 'within',
+  ncol = 4,
+  pop_levels = pop_levels
 )
 
 ```
@@ -708,8 +732,8 @@ plot_frac_highly_related_within = fx_plot_frac_highly_related(
   relatedness_matrix = pairwise_relatedness,
   metadata = ampseq$metadata,
   Population = 'Population',
-  fill_color = c("dodgerblue3",  "firebrick3", "gold3"),
-  threshold = 0.99, type_pop_comparison = 'within')
+  fill_color = pop_colors,
+  threshold = 0.99, type_pop_comparison = 'within', pop_levels = pop_levels)
 
 ```
 
@@ -719,10 +743,10 @@ source('fx_frac_highly_related_over_time.R')
 plot_frac_highly_related_over_quarters_within = fx_plot_frac_highly_related_over_time(relatedness_matrix = pairwise_relatedness,
                                        metadata = ampseq$metadata,
                                        Population = c('Population', 'quarter_of_collection'),
-                                       fill_color = c("dodgerblue3",  "firebrick3", "gold3"),
+                                       fill_color = pop_colors,
                                        threshold = 0.99,
-                                       type_pop_comparison = 'within')
-
+                                       type_pop_comparison = 'within',
+                                       pop_levels = pop_levels)
 
 ```
 
@@ -761,14 +785,13 @@ plot_network = fx_plot_network(relatedness_matrix = pairwise_relatedness,
                                metadata = ampseq$metadata,
                                sample_id = 'samples',
                                group_by = 'Population',
-                               levels = c("Quibdo", "Buenaventura", "Guapi", "missing data"),
-                               colors = c("firebrick3", "dodgerblue3", "gold3", "gray75")
+                               levels = pop_levels,
+                               colors = pop_colors
                               )
 
 ```
 
 ```{r, fig.width = 12, fig.height=10, fig.cap = '**Figure 7:** Effect of transmission on relatedness. A) Histogram of the distribution of pairwise genetic relatedness by study area (Panels). The dashed vertical line represents the average genetic relatedness in the overall population. B) Proportion of highly related samples (IBD > 0.99) in each study area. C) Proportion of highly related samples over year quarters in each study area. D) Spearman correlation of the proportion of highly related samples per year quarter in each estudy area and the number of collected samples by passive case detection.'}
-
 
 plot_highlyR_over_time = ggdraw()+
   draw_plot(plot_relatedness_distribution_within$plot+
@@ -826,9 +849,9 @@ plot_div_by_pop = ampseq[["pop_summary"]]%>%
                               "Shannon",
                               "Hexp")),
                names_to = "metric", values_to = "value")%>%
-  ggplot(aes(x = factor(pop, levels = c("Quibdo", "Buenaventura", "Guapi", "Total")),
+  ggplot(aes(x = factor(pop, levels = c(pop_levels, "Total")),
              y = value,
-             color = factor(pop, levels = c("Quibdo", "Buenaventura", "Guapi", "Total")),
+             color = factor(pop, levels = c(pop_levels, "Total")),
              size = Richness))+
   geom_point(alpha = .6) +
   facet_wrap(~factor(metric,
@@ -838,7 +861,7 @@ plot_div_by_pop = ampseq[["pop_summary"]]%>%
              scales = "free_y",
              ncol = 1) +
   theme_bw() +
-  scale_color_manual(values = c("firebrick3", "dodgerblue3", "gold3", "gray30"))+
+  scale_color_manual(values = c(pop_colors, "gray30"))+
   labs(title = "Haplotypic and genetic diversity",
        y = "Value",
        x = "Population",
@@ -885,8 +908,11 @@ plot_relatedness_distribution_between = fx_plot_relatedness_distribution(
   relatedness_matrix = pairwise_relatedness,
   metadata = ampseq$metadata,
   Population = 'Population',
-  fill_color = c("gray50", "gray50", "gray50"),
-  type_pop_comparison = 'between'
+  fill_color = c("gray50", "gray50", "gray50", "gray50", "gray50", "gray50"),
+  type_pop_comparison = 'between',
+  ncol = 3,
+  pop_levels = c("Buenaventura-Guapi", "Buenaventura-Quibdo", "Buenaventura-Tumaco",
+                 "Guapi-Quibdo", "Guapi-Tumaco", "Quibdo-Tumaco")
 )
 ```
 
@@ -896,8 +922,9 @@ plot_frac_highly_related_between = fx_plot_frac_highly_related(
   relatedness_matrix = pairwise_relatedness,
   metadata = ampseq$metadata,
   Population = 'Population',
-  fill_color = c("gray50", "gray50", "gray50"),
-  threshold = 0.99, type_pop_comparison = 'between')
+  fill_color = c("gray50", "gray50", "gray50","gray50", "gray50", "gray50"),
+  threshold = 0.99, type_pop_comparison = 'between', pop_levels = c("Buenaventura-Guapi", "Buenaventura-Quibdo", "Buenaventura-Tumaco",
+                 "Guapi-Quibdo", "Guapi-Tumaco", "Quibdo-Tumaco"))
 ```
 
 The average genetic relatedness and the proportion of highly related samples were higher between Buenaventura and Guapi (mean $r$ = `r round(plot_relatedness_distribution_between$relatedness %>% filter(Pop_comparison == 'Buenaventura-Guapi') %>% summarise(mean(r)) %>% unlist(), 3)`, proportion = `r round(plot_frac_highly_related_between$highly_related_table %>% ungroup %>% filter(Pop_comparison == 'Buenaventura-Guapi') %>% select(prop) %>% unlist %>% mean, 3)`) than Buenaventura and Quibdo (mean $r$ = `r round(plot_relatedness_distribution_between$relatedness %>% filter(Pop_comparison == 'Buenaventura-Quibdo') %>% summarise(mean(r)) %>% unlist(), 3)`, proportion = `r round(plot_frac_highly_related_between$highly_related_table %>% ungroup %>% filter(Pop_comparison == 'Buenaventura-Quibdo') %>% select(prop) %>% unlist %>% mean, 3)`), and Guapi and Quibdo (mean $r$ = `r round(plot_relatedness_distribution_between$relatedness %>% filter(Pop_comparison == 'Guapi-Quibdo') %>% summarise(mean(r)) %>% unlist(), 3)`, proportion = `r round(plot_frac_highly_related_between$highly_related_table %>% ungroup %>% filter(Pop_comparison == 'Guapi-Quibdo') %>% select(prop) %>% unlist %>% mean, 3)`). The results suggest higher connectivity or mobilization  of parasites between Buenaventura and Guapi than Quibdo and these two study areas.

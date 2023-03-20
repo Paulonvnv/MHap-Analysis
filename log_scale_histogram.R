@@ -1,6 +1,6 @@
 log_scale_histogram = function(data, var, binwidth, group_by, levels, x_label, fill_color, y_breaks, ncol,
                                na.rm = FALSE,
-                               filters = c('Buenaventura', 'Guapi')){
+                               filters = NULL){
   
   # data = ampseq$metadata
   # var = "NPolyLoci"
@@ -18,7 +18,7 @@ log_scale_histogram = function(data, var, binwidth, group_by, levels, x_label, f
   
   if(na.rm){
     data = data[!is.na(data[['groups']]) & !grepl('NA', data[['groups']]),]
-  }else{
+  }else if(length(data[is.na(data[['groups']]) | grepl('NA', data[['groups']]),][['groups']])>0){
     data[is.na(data[['groups']]) | grepl('NA', data[['groups']]),][['groups']] = 'missing data'
   }
   

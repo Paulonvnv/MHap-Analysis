@@ -10,7 +10,7 @@ fx_get_polygenomic = function(ampseq_object, strata, update_popsummary = T, na.r
   if(na.rm){
     ampseq_loci_abd_table = ampseq_loci_abd_table[!(is.na(metadata[[strata]]) | grepl('NA',metadata[[strata]])),]
     metadata = metadata[!(is.na(metadata[[strata]]) | grepl('NA',metadata[[strata]])),]
-  }else{
+  }else if(length(metadata[is.na(metadata[[strata]]) | grepl('NA',metadata[[strata]]),][[strata]])>0){
     metadata[is.na(metadata[[strata]]) | grepl('NA',metadata[[strata]]),][[strata]] = 'missing data'
   }
   

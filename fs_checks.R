@@ -2,8 +2,8 @@
 
 # In hmmloglikelihood.cpp any frequency greater than 1e-20 is considered non-zero
 fs_checks <- function(fs, warn,
-                      non_zero_fs_lb = 1e-20, # Magic number
-                      max_dev_lim = 1e-5, # Magic number
+                      non_zero_fs_lb = 0, #1e-20, # Magic number
+                      max_dev_lim = 0, #1e-5, # Magic number
                       do_return = FALSE){
   
   if (!warn) {

@@ -10,14 +10,12 @@ fx_read_cigar_tables = function(paths, sample_id_pattern){
     cigar_run = read.table(file.path(paths, run, "dada2/run_dada2/CIGARVariants.out.tsv"))
     names(cigar_run) = cigar_run[1,]
     samples = sapply(strsplit(cigar_run[-1,1], "_"), function(x) x[1])
-    samples[!grepl(sample_id_pattern,samples)] <- paste(samples[!grepl(sample_id_pattern,samples)], run, sep = "_")
+    samples[!grepl(sample_id_pattern,samples)] = paste(samples[!grepl(sample_id_pattern,samples)], run, sep = "_")
     cigar_run = cigar_run[-1, -1]
     cigar_run = apply(cigar_run, 2, function(x) as.integer(x))
-    rownames(cigar_run) = samples
+    rownames(cigar_run) = paste(1:length(samples), run, samples, sep = '/')
     cigar_tables[[run]] = cigar_run
-    metadata = rbind(metadata, data.frame(samples = samples, run = run, typeofSamp = NA))
-    metadata[grepl(sample_id_pattern, metadata[["samples"]]),][["typeofSamp"]] = "Samples"
-    metadata[!grepl(sample_id_pattern, metadata[["samples"]]),][["typeofSamp"]] = "Controls"
+
     rm(list = c("run", "cigar_run", "samples"))
   }
   
@@ -33,16 +31,44 @@ fx_read_cigar_tables = function(paths, sample_id_pattern){
     rm(run)
   }
   
-  cigar_table %<>% pivot_wider(names_from = "alleles", values_from = "counts", values_fn = first)
-  sample_names = cigar_table[, 1]
+  cigar_table %<>% pivot_wider(names_from = "alleles", values_from = "counts")
+  sample_names = gsub("^.+/","",cigar_table[['samples']])
+  
+  duplicated_samples = sample_names[duplicated(sample_names)]
+  
+  cigar_table_replicates = cigar_table[duplicated(sample_names),]
+  cigar_table = cigar_table[!duplicated(sample_names),]
+  
+  for(sample in duplicated_samples){
+    
+    temp_data = rbind(cigar_table[grepl(sample,
+                                        cigar_table$samples),],
+                      cigar_table_replicates[grepl(sample,
+                                                   cigar_table_replicates$samples),])
+    
+    temp_test = rowSums(temp_data[,-1], na.rm = T)
+    
+    cigar_table[grepl(sample,
+                      cigar_table$samples),] = temp_data[which.max(temp_test),]
+    
+  }
+  
+  metadata = data.frame(samples = gsub("^.+/","",cigar_table[['samples']]),
+                        run = gsub('/.+$', '',gsub("^\\d+/","",cigar_table[['samples']])),
+                        order_in_plate = gsub("/.+$","",cigar_table[['samples']]), typeofSamp = NA)
+  
+  
+  metadata[grepl(sample_id_pattern, metadata[["samples"]]),][["typeofSamp"]] = "Samples"
+  metadata[!grepl(sample_id_pattern, metadata[["samples"]]),][["typeofSamp"]] = "Controls"
+  
+  
+
   cigar_table = cigar_table[, -1]
   cigar_table = as.matrix(cigar_table)
   
-  rownames(cigar_table) = unlist(sample_names)
+  rownames(cigar_table) = metadata$samples
   
   cigar_table[is.na(cigar_table)] = 0
-  
-  metadata = metadata[!duplicated(metadata$samples),]
   
   return(list(cigar_table = cigar_table,
               metadata = metadata))

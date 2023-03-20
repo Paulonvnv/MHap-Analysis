@@ -4,7 +4,8 @@ fx_plot_frac_highly_related = function(relatedness_matrix = pairwise_relatedness
                                       Population = 'Population',
                                       fill_color = c("dodgerblue3",  "firebrick3", "gold3", "gray50", "gray50", "gray50"),
                                       threshold = 0.99,
-                                      type_pop_comparison = 'between'){
+                                      type_pop_comparison = 'between',
+                                      pop_levels = NULL){
   
   pairwise_relatedness_l = data.frame(Yi = rownames(relatedness_matrix), relatedness_matrix)
   
@@ -16,31 +17,49 @@ fx_plot_frac_highly_related = function(relatedness_matrix = pairwise_relatedness
   
   pairwise_relatedness_l %<>% filter(Yi != Yj)
   
-  pairwise_relatedness_l$Pop_comparison = apply(pairwise_relatedness_l, 1, function(x){
-    
-    ifelse(metadata[metadata[['samples']] == x['Yi'],][[Population]] == 
-             metadata[metadata[['samples']] == x['Yj'],][[Population]],
-           metadata[metadata[['samples']] == x['Yi'],][[Population]],
-           paste(sort(c(metadata[metadata[['samples']] == x['Yi'],][[Population]],
-                        metadata[metadata[['samples']] == x['Yj'],][[Population]])), collapse = "-"))
-  })
+  pairwise_relatedness_l = merge(pairwise_relatedness_l, metadata[,c('samples', Population)], by.x = 'Yi', by.y = 'samples', all.x = TRUE)
+  
+  names(pairwise_relatedness_l) = c(names(pairwise_relatedness_l)[-4], 'Yi_Population')
+  
+  pairwise_relatedness_l = merge(pairwise_relatedness_l, metadata[,c('samples', Population)], by.x = 'Yj', by.y = 'samples', all.x = TRUE)
+  
+  names(pairwise_relatedness_l) = c(names(pairwise_relatedness_l)[-5], 'Yj_Population')
+  
+  pairwise_relatedness_l %<>% filter(!is.na(Yi_Population), !is.na(Yj_Population))
   
   pairwise_relatedness_l %<>% mutate(Pop_comparison = case_when(
-    is.na(Pop_comparison) | grepl('NA', Pop_comparison) ~ "missing data",
-    !(is.na(Pop_comparison) | grepl('NA', Pop_comparison)) ~ Pop_comparison
+    Yi_Population == Yj_Population ~ Yi_Population,
+    Yi_Population != Yj_Population ~ max(Yi_Population, Yj_Population)
   ))
   
-  # pairwise_relatedness_l[is.na(pairwise_relatedness_l$Pop_comparison),]
-  # pairwise_relatedness_l[grepl('NA',pairwise_relatedness_l$Pop_comparison),]
-  # 
-  # 
+  pairwise_relatedness_l$Pop_comparison = apply(pairwise_relatedness_l, 1, function(x){
+    
+    ifelse( x['Yi_Population'] == x['Yj_Population'],
+            x['Yi_Population'],
+            paste(sort(c(x['Yi_Population'], x['Yj_Population'])), collapse = "-"))
+  })
+  
+  # if(sum(is.na(pairwise_relatedness_l$Pop_comparison)) + sum(grepl('NA', pairwise_relatedness_l$Pop_comparison)) >= 1){
+  #   pairwise_relatedness_l %<>% mutate(Pop_comparison = case_when(
+  #     is.na(Pop_comparison) | grepl('NA', Pop_comparison) ~ "missing data",
+  #     !(is.na(Pop_comparison) | grepl('NA', Pop_comparison)) ~ Pop_comparison
+  #   ))
+  #   
+  #   pairwise_relatedness_l %<>% mutate(Type_of_comparison = case_when(
+  #     grepl("-",Pop_comparison) ~ "Between",
+  #     !grepl("-",Pop_comparison) ~ "Within",
+  #     Pop_comparison == 'missing data' ~ 'missing data'
+  #   ))
+  #   
+  #   pairwise_relatedness_l %<>% filter(Pop_comparison != 'missing data', Type_of_comparison != 'missing data')
+  # }else{
+  #   
   pairwise_relatedness_l %<>% mutate(Type_of_comparison = case_when(
     grepl("-",Pop_comparison) ~ "Between",
-    !grepl("-",Pop_comparison) ~ "Within",
-    Pop_comparison == 'missing data' ~ 'missing data'
+    !grepl("-",Pop_comparison) ~ "Within"
   ))
   
-  pairwise_relatedness_l %<>% filter(Pop_comparison != 'missing data', Type_of_comparison != 'missing data')
+  # }
   
   pairwise_relatedness_l$Pop_comparison = factor(pairwise_relatedness_l$Pop_comparison,
                                                  levels = c(sort(unique(metadata[!is.na(metadata[[Population]]),][[Population]])),
@@ -76,7 +95,7 @@ fx_plot_frac_highly_related = function(relatedness_matrix = pairwise_relatedness
     
     plot_frac_highly_related = highly_related_table %>%
       filter(Type_of_comparison == 'Within') %>%
-      ggplot(aes(x = Pop_comparison, y = prop, fill = Pop_comparison)) + 
+      ggplot(aes(x = factor(Pop_comparison, levels = pop_levels), y = prop, fill = factor(Pop_comparison, levels = pop_levels))) + 
       geom_col(alpha = .85)+
       geom_errorbar(aes(ymin = lower, ymax = upper), width = .2)+
       scale_fill_manual(values = fill_color)+
@@ -93,7 +112,7 @@ fx_plot_frac_highly_related = function(relatedness_matrix = pairwise_relatedness
     
     plot_frac_highly_related = highly_related_table %>%
       filter(Type_of_comparison == 'Between') %>%
-      ggplot(aes(x = Pop_comparison, y = prop, fill = Pop_comparison)) + 
+      ggplot(aes(x = factor(Pop_comparison, levels = pop_levels), y = prop, fill = factor(Pop_comparison, levels = pop_levels))) + 
       geom_col(alpha = .85)+
       geom_errorbar(aes(ymin = lower, ymax = upper), width = .2)+
       scale_fill_manual(values = fill_color)+
@@ -109,7 +128,7 @@ fx_plot_frac_highly_related = function(relatedness_matrix = pairwise_relatedness
   }else if(type_pop_comparison == 'both'){
     
     plot_frac_highly_related = highly_related_table %>%
-      ggplot(aes(x = Pop_comparison, y = prop, fill = Pop_comparison)) + 
+      ggplot(aes(x = factor(Pop_comparison, levels = pop_levels), y = prop, fill = factor(Pop_comparison, levels = pop_levels))) + 
       geom_col(alpha = .85)+
       geom_errorbar(aes(ymin = lower, ymax = upper), width = .2)+
       scale_fill_manual(values = fill_color)+
