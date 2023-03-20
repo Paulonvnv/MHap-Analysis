@@ -1,5 +1,5 @@
 fx_pairwise_relatedness = function(loci_object){
-  
+  library(svMisc)
   source('estimate_r_and_k.R')
   
   loci_table = loci_object[["loci_table"]]
@@ -99,10 +99,14 @@ fx_pairwise_relatedness = function(loci_object){
       
     }
     
-    print(paste("pair", pair, "of", nrow(pairs), sep = " "))
+    #print(paste0('pair ', pair, ' out of ', nrow(pairs)))
+    progress(round(100*pair/nrow(pairs)))
     
   }
   
   return(relatedness_matrix)
   
 }
+
+
+

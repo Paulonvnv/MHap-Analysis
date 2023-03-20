@@ -49,6 +49,8 @@ fx_loci_amplification_rate = function(ampseq_object, threshold = .65, chr_length
   ampseq_loci_abd_table = ampseq_loci_abd_table[, colnames(ampseq_loci_abd_table) %in% loci_performance[loci_performance[["loci_ampl_rate"]] > threshold,][["loci"]]]
   
   markers = ampseq_object[["markers"]]
+  
+  discarded_markers = markers[loci_performance[["loci_ampl_rate"]] <= threshold ,]
   markers = markers[loci_performance[["loci_ampl_rate"]] > threshold ,]
   
   markers[["distance"]] = Inf
@@ -57,7 +59,8 @@ fx_loci_amplification_rate = function(ampseq_object, threshold = .65, chr_length
      for(amplicon in 1:(nrow(markers[markers[["chromosome"]] == chromosome,])-1)){
          markers[markers[["chromosome"]] == chromosome,][amplicon, "distance"] = markers[markers[["chromosome"]] == chromosome,][amplicon + 1, "pos"] - markers[markers[["chromosome"]] == chromosome,][amplicon, "pos"]
        }
-    }
+  }
+
   
   loci_performance_complete = loci_performance
   loci_performance = loci_performance[loci_performance[["loci_ampl_rate"]] > threshold ,]
@@ -66,7 +69,8 @@ fx_loci_amplification_rate = function(ampseq_object, threshold = .65, chr_length
   ampseq_object[["markers"]] = markers
   ampseq_object[["loci_performance"]] = loci_performance
   ampseq_object[["discarded_loci"]] = list(loci_abd_table = ampseq_loci_abd_table_discarded_loci,
-                                           loci_performance = loci_performance_complete)
+                                           loci_performance = loci_performance_complete,
+                                           markers = discarded_markers)
   ampseq_object[["plots"]][["all_loci_amplification_rate"]] = all_loci_performance_plot
   ampseq_object[["plots"]][["amplification_rate_per_locus"]] = amplification_rate_per_locus
   return(ampseq_object)

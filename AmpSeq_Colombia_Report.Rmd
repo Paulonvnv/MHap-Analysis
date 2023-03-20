@@ -1,7 +1,7 @@
 ---
 title: "AmpSeq Colombia Report"
-author: "Laboratory of Genomic and Evolutionary Biology of Malaria Parasites"
-date: "2022-12-19"
+author: "Laboratory of Genomic Epidemiology of Malaria"
+date: "2023-03-12"
 output:
   html_document:
     toc: true
@@ -14,7 +14,7 @@ editor_options:
   chunk_output_type: inline
 ---
 
-This is a preliminary report of results of amplicon sequencing (microhaplotypes) of the *P. falciparum* samples collected from 2019 to 2022 in three municipalities located in the pacific coast of Colombia. The report includes the following topics:
+This is a preliminary report of results of amplicon sequencing (microhaplotypes) of the *P. falciparum* samples collected from August 2020 to August 2022 in four municipalities located in the pacific coast of Colombia and Puerto Inirida located in the border with Venezuela. The report includes the following topics:
 
 1.  Performance of the genotyping process.
 
@@ -33,92 +33,109 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
 if(!require(adegenet)){
   install.packages("adegenet")
-  require(adegenet)
+  library(adegenet)
+}else{
+  library(adegenet)
 }
 
 if(!require(ade4)){
   install.packages("ade4")
-  require(ade4)
+  library(ade4)
+}else{
+  library(ade4)
 }
 
 if(!require(poppr)){
   install.packages("poppr")
-  require(poppr)
+  library(poppr)
+}else{
+  library(poppr)
 }
 
 if(!require(dplyr)){
   install.packages("dplyr")
-  require(dplyr)
+  library(dplyr)
+}else{
+  library(dplyr)
 }
 
 if(!require(magrittr)){
   install.packages("magrittr")
-  require(magrittr)
+  library(magrittr)
+}else{
+  library(magrittr)
 }
 
 if(!require(tidyr)){
   install.packages("tidyr")
-  require(tidyr)
+  library(tidyr)
+}else{
+  library(tidyr)
 }
 
 if(!require(ggplot2)){
   install.packages("ggplot2")
-  require(ggplot2)
+  library(ggplot2)
+}else{
+  library(ggplot2)
 }
 
 if(!require(cowplot)){
   install.packages("cowplot")
-  require(cowplot)
+  library(cowplot)
+}else{
+  library(cowplot)
 }
 
-if(!require(paneljudge)){
-  install.packages("paneljudge")
-  require(paneljudge)
-}
 
 if(!require(vegan)){
   install.packages("vegan")
-  require(vegan)
+  library(vegan)
+}else{
+  library(vegan)
 }
 
 if(!require(parallel)){
   install.packages("parallel")
-  require(parallel)
+  library(parallel)
+}else{
+  library(parallel)
 }
 
 if(!require(ape)){
   install.packages("ape")
-  require(ape)
+  library(ape)
+}else{
+  library(ape)
 }
 
 if(!require(pegas)){
   install.packages("pegasn")
-  require(pegas)
+  library(pegas)
+}else{
+  library(pegas)
 }
 
 if(!require(RColorBrewer)){
   install.packages("RColorBrewer")
-  require(RColorBrewer)
+  library(RColorBrewer)
+}else{
+  library(RColorBrewer)
 }
-
-
-if(!require(GADMTools)){
-  install.packages('GADMTools')
-  require(GADMTools)
-}
-
 
 if(!require(Hmisc)){
   install.packages('Hmisc')
-  require(Hmisc)
+  library(Hmisc)
+}else{
+  library(Hmisc)
 }
 
 if(!require(ggpubr)){
   install.packages('ggpubr')
-  require(ggpubr)
+  library(ggpubr)
+}else{
+  library(ggpubr)
 }
-
-
 ```
 
 
@@ -140,7 +157,9 @@ rownames(cigar_object$cigar_table) = cigar_object[["metadata"]][["samples"]]
 cigar_object[["metadata"]] %<>% mutate(Population = case_when(
   grepl('SP0101254',samples) ~ 'Buenaventura',
   grepl('SP0112286',samples) ~ 'Quibdo',
-  grepl('SP0126288',samples) ~ 'Guapi'
+  grepl('SP0126288',samples) ~ 'Guapi',
+  grepl('SP0152835',samples) ~ 'Tumaco',
+  grepl('SP019400', samples) ~ 'Puerto Inirida'
 ))
 ```
 
@@ -162,21 +181,33 @@ cigar_object[["cigar_table"]] = cigar_object[["cigar_table"]][,!grepl("PvDHFR", 
 
 ```{r 'Adding collection data'}
 
-external_metadata = read.csv("metadata.csv")
+external_metadata = read.csv("metadata_feb3_23.csv")
 
 external_metadata %<>% mutate(
   samples = Código,
   Population = case_when(
   grepl('SP0101254',samples) ~ 'Buenaventura',
   grepl('SP0112286',samples) ~ 'Quibdo',
-  grepl('SP0126288',samples) ~ 'Guapi'),
+  grepl('SP0126288',samples) ~ 'Guapi',
+  grepl('SP0152835',samples) ~ 'Tumaco',
+  grepl('SP019400', samples) ~ 'Puerto Inirida'
+  ),
   date_of_symp = X2.9..Fecha.inicio.de.síntomas,
   date_of_collection = X2.3..Fecha.de.reclutamiento.
  )
 
+
 external_metadata %<>% select(samples, Population, date_of_collection, date_of_symp)
+
+external_metadata[!grepl('(2020)|(2021)|(2022)|(2023)', external_metadata$date_of_collection),][['date_of_collection']] =
+  external_metadata[!grepl('(2020)|(2021)|(2022)|(2023)', external_metadata$date_of_collection),][['date_of_symp']]
+
 external_metadata %<>% mutate(month_of_collection = substr(date_of_collection, 1, 7))
 
+
+external_metadata[external_metadata$month_of_collection == '2023-10',][['date_of_collection']] = '2023-01-01'
+external_metadata[external_metadata$month_of_collection == '2023-10',][['date_of_symp']] = '2023-01-01'
+external_metadata[external_metadata$month_of_collection == '2023-10',][['month_of_collection']] = '2023-01'
 
 external_metadata[["group"]] = ifelse(external_metadata$samples %in% cigar_object$metadata$samples, "AMPseq", "noAMPseq")
 
@@ -195,31 +226,27 @@ cigar_object$metadata$quarter_of_collection = paste(substr(cigar_object$metadata
 ```
 
 ```{r 'Ploting the number of collected samples by Municipality over time', echo=FALSE}
-dates = c(paste(rep(2020, 4),c(paste0("0",8:9),10:12), sep ="-"),
-          paste(rep(2021, 12),c(paste0("0",1:9),10:12), sep ="-"),
-          paste(rep(2022, 2),c(paste0("0",1:2)), sep ="-"))
+dates = sort(unique(cigar_object$metadata$month_of_collection))
+pop_levels = c("Quibdo", "Buenaventura", "Guapi", 'Tumaco', 'Puerto Inirida')
+pop_colors = c("firebrick3", "dodgerblue3", "gold3", "darkseagreen3", "lightsalmon2")
 
 plot_temporal_collection_of_samples = external_metadata %>%
   filter(!is.na(Population)) %>%
   group_by(Population, month_of_collection) %>%
   summarise(nsamples= n())%>%
   ggplot(aes(x = month_of_collection, y = nsamples, fill = factor(Population,
-                                                              levels = c("Quibdo",
-                                                                         "Buenaventura",
-                                                                         "Guapi"))))+
+                                                              levels = pop_levels)))+
   geom_col()+
   theme_bw()+
-  scale_fill_manual(values = c("firebrick3", "dodgerblue3", "gold3"))+
+  scale_fill_manual(values = pop_colors)+
   facet_wrap(.~factor(Population,
-                      levels = c("Quibdo",
-                                 "Buenaventura",
-                                 "Guapi")),
+                      levels = pop_levels),
              strip.position = "top", ncol = 1)+
   labs(title = 'B) # Samples collected over time',
        y = "Collected samples by PCD",
        x = "Months")+
-  theme(axis.text = element_text(size = 12),
-        axis.text.x = element_text(angle = 315, vjust = 0),
+  theme(axis.text = element_text(size = 9),
+        axis.text.x = element_text(angle = 90, vjust = 0),
         axis.title = element_text(size = 12),
         strip.text = element_text(size = 12),
         legend.position =  "none")+
@@ -233,22 +260,31 @@ plot_temporal_collection_of_samples = external_metadata %>%
 # Step 1: Get all shape files from LAC countries at national level
 # SpatialPolygonsDataFrame at country level (level = 0)
 
+source('fx_gadm_sp_loadCountries.R')
 
 col0.spldf <- gadm_sp_loadCountries("COL",level = 0, basefile = "./GADMTools/world.rds.files/rds0/")
 
 col2.spldf <- gadm_sp_loadCountries("COL",level = 2, basefile = "./GADMTools/world.rds.files/rds2/")
 
 
-localities = data.frame(Localities = factor(c("Guapí",
+localities = data.frame(Localities = factor(c("Puerto Inírida",
+                                              "Tumaco",
+                                              "Guapí",
                                               "Buenaventura",
-                                              "Quibdó"), levels = c("Guapí",
-                                                                    "Buenaventura",
-                                                                    "Quibdó")),
+                                              "Quibdó"),
+                                            levels = c("Puerto Inírida",
+                                                       "Tumaco",
+                                                       "Guapí",
+                                                       "Buenaventura",
+                                                       "Quibdó")),
                         long = -70,
-                        lat = c(10, 12, 14),
-                        colors = c("gold3",
+                        lat = c(6, 8, 10, 12, 14),
+                        colors = c("lightsalmon2",
+                                   "darkseagreen3",
+                                   "gold3",
                                    "dodgerblue3",
-                                   "firebrick3"))
+                                   "firebrick3"
+                                   ))
 
 # Step 3: plot the map
 
@@ -259,8 +295,10 @@ plot_study_sites = ggplot() +
   geom_polygon(data=col2.spldf[["spdf"]][col2.spldf[["spdf"]][["NAME_2"]] == "Quibdó",], aes(x=long, y=lat, group = group), fill = "firebrick3", color = "gray40", size=.3) +
   geom_polygon(data=col2.spldf[["spdf"]][col2.spldf[["spdf"]][["NAME_2"]] == "Buenaventura",], aes(x=long, y=lat, group = group), fill = "dodgerblue3", color = "gray40", size=.3) +
   geom_polygon(data=col2.spldf[["spdf"]][col2.spldf[["spdf"]][["NAME_2"]] == "Guapí",], aes(x=long, y=lat, group = group), fill = "gold3", color = "gray40", size=.3) +
-  geom_point(data=localities, aes(x=long, y=lat, color=Localities), size = 5) +
-  geom_label(data=localities, aes(x=long + c(1.3, 2.3, 1.5), y=lat, label = Localities)) +
+  geom_polygon(data=col2.spldf[["spdf"]][col2.spldf[["spdf"]][["NAME_2"]] == "Tumaco",], aes(x=long, y=lat, group = group), fill = "darkseagreen3", color = "gray40", size=.3) +
+  geom_polygon(data=col2.spldf[["spdf"]][col2.spldf[["spdf"]][["NAME_2"]] == "Puerto Inírida",], aes(x=long, y=lat, group = group), fill = "lightsalmon2", color = "gray40", size=.3) +
+  #geom_point(data=localities, aes(x=long, y=lat, color=Localities), size = 5) +
+  #geom_label(data=localities, aes(x=long + c(1.3, 2.3, 1.5, 1.2), y=lat, label = Localities)) +
   theme_bw()+
   labs(title = "A) Study sites in Colombia",
        x = "Longitude",
@@ -277,7 +315,7 @@ plot_study_sites = ggplot() +
 
 ```
 
-```{r 'Plot of number of collected samples by Municipality over time whit map', echo=FALSE, warning=FALSE, message=FALSE, fig.width=10, fig.height=5, fig.cap='**Figure 1:** Number of collected samples by Municipality over time'}
+```{r 'Plot of number of collected samples by Municipality over time whit map', echo=FALSE, warning=FALSE, message=FALSE, fig.width=10, fig.height=5, fig.cap='**Figure 1:** A) Map of the four study sites: Quibdo (Red), Buenaventura (Blue), Guapi (Yellow) and Tumaco (Green). B) Number of collected samples by study over time.'}
 plot_study_areas = ggdraw()+
   draw_plot(plot_study_sites,
             x = 0,
@@ -341,11 +379,19 @@ coverage %<>% pivot_longer(cols = all_of(colnames(coverage)[c(-ncol(coverage), -
                            names_to = 'Markers',
                            values_to = 'Read_depth')
 
-plot_read_depth_heatmap = coverage %>% ggplot(aes(x = Markers, y = samples, fill = log10(Read_depth)))+
+sample_order = coverage %>%
+  group_by(samples) %>%
+  summarise(Read_depth = sum(Read_depth, na.rm = T)) %>%
+  arrange(Read_depth) %>%
+  select(samples) %>% unlist
+
+
+plot_read_depth_heatmap = coverage %>% ggplot(aes(x = Markers, y = factor(samples, levels = sample_order), fill = log10(Read_depth)))+
   geom_tile()+
   scale_fill_gradient(low="white", high="red",
                       breaks = c(1, 2, 3, 4),
                       labels = 10^c(1, 2, 3, 4))+
+  facet_wrap(factor(study_area, levels = pop_levels)~., ncol = 1, scales = 'free_y')+
   labs(y = 'Samples',
        fill = "Read depth")+
   theme_bw()+
@@ -365,10 +411,11 @@ plot_read_depht_histogram = log_scale_histogram(coverage[!is.na(coverage$Read_de
                                                 var = 'Read_depth',
                                                 binwidth = 100,
                                                 group_by = 'study_area',
-                                                levels = c("Quibdo", "Buenaventura", "Guapi"),
+                                                levels = pop_levels,
                                                 x_label = "Read depth",
-                                                fill_color = c("firebrick3", "dodgerblue3", "gold3"),
-                                                y_breaks = 10^(1:4), ncol = 3
+                                                fill_color = pop_colors,
+                                                y_breaks = 10^(1:4), ncol = 2,
+                                                filters = pop_levels
                                                 )
 
 plot_read_depht_histogram
@@ -420,7 +467,7 @@ plot_locus_amplificatin_rate
 
 ## Amplification rate by sample
 
-Next step we measured the proportion of loci amplified per each sample, also called the amplification rate of the samples, and the minmum proportion of loci that a sample should amplified was set to 0.8. All samples bellow this threshold were discarded.
+Next we measured the proportion of loci amplified per each sample, also called the amplification rate of the samples, and the minmum proportion of loci that a sample should amplified was set to 0.8. All samples bellow this threshold were discarded.
 
 ```{r 'Filtering samples of low amplification rate', fig.width=5, fig.height=5, fig.cap='**Figure 5:** Proportion of amplified loci per sample. The figure shows the distribution of the amplification rate (or proportion of amplified loci) of the samples, with the number of samples in the y-axis and the amplification rate in the x-axis.'}
 source("fx_sample_amplification_rate.R")
@@ -443,12 +490,23 @@ ampseq$plots$samples_amplification_rate+
 
 # Molecular surveillance of drug resistance
 
-Surveillance of polymorphisms or allelic variants associated with resistance against antimalarials is of the utmost importance in public health. That is why our panel of markers includes 5 genes (9 markers in total, some genes are genotyped by more than one marker) that have polymorphisms associated with antimalarial resistance. In this section we identified the different haplotypes of these genes present in our data set, and we determined the frequency of each haplotype in each study area and in each quarter of the year. Each number in the haplotype indicates a position in the amino acid chain, the letter before the number indicates the reference allele (with sensitive phenotype), and the letter after the number is the allele observed in the sample. If the letters are in capital letters, that allele in that position has been previously reported as resistant, whereas the letters in lower case indicate that it is the first time that the position has been reported as polymorphic. In case the sample is polyclonal, each allele observed is separated by the a vertical line `|`, and the order in which they are reported is based on their read count. Null data, that is, sections of the gene that have not been amplified, are completed with the question mark `?`. It is important to note that polyclonal samples are included in this calculation, so the sum of prevalences may be greater than unity in some cases.
+Surveillance of polymorphisms or allelic variants associated with resistance against antimalarials is of the utmost importance in public health. That is why our panel of markers includes 5 genes (9 markers in total, some genes are genotyped by more than one marker) that have polymorphisms associated with antimalarial resistance. In this section we identified the different haplotypes of these genes present in our data set, and we determined the frequency of each haplotype in each study area and in each quarter of the year. Each number in the haplotype indicates a position in the amino acid chain, the letter before the number indicates the reference allele (with sensitive phenotype), and the letter after the number is the allele observed in the sample. If the letters are in capital letters, that allele in that position has been previously reported as resistant, whereas the letters in lower case indicate that it is the first time that the position has been reported as polymorphic. In case the sample is polyclonal, each allele observed is separated by the a vertical line `|`, and the order in which they are reported is based on their read count. Null data, that is, sections of the gene that have not been amplified, are completed with the question mark `?`.
 
 ```{r 'Molecular surveillance of drug resistance', fig.width=12, fig.height=7, fig.cap='**Figure 6:** Frequency of haplotypes of genes associated with drug resistance. y-axis shows the frequency in the sub-population, x-axis shows the quarter of the year where the sample was collected, rows panels corresponds to the three study areas, and column panels represents each genotyped gene. Colors were assigned based on the possible phenotype, dark blue indicates sensitive, while dark red indicates resistance. Light colors where assigned for incomplete information'}
 source('fx_drug_resistant_haplotypes.R')
 
-drug_resistant_haplotypes = fx_drug_resistant_haplotypes(ampseq,
+ampseq_drug = ampseq
+
+ampseq_drug$loci_abd_table = cbind(ampseq_drug$loci_abd_table,
+                                   ampseq_drug$discarded_loci$loci_abd_table[rownames(ampseq_drug$discarded_loci$loci_abd_table) %in%
+                                                     rownames(ampseq_drug$loci_abd_table),
+                                          grepl(('PfDHFR|PfMDR1|PfDHPS|PfKelch13|PF3D7_1447900'),colnames(ampseq_drug$discarded_loci$loci_abd_table))]
+                                          )
+
+ampseq_drug$markers = rbind(ampseq_drug$markers,
+                            ampseq_drug$discarded_loci$markers[grepl(('PfDHFR|PfMDR1|PfDHPS|PfKelch13|PF3D7_1447900'),ampseq_drug$discarded_loci$markers$amplicon),])
+
+drug_resistant_haplotypes = fx_drug_resistant_haplotypes(ampseq_drug,
                                                          reference_alleles = 'drugR_alleles.csv',
                                         gene_names = c('PfDHFR',
                                                        'PfMDR1',
@@ -462,36 +520,39 @@ drug_resistant_haplotypes = fx_drug_resistant_haplotypes(ampseq,
                                                      'PF3D7_1447900'),
                                         gff_file = "reference/3D7/PlasmoDB-59_Pfalciparum3D7.gff",
                                         fasta_file = "reference/3D7/PlasmoDB-59_Pfalciparum3D7_Genome.fasta",
-                                        variables = c('samples', 'Population', 'quarter_of_collection'))
+                                        variables = c('samples', 'Population', 'quarter_of_collection'),
+                                        na.var.rm = TRUE,
+                                        filters = c('Population;Buenaventura,Quibdo,Guapi,Tumaco,Puerto Inirida',                               'quarter_of_collection;2020-Q4,2021-Q1,2021-Q2,2021-Q3,2021-Q4,2022-Q1,2022-Q2,2022-Q3'))
 
 ```
 
-For the PfMDR1 gene, the predominant haplotype was 86N184F1042d containing the Y184F mutation associated with resistance to lumefantrine and mefloquine. In the PfMDR2 gene (PF3D7_1447900) the most prevalent haplotype was the sensitive haplotype 479y 484T 494i. For the PfKelch13 gene, all the samples had the artemisinin-sensitive haplotype. In the PfDHFR gene, the most prevalent haplotype was 16a51I59C108N164I, which contains two mutations associated with resistance to pyremethamine (N51I and S108N). However, in Buenaventura and Guapi the presence of the sensitive haplotype for this drug was observed. In contrast, the PfDHPS gene haplotype, 436S437G540K581A613A resistant to sulfodoxine, was the most prevalent only in Quibdo, while in the other two study areas the most prevalent haplotype was the sensitive haplotype.
+For the PfMDR1 gene, the predominant haplotypes were 86N184F1034s1042d1246D and 86N184F1034s1042d1246Y containing the Y184F and D1246Y mutations associated with resistance to lumefantrine and mefloquine. In the PfMDR2 gene (PF3D7_1447900) the most prevalent haplotype was the sensitive haplotype 479y484T492i, except for Puerto Inirida where the predominant haplotype contains a nonsynonymous mutation i492v that has not been reported before. For the PfKelch13 gene, all the samples had the artemisinin-sensitive haplotype, and one sample had a synonymous mutation at the amino acid position 543 (c.1629T>C). In the PfDHFR gene, the most prevalent haplotype was 16a51I59C108N164I, which contains two mutations associated with resistance to pyremethamine (N51I and S108N). In Puerto Inirida samples also carried an additional mutation c50r. In Quibdo and Puerto Iniridad, these haplotypes were fixed; while in Buenaventura, Guapi, and Tumaco the presence of the sensitive haplotype for this drug was also observed. In contrast, the PfDHPS gene haplotype, 436S437G540K581A613A resistant to sulfodoxine, was the most prevalent only in Quibdo, while in the other three study areas the most prevalent haplotype was the sensitive haplotype, except for Puerto Inirida where other three resistant haplotypes were oberved.
 
-```{r 'Plot drug resistance', fig.width=12, fig.height=7, fig.cap='**Figure 7:** Frequency of haplotypes of genes associated with drug resistance. y-axis shows the frequency in the sub-population, x-axis shows the quarter of the year where the sample was collected, rows panels corresponds to the three study areas, and column panels represents each genotyped gene. Colors were assigned based on the possible phenotype, dark blue indicates sensitive, while dark red indicates resistance. Light colors where assigned for incomplete information'}
-source('fx_drug_resistant_haplotypes.R')
+```{r 'Plot drug resistance', fig.width=12, fig.height=7, fig.cap='**Figure 6:** Frequency of haplotypes of genes associated with drug resistance. y-axis shows the frequency in the sub-population, x-axis shows the quarter of the year where the sample was collected, rows panels corresponds to the three study areas, and column panels represents each genotyped gene. Colors were assigned based on the possible phenotype, dark blue indicates sensitive, while dark red indicates resistance. Light colors where assigned for incomplete information'}
 
 blues = brewer.pal(9, 'Blues')
 reds = brewer.pal(9, 'Reds')
 
 drug_resistant_haplotypes$haplo_freq_plot+
+  theme(axis.text.x = element_text(angle = 90))+
   scale_fill_manual(values = c(
-    blues[3], reds[5], blues[8], reds[4], # MDR2
-    reds[c(8,5,3)], blues[c(8,3)], # DFHR
-    blues[c(2, 4, 3, 8)], reds[8], # DHPS
-    blues[8], #K13
-    blues[c(2,3)], reds[c(5,3,8)] # MDR1
+    'gray75',blues[6], reds[3], # MDR2
+    reds[c(8,7)], blues[3], reds[6], blues[6], reds[c(9,3)], # DFHR
+    'gray75',blues[4], reds[5], blues[c(2,6)], reds[c(4,9,6,8)], # DHPS
+    blues[6], #K13
+    'gray75', blues[c(4,2,3)], reds[c(4,5,7,9)], blues[2], reds[4], blues[c(3,4)], reds[c(5,6,7,9)] # MDR1
   ))+
   labs(y = 'Haplotype prevalence in infected individuals')
+
 
 ```
 
 
 # Monitoring transmission intensity
 
-The transmission of Malaria has an effect on the evolutionary processes that affect the parasite population. Thus, various genetic indicators are used to identify changes in the intensity of transmission at a spatial and temporal level. One of these indicators is the prevalence of polyclonal infections, or the coexistence of two or more different clones (haplotypes) within the infected individual. As the human parasite genome is haploid, the presence of a single haplotype is expected. The presence of two or more different haplotypes in the sample may be due to the transmission of two or more different genotypes from the same bite (co-infection), or the acquisition of parasites by multiple infections or independent bites (super-infection); and both processes are related to the intensity of transmission. In low transmission there are few infective bites, so there is little chance that a person can acquire a super-infection or co-infection, and therefore most infections are monoclonal. On the other hand, when the necessary conditions exist for the increase in the mosquito population and the interaction between it and the human is favored, super-infections and co-infections increase, generating an increase in the prevalence of polyclonal infections.
+The transmission of Malaria has an effect on the evolutionary processes that affect the parasite population. Thus, various genetic indicators are used to identify changes in the intensity of transmission at a spatial and temporal level. One of these indicators is the prevalence of polyclonal infections, or the coexistence of two or more different clones (haplotypes) within the infected individual. As the parasite genome is haploid in the human host, the presence of a single haplotype is expected. The presence of two or more different haplotypes in the sample may be due to the transmission of two or more different genotypes from the same bite (co-infection), or the acquisition of parasites by multiple infections or independent bites (super-infection); and both processes are related to the intensity of transmission. In low transmission there are few infective bites, so there is little chance that a person can acquire a super-infection or co-infection, and therefore most infections are monoclonal. On the other hand, when the necessary conditions exist for the increase in the mosquito population and the interaction between them and the human population is favored, super-infections and co-infections increase, generating an increase in the prevalence of polyclonal infections.
 
-The genetic relatedness between parasites is also affected by the intensity of transmission. As we mentioned previously, in low transmission scenarios monoclonal infections are favored, so when an infected person is bitten, a single haplotype is transmitted and self-fertilization of the parasite occurs in the mosquito (sexual reproduction of two genetically identical or related haplotypes). This mechanism of propagation by inbreeding is called clonal propagation, and it causes all the alleles of a haplotype to segregate together and not independently, thus increasing the genetic relatedness in the population. In contrast, when the transmission intenity increase, the genetic relatedness tent to decrease as a consequence of the decrease in imbreading and the introduction of new clones by mutation, recombination and migration. 
+The genetic relatedness between parasites is also affected by the intensity of transmission. As we mentioned previously, in low transmission scenarios monoclonal infections are favored, so when an infected person is bitten, a single haplotype is transmitted and self-fertilization of the parasite occurs in the mosquito (sexual reproduction of two genetically identical or related haplotypes). This mechanism of propagation by inbreeding is called clonal propagation, and it causes all the alleles of a haplotype to segregate together and not independently, thus increasing the genetic relatedness in the population. In contrast, when the transmission intensity increase, the genetic relatedness tent to decrease as a consequence of the decrease in inbreeding and the introduction of new clones by mutation, recombination and migration. 
 
 ## Complexity of infection and transmission
 
@@ -500,8 +561,8 @@ In this section we will focus on describing the relationship between the intensi
 ```{r "Defining clonality of the samples"}
 
 source("fx_get_polygenomic.R")
-ampseq = fx_get_polygenomic(ampseq_object = ampseq, strata = "Population")
-
+ampseq = fx_get_polygenomic(ampseq_object = ampseq, strata = "Population", na.rm = FALSE,
+                            filters = NULL)
 ```
 
 ```{r 'Distribution of the number of heterozygous loci per sample by sampling location'}
@@ -509,17 +570,15 @@ source("log_scale_histogram.R")
 
 plot_log_NPolyLoci_by_pop = log_scale_histogram(data = ampseq$metadata[ampseq$metadata$NPolyLoci != 0,],
                                                 var = "NPolyLoci", binwidth = 1, group_by = "Population",
-                                                levels = c("Quibdo", "Buenaventura", "Guapi"), x_label = "Number of heterozygous loci per sample",
-                                                fill_color = c("firebrick3", "dodgerblue3", "gold3", "gray70"),
-                                                y_breaks = c(1, 5,10, 30), ncol = 3)+
+                                                levels = pop_levels, x_label = "Number of heterozygous loci per sample",
+                                                fill_color = pop_colors,
+                                                y_breaks = c(1, 5,10, 30), ncol = 5)+
   theme(axis.text = element_text(size = 12),
         axis.title = element_text(size = 12),
         strip.text = element_text(size = 12)) +
   labs(title = 'B) Distribution of # heterozygous loci per sample', 
        y = "# Samples",
        x = "# heterozygous loci per sample")
-
-
 
 ```
 
@@ -529,9 +588,9 @@ plot_log_coi_by_pop = log_scale_histogram(data = ampseq$metadata,
                                           var = "coi",
                                           binwidth = 1,
                                           group_by = "Population",
-                                          levels = c("Quibdo", "Buenaventura", "Guapi"), x_label = "COI",
-                                          fill_color = c("firebrick3", "dodgerblue3", "gold3"),
-                                          y_breaks = c(1, 10, 100, 400), ncol = 3)+
+                                          levels = pop_levels, x_label = "COI",
+                                          fill_color = pop_colors,
+                                          y_breaks = c(1, 10, 100, 400), ncol = 5)+
   theme(axis.text = element_text(size = 12),
         axis.title = element_text(size = 12),
         strip.text = element_text(size = 12)) +
@@ -541,32 +600,30 @@ plot_log_coi_by_pop = log_scale_histogram(data = ampseq$metadata,
 
 ```{r 'Proportion of polyclonal infections by sampling location'}
 
-plot_poly_by_pop = ampseq[["pop_summary"]] %>% ggplot(aes(x = factor(pop, levels = c("Quibdo", "Buenaventura", "Guapi", "Total")),
+plot_poly_by_pop = ampseq[["pop_summary"]] %>% ggplot(aes(x = factor(pop, levels = c(pop_levels, "Total")),
                                                           y = prop_poly,
-                                                          fill = factor(pop, levels = c("Quibdo", "Buenaventura", "Guapi", "Total"))))+
+                                                          fill = factor(pop, levels = c(pop_levels, "Total"))))+
   geom_col(alpha = .6) +
   geom_errorbar(aes(ymin = prop_poly_lower, ymax = prop_poly_upper), width = .2)+
   theme_bw() +
   labs(title = "D) Frequency of polyclonal infections",
        y = "Frecuencia") +
   scale_size(range = c(3, 6)) +
-  scale_fill_manual(values = c("firebrick3", "dodgerblue3", "gold3", "gray30"))+
+  scale_fill_manual(values = c(pop_colors, "gray30"))+
   scale_y_continuous(limits = c(0, 0.3))+
   theme(axis.text = element_text(size = 12),
         axis.title = element_blank(),
         legend.position = "none")
 
-
-
 ```
 
-There were `r plot_poly_by_pop$data %>% filter(pop == 'Total') %>% select(n_poly) %>% unlist()` polyclonal infections in the overall population (propottion = `r round(plot_poly_by_pop$data %>% filter(pop == 'Total') %>% select(prop_poly) %>% unlist(),3)`), being Guapi the study area highest number of polyclonals (`r plot_poly_by_pop$data %>% filter(pop == 'Guapi') %>% select(n_poly) %>% unlist()`, proportion = `r round(plot_poly_by_pop$data %>% filter(pop == 'Guapi') %>% select(prop_poly) %>% unlist(), 3)`), followed by Quibdo (`r plot_poly_by_pop$data %>% filter(pop == 'Quibdo') %>% select(n_poly) %>% unlist()`, proportion = `r round(plot_poly_by_pop$data %>% filter(pop == 'Quibdo') %>% select(prop_poly) %>% unlist(), 3)`) and then Buenaventura (`r plot_poly_by_pop$data %>% filter(pop == 'Buenaventura') %>% select(n_poly) %>% unlist()`, proportion = `r round(plot_poly_by_pop$data %>% filter(pop == 'Buenaventura') %>% select(prop_poly) %>% unlist(), 3)`). Moreover in Guapi also showed the largest number of heterozygous loci in a sample (`r plot_log_NPolyLoci_by_pop$data %>% filter(group == 'Guapi', Count > 0) %>% select(bin)%>% max()` heterozygous loci), and was the only one that reported a COI equals to 3 in a sample. However, no significant association was observed between the proportion of polyclonal infections and the number of collected samples. These results suggest that individuals with *P. falciparum* infections in Guapi have a higher exposure to infected mosquitoes than the other two communities, but that the higher exposure is not caused by the increase in transmission intensity in the study area.
+There were `r plot_poly_by_pop$data %>% filter(pop == 'Total') %>% select(n_poly) %>% unlist()` polyclonal infections in the overall population (propottion = `r round(plot_poly_by_pop$data %>% filter(pop == 'Total') %>% select(prop_poly) %>% unlist(),3)`), being Guapi the study area highest number of polyclonals (`r plot_poly_by_pop$data %>% filter(pop == 'Guapi') %>% select(n_poly) %>% unlist()`, proportion = `r round(plot_poly_by_pop$data %>% filter(pop == 'Guapi') %>% select(prop_poly) %>% unlist(), 3)`), followed by Quibdo (`r plot_poly_by_pop$data %>% filter(pop == 'Quibdo') %>% select(n_poly) %>% unlist()`, proportion = `r round(plot_poly_by_pop$data %>% filter(pop == 'Quibdo') %>% select(prop_poly) %>% unlist(), 3)`), Tumaco (`r plot_poly_by_pop$data %>% filter(pop == 'Tumaco') %>% select(n_poly) %>% unlist()`, proportion = `r round(plot_poly_by_pop$data %>% filter(pop == 'Tumaco') %>% select(prop_poly) %>% unlist(), 3)`) , and then Buenaventura (`r plot_poly_by_pop$data %>% filter(pop == 'Buenaventura') %>% select(n_poly) %>% unlist()`, proportion = `r round(plot_poly_by_pop$data %>% filter(pop == 'Buenaventura') %>% select(prop_poly) %>% unlist(), 3)`). Polyclonal infections were not observed in Puerto Inirida, maybe as a consequence of the low rate of amplification in this group of samples (Figure 2). Moreover, Guapi also showed the largest number of heterozygous loci in a sample (`r plot_log_NPolyLoci_by_pop$data %>% filter(group == 'Guapi', Count > 0) %>% select(bin)%>% max()` heterozygous loci), and was the only one that reported a COI equals to 3 in a sample. The temporal analysis showed a modest ($R = 0.47$) but significant association ($p_{-value} = 0.011$) between the proportion of polyclonal infections and the number of collected samples.
 
 ```{r 'Temporal change of complexity of infection'}
 
 ampseq$metadata %<>% mutate(Pop_quarter = paste(Population, quarter_of_collection, sep = '_'))
 
-plot_poly_by_pop_over_time = fx_get_polygenomic(ampseq_object = ampseq, strata = "Pop_quarter", update_popsummary = F)[-1,]%>%mutate(
+plot_poly_by_pop_over_time = fx_get_polygenomic(ampseq_object = ampseq, strata = "Pop_quarter", update_popsummary = F, na.rm = TRUE, filters = NULL)[-1,]%>%mutate(
   Population = stringr::str_split(pop, '_', simplify = TRUE)[,1],
   Date = stringr::str_split(pop, '_', simplify = TRUE)[,2],
   prop_poly_lower = case_when(
@@ -583,14 +640,14 @@ plot_poly_by_pop_over_time = fx_get_polygenomic(ampseq_object = ampseq, strata =
              fill = Population))+
   geom_col()+
   geom_errorbar(width = .2)+
-  facet_wrap(~Population, ncol = 3)+
+  facet_wrap(~Population, ncol = 5)+
   theme_bw()+
-  scale_fill_manual(values = c("dodgerblue3","gold3","firebrick3"))+
+  scale_fill_manual(values = pop_colors)+
   labs(title = 'E) Temporal change of the proportion of polyclonal infections',
        y = "Polyclonal infections",
        x = "Date of sampling")+
-  theme(axis.text = element_text(size = 12),
-        axis.text.x = element_text(angle = 315, vjust = 0),
+  theme(axis.text = element_text(size = 10),
+        axis.text.x = element_text(angle = 90, vjust = 0),
         axis.title = element_text(size = 12),
         strip.text = element_text(size = 12),
         legend.position =  "none")
@@ -612,7 +669,7 @@ plot_cor_proppoly_nsamples = ggscatter(nsamples_vs_proppoly, x = "prop_poly", y 
 
 ```
 
-```{r 'Complexity of infection and transmission intensity', fig.width=12, fig.height=8, fig.cap = '**Figure 8:** Effect of transmission on the complexity of infections. A) Map os the 3 study areas. B) Distribution of the number of heterozygous loci per samples per population. C) Distribution of the complexity of infection (COI) by study area. In B and C, y-axis is in logarithm scale. D) Proportion of polyclonal infections per study area. E) Proportion of polyclonal infections per study area over year quarters. F) Spearman correlation of the number of collected samples and proportion of polyclonal infections per year quarters. Each point in F represent the measurement of each year quarter in each study area.'}
+```{r 'Complexity of infection and transmission intensity', fig.width=12, fig.height=8, fig.cap = '**Figure 7:** Effect of transmission on the complexity of infections. A) Map os the 4 study areas. B) Distribution of the number of heterozygous loci per samples per population. C) Distribution of the complexity of infection (COI) by study area. In B and C, y-axis is in logarithm scale. D) Proportion of polyclonal infections per study area. E) Proportion of polyclonal infections per study area over year quarters. F) Spearman correlation of the number of collected samples and proportion of polyclonal infections per year quarters. Each point in F represent the measurement of each year quarter in each study area.'}
 plot_log_poly_by_pop_map = ggdraw()+
   draw_plot(plot_study_sites,
             x = 0,
@@ -691,8 +748,10 @@ plot_relatedness_distribution_within = fx_plot_relatedness_distribution(
   relatedness_matrix = pairwise_relatedness,
   metadata = ampseq$metadata,
   Population = 'Population',
-  fill_color = c("dodgerblue3", "gold3", "firebrick3"),
-  type_pop_comparison = 'within'
+  fill_color = pop_colors,
+  type_pop_comparison = 'within',
+  ncol = 5,
+  pop_levels = pop_levels
 )
 
 ```
@@ -703,8 +762,8 @@ plot_frac_highly_related_within = fx_plot_frac_highly_related(
   relatedness_matrix = pairwise_relatedness,
   metadata = ampseq$metadata,
   Population = 'Population',
-  fill_color = c("dodgerblue3",  "firebrick3", "gold3"),
-  threshold = 0.99, type_pop_comparison = 'within')
+  fill_color = pop_colors,
+  threshold = 0.99, type_pop_comparison = 'within', pop_levels = pop_levels)
 
 ```
 
@@ -714,10 +773,11 @@ source('fx_frac_highly_related_over_time.R')
 plot_frac_highly_related_over_quarters_within = fx_plot_frac_highly_related_over_time(relatedness_matrix = pairwise_relatedness,
                                        metadata = ampseq$metadata,
                                        Population = c('Population', 'quarter_of_collection'),
-                                       fill_color = c("dodgerblue3",  "firebrick3", "gold3"),
+                                       fill_color = pop_colors,
                                        threshold = 0.99,
-                                       type_pop_comparison = 'within')
-
+                                       type_pop_comparison = 'within',
+                                       ncol = 5,
+                                       pop_levels = pop_levels)
 
 ```
 
@@ -730,143 +790,56 @@ nsamples_vs_highlyR = left_join(plot_frac_highly_related_over_quarters_within$pl
   filter(!is.na(Population)) %>%
     mutate(quarter_of_collection = paste(substr(date_of_collection, 1, 4), quarters.Date(date_of_collection), sep='-'))%>%
   group_by(Population, quarter_of_collection) %>%
-  summarise(nsamples= n()) %>% mutate(pop = paste(Population, quarter_of_collection, sep = '_')), by = 'pop') %>% filter(!(quarter_of_collection %in% c('2020-Q3','2020-Q4')))
+  summarise(nsamples= n()) %>% mutate(pop = paste(Population, quarter_of_collection, sep = '_')), by = 'pop')# %>% filter(!(quarter_of_collection %in% c('2020-Q3','2020-Q4')))
 
 plot_cor_highlyR_nsamples = ggscatter(nsamples_vs_highlyR, x = "prop", y = "nsamples", 
           add = "reg.line", conf.int = TRUE, 
           cor.coef = TRUE, cor.method = "spearman",
           title= 'D) # Collected samples vs. Proportion of highly related samples',
-          xlab = "Proportion of highly related samples", ylab = "Number of samples",
-          facet.by = 'Population')
+          xlab = "Proportion of highly related samples", ylab = "Number of samples")#,
+          #facet.by = 'Population')
 
-cor_highlyR_nsamples = cor.test(x = nsamples_vs_highlyR[nsamples_vs_highlyR$Population == 'Quibdo' ,]$prop,
-                                y = nsamples_vs_highlyR[nsamples_vs_highlyR$Population == 'Quibdo' ,]$nsamples,
-                                method = 'spearman')
-
-
+# cor_highlyR_nsamples = cor.test(x = nsamples_vs_highlyR[nsamples_vs_highlyR$Population == 'Quibdo' ,]$prop,
+#                                 y = nsamples_vs_highlyR[nsamples_vs_highlyR$Population == 'Quibdo' ,]$nsamples,
+#                                 method = 'spearman')
 
 ```
 
-There were `r length(pairwise_relatedness[!is.na(pairwise_relatedness)]) -nrow(pairwise_relatedness)` pairwise comparisons, and as it can be observed in figure 6, most samples were highly related (r $\ge$ 0.99) and the average genetic relatedness was `r round(mean(pairwise_relatedness, na.rm = T), 3)` (se = `r round(sd(pairwise_relatedness, na.rm = T)/sqrt(nrow(pairwise_relatedness)), 3)`). The average pairwise relatedness and the proportion of highly related sample comparisons within Buenaventura (mean $r$ = `r round(plot_relatedness_distribution_within$relatedness %>% filter(Pop_comparison == 'Buenaventura') %>% summarise(mean(r)) %>% unlist(), 3)`, proportion = `r plot_frac_highly_related_within$highly_related_table %>% ungroup %>% filter(Pop_comparison == 'Buenaventura') %>% select(prop) %>% unlist`) were greater than the other two study areas (`r round(plot_relatedness_distribution_within$relatedness %>% filter(Pop_comparison %in% c('Guapi','Quibdo')) %>% summarise(mean(r)) %>% unlist(), 3)`, proportion = `r round(plot_frac_highly_related_within$highly_related_table %>% ungroup %>% filter(Pop_comparison %in% c('Guapi','Quibdo')) %>% select(prop) %>% unlist %>% mean, 3)`). These results suggest that the genetic diversity of the parasite population or the transmission intensity in Buenventura is lower compared to the other sites. On the other hand, an strong negative correlation between the temporal change of the proportion of highly related samples and the number of collected samples was observed in Quibdo but not in the other two study areas (Figure 7 C and D), suggesting the increase of transmission intensity (resent outbreak) in this site.
+There were `r length(pairwise_relatedness[!is.na(pairwise_relatedness)]) -nrow(pairwise_relatedness)` pairwise comparisons, and as it can be observed in Figure 8 A, most samples were highly related (r $\ge$ 0.99) and the average genetic relatedness was `r round(mean(pairwise_relatedness, na.rm = T), 3)` (se = `r round(sd(pairwise_relatedness, na.rm = T)/sqrt(nrow(pairwise_relatedness)), 3)`). The average pairwise relatedness and the proportion of highly related sample comparisons within Buenaventura (mean $r$ = `r round(plot_relatedness_distribution_within$relatedness %>% filter(Pop_comparison == 'Buenaventura') %>% summarise(mean(r)) %>% unlist(), 3)`, proportion = `r plot_frac_highly_related_within$highly_related_table %>% ungroup %>% filter(Pop_comparison == 'Buenaventura') %>% select(prop) %>% unlist`) were slightly greater than in Quibdo and Guapi (`r round(plot_relatedness_distribution_within$relatedness %>% filter(Pop_comparison %in% c('Guapi','Quibdo')) %>% summarise(mean(r)) %>% unlist(), 3)`, proportion = `r round(plot_frac_highly_related_within$highly_related_table %>% ungroup %>% filter(Pop_comparison %in% c('Guapi','Quibdo')) %>% select(prop) %>% unlist %>% mean, 3)`) (Tumaco and Puerto Iniridad are not included because their low sample size). No significant association was observed between the temporal change of the proportion of highly related samples and the number of collected samples.
 
-```{r 'network', fig.width=5, fig.height=5, fig.cap = '**Figure 9:** Network representation of pairwise genetic relatedness between samples. Each node represents a sample, and branches are displayed only for pairwise comparisons with a relatedness greater than 0.99. Colors were assigned based on the sampling location: Buenaventura (blue), Guapi (glold) and Quibdo (red).'}
-
-source('fx_plot_network.R')
-
-plot_network = fx_plot_network(relatedness_matrix = pairwise_relatedness,
-                               threshold = .99,
-                               metadata = ampseq$metadata,
-                               sample_id = 'samples',
-                               group_by = 'Population',
-                               levels = c("Quibdo", "Buenaventura", "Guapi"),
-                               colors = c("firebrick3", "dodgerblue3", "gold3")
-                              )
-
-```
-
-```{r, fig.width = 12, fig.height=10, fig.cap = '**Figure 10:** Effect of transmission on relatedness. A) Histogram of the distribution of pairwise genetic relatedness by study area (Panels). The dashed vertical line represents the average genetic relatedness in the overall population. B) Proportion of highly related samples (IBD > 0.99) in each study area. C) Proportion of highly related samples over year quarters in each study area. D) Spearman correlation of the proportion of highly related samples per year quarter in each estudy area and the number of collected samples by passive case detection.'}
-
+```{r, fig.width = 12, fig.height=8, fig.cap = '**Figure 8:** Effect of transmission on relatedness. A) Histogram of the distribution of pairwise genetic relatedness by study area (Panels). The dashed vertical line represents the average genetic relatedness in the overall population. B) Proportion of highly related samples (IBD > 0.99) in each study area. C) Proportion of highly related samples over year quarters in each study area. D) Spearman correlation of the proportion of highly related samples per year quarter in each estudy area and the number of collected samples by passive case detection.'}
 
 plot_highlyR_over_time = ggdraw()+
   draw_plot(plot_relatedness_distribution_within$plot+
               labs(title = 'A) Distribution of relatedness by study area'),
             x = 0,
-            y = .66,
+            y = .5,
             width = .66,
-            height = .34)+
+            height = .5)+
   draw_plot(plot_frac_highly_related_within$plot+
               labs(title = 'B) Highly related',
                    y = 'Proportion'),
             x = .66,
-            y = .66,
+            y = .5,
             width = .34,
-            height = .34)+
+            height = .5)+
   draw_plot(plot_frac_highly_related_over_quarters_within$plot_frac_highly_related+
               labs(title = 'C) Proportion of highly related samples over time (IBD > 0.99)',
                    y = 'Proportion'),
             x = 0,
-            y = .33,
-            width = 1,
-            height = .33)+
-  draw_plot(plot_cor_highlyR_nsamples,
-            x = 0,
             y = 0,
-            width = 1,
-            height = .33)
+            width = .66,
+            height = .5)+
+  draw_plot(plot_cor_highlyR_nsamples,
+            x = .66,
+            y = 0,
+            width = .34,
+            height = .5)
 
 plot_highlyR_over_time
 
 ```
 
-
-```{r 'getting genetic diversity by loci', include = FALSE}
-
-## Haplotypic and genetic diversity and transmission
-source("fx_loci_diversity.R")
-
-ampseq$loci_performance = cbind(ampseq$loci_performance,fx_loci_diversity(ampseq$loci_abd_table, variance = TRUE))
-```
-
-
-```{r 'getting genetic diversity by pop', include = FALSE}
-
-source("fx_pop_diversity.R")
-
-ampseq[["pop_summary"]] = cbind(ampseq[["pop_summary"]],fx_pop_diversity(ampseq_object = ampseq, strata = "Population")[-1])
-
-```
-
-```{r 'Haplotype and genetic diversity by sampling location', fig.width=12, fig.height=6, include = FALSE}
-
-plot_div_by_pop = ampseq[["pop_summary"]]%>%
-  pivot_longer(cols= all_of(c("Effective.richness",
-                              "Shannon",
-                              "Hexp")),
-               names_to = "metric", values_to = "value")%>%
-  ggplot(aes(x = factor(pop, levels = c("Quibdo", "Buenaventura", "Guapi", "Total")),
-             y = value,
-             color = factor(pop, levels = c("Quibdo", "Buenaventura", "Guapi", "Total")),
-             size = Richness))+
-  geom_point(alpha = .6) +
-  facet_wrap(~factor(metric,
-                     levels = c("Effective.richness",
-                                "Shannon",
-                                "Hexp")),
-             scales = "free_y",
-             ncol = 1) +
-  theme_bw() +
-  scale_color_manual(values = c("firebrick3", "dodgerblue3", "gold3", "gray30"))+
-  labs(title = "Haplotypic and genetic diversity",
-       y = "Value",
-       x = "Population",
-       color = "Population")+
-  theme(axis.text = element_text(size = 12),
-        axis.title = element_text(size = 12),
-        strip.text = element_text(size = 12))
-
-
-plot_div_by_pop_map = ggdraw()+
-  draw_plot(plot_study_sites,
-            x = 0,
-            y = .1,
-            width = .4,
-            height = .8)+
-  draw_plot(plot_div_by_pop,
-            x = .4,
-            y = 0,
-            width = .6,
-            height = 1)
-
-plot_div_by_pop_map
-
-# ggsave("plot_div_by_pop_map.png",
-#        plot_div_by_pop_map,
-#        device = "png",
-#        units = "in",
-#        width = 12,
-#        height = 6,
-#        dpi = 320)
-```
 
 # Measuring geographic connectivity
 
@@ -878,9 +851,13 @@ plot_relatedness_distribution_between = fx_plot_relatedness_distribution(
   relatedness_matrix = pairwise_relatedness,
   metadata = ampseq$metadata,
   Population = 'Population',
-  fill_color = c("gray50", "gray50", "gray50"),
-  type_pop_comparison = 'between'
+  fill_color = rep('gray50', 10),
+  type_pop_comparison = 'between',
+  ncol = 5,
+  pop_levels = c("Buenaventura-Guapi", "Buenaventura-Quibdo", "Buenaventura-Tumaco", "Buenaventura-Puerto Inirida",
+                 "Guapi-Quibdo", "Guapi-Tumaco", "Guapi-Puerto Inirida", "Quibdo-Tumaco", "Puerto Inirida-Quibdo", "Puerto Inirida-Tumaco")
 )
+
 ```
 
 ```{r 'highly related samples between study areas'}
@@ -889,13 +866,15 @@ plot_frac_highly_related_between = fx_plot_frac_highly_related(
   relatedness_matrix = pairwise_relatedness,
   metadata = ampseq$metadata,
   Population = 'Population',
-  fill_color = c("gray50", "gray50", "gray50"),
-  threshold = 0.99, type_pop_comparison = 'between')
+  fill_color = rep('gray50', 10),
+  threshold = 0.99, type_pop_comparison = 'between', pop_levels = c("Buenaventura-Guapi", "Buenaventura-Quibdo", "Buenaventura-Tumaco", "Buenaventura-Puerto Inirida",
+                 "Guapi-Quibdo", "Guapi-Tumaco", "Guapi-Puerto Inirida", "Quibdo-Tumaco", "Puerto Inirida-Quibdo", "Puerto Inirida-Tumaco"))
+
 ```
 
-The average genetic relatedness and the proportion of highly related samples were higher between Buenaventura and Guapi (mean $r$ = `r round(plot_relatedness_distribution_between$relatedness %>% filter(Pop_comparison == 'Buenaventura-Guapi') %>% summarise(mean(r)) %>% unlist(), 3)`, proportion = `r round(plot_frac_highly_related_between$highly_related_table %>% ungroup %>% filter(Pop_comparison == 'Buenaventura-Guapi') %>% select(prop) %>% unlist %>% mean, 3)`) than Buenaventura and Quibdo (mean $r$ = `r round(plot_relatedness_distribution_between$relatedness %>% filter(Pop_comparison == 'Buenaventura-Quibdo') %>% summarise(mean(r)) %>% unlist(), 3)`, proportion = `r round(plot_frac_highly_related_between$highly_related_table %>% ungroup %>% filter(Pop_comparison == 'Buenaventura-Quibdo') %>% select(prop) %>% unlist %>% mean, 3)`), and Guapi and Quibdo (mean $r$ = `r round(plot_relatedness_distribution_between$relatedness %>% filter(Pop_comparison == 'Guapi-Quibdo') %>% summarise(mean(r)) %>% unlist(), 3)`, proportion = `r round(plot_frac_highly_related_between$highly_related_table %>% ungroup %>% filter(Pop_comparison == 'Guapi-Quibdo') %>% select(prop) %>% unlist %>% mean, 3)`). The results suggest higher connectivity or mobilization  of parasites between Buenaventura and Guapi than Quibdo and these two study areas.
+The average genetic relatedness and the proportion of highly related samples were higher among Buenaventura, Guapi and Tumaco (mean $r$ = `r round(plot_relatedness_distribution_between$relatedness %>% filter(Pop_comparison %in% c('Buenaventura-Guapi', "Buenaventura-Tumaco", "Guapi-Tumaco")) %>% summarise(mean(r)) %>% unlist(), 3)`, proportion = `r round(plot_frac_highly_related_between$highly_related_table %>% ungroup %>% filter(Pop_comparison == 'Buenaventura-Guapi') %>% select(prop) %>% unlist %>% mean, 3)`) than between Quibdo and the other three study sites located in the Pacific coast (mean $r$ = `r round(plot_relatedness_distribution_between$relatedness %>% filter(Pop_comparison %in% c('Buenaventura-Quibdo', "Guapi-Quibdo", "Tumaco-Quibdo")) %>% summarise(mean(r)) %>% unlist(), 3)`, proportion = `r round(plot_frac_highly_related_between$highly_related_table %>% ungroup %>% filter(Pop_comparison %in% c('Buenaventura-Quibdo', "Guapi-Quibdo", "Tumaco-Quibdo")) %>% select(prop) %>% unlist %>% mean, 3)`). No conectivity was oberved between Puerto Inirida and the other four study sites. The results suggest higher connectivity or mobilization  of parasites between Buenaventura, Guapi and Tumaco, than Quibdo and these three study areas.
 
-```{r 'Connectivity', fig.width=10, fig.height=5, fig.cap = '**Figure 11:** A) Histogram distribution of pairwise genetic relatedness between sampling locations. Panels in columns correspond to the three study areas. The dotted vertical lines represent the average genetic relatedness in the whole population. B) Proportion of highly related samples between sampling locations.'}
+```{r 'Connectivity', fig.width=10, fig.height=5, fig.cap = '**Figure 9:** A) Histogram distribution of pairwise genetic relatedness between sampling locations. Panels in columns correspond to the three study areas. The dotted vertical lines represent the average genetic relatedness in the whole population. B) Proportion of highly related samples between sampling locations.'}
 
 plot_connectivity = ggdraw()+
   draw_plot(plot_relatedness_distribution_between$plot+
@@ -905,6 +884,10 @@ plot_connectivity = ggdraw()+
             width = .7,
             height = 1)+
   draw_plot(plot_frac_highly_related_between$plot+
+              scale_x_discrete(breaks = c("Buenaventura-Guapi", "Buenaventura-Quibdo", "Buenaventura-Tumaco", "Buenaventura-Puerto Inirida",
+                 "Guapi-Quibdo", "Guapi-Tumaco", "Guapi-Puerto Inirida", "Quibdo-Tumaco", "Puerto Inirida-Quibdo", "Puerto Inirida-Tumaco"),
+                 labels = c("B-G", "B-Q", "B-T", "B-PI",
+                 "G-Q", "G-T", "G-PI", "Q-T", "PI-Q", "PI-T"))+
               labs(title = 'B) Highly related'),
             x = 0.7,
             y = 0,
@@ -913,18 +896,6 @@ plot_connectivity = ggdraw()+
 
 plot_connectivity
 ```
-
-# Preliminary conclusions
-
-1. The haplotype associated to sulfadoxine resistance is differentially spread across the study areas.
-
-2. Individuals with *P. falciparum* infections in Guapi have a higher exposure to infected mosquitoes than the other two communities.
-
-3. The genetic diversity of the parasite population or the transmission intensity in Buenventura is lower compared to the other two sites.
-
-4. There is an increment of transmission intensity (resent outbreak) in Quibdo.
-
-5. There is higher connectivity or mobilization  of parasites between Buenaventura and Guapi.
 
 
 

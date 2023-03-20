@@ -30,7 +30,7 @@ fx_drug_resistant_haplotypes = function(ampseq_object,
   # Define haplotypes respect to a reference genome
   source('fx_haplotypes_respect_to_reference.R')
   
-  haplotypes_respect_to_reference = fx_haplotypes_respect_to_reference(ampseq,
+  haplotypes_respect_to_reference = fx_haplotypes_respect_to_reference(ampseq_object,
                                                                        gene_names,
                                                                        gene_ids,
                                                                        gff_file,
@@ -462,8 +462,11 @@ fx_drug_resistant_haplotypes = function(ampseq_object,
                            haplotype_counts$var2 == date,][['freq']] = haplotype_counts[haplotype_counts$gene_names == gene&
                                                                                                               haplotype_counts$var1 == Pop&
                                                                                                               haplotype_counts$var2 == date,][['count']]/
-          samples_pop_quarter[samples_pop_quarter$var1 == Pop&
-                                samples_pop_quarter$var2 == date,][['count']]
+          sum(haplotype_counts[haplotype_counts$gene_names == gene&
+                                 haplotype_counts$var1 == Pop&
+                                 haplotype_counts$var2 == date,][['count']])
+          # samples_pop_quarter[samples_pop_quarter$var1 == Pop&
+          #                       samples_pop_quarter$var2 == date,][['count']]
         
       }
     }

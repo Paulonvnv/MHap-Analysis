@@ -7,7 +7,9 @@ fx_plot_network = function(relatedness_matrix,
                         levels,
                         colors){
   
-  metadata[is.na(metadata[[group_by]]),][[group_by]] = 'missing data'
+  if(sum(is.na(metadata[[group_by]])) > 0){
+    metadata[is.na(metadata[[group_by]]),][[group_by]] = 'missing data'
+  }
   
   pairwise_relatednes_l = data.frame(Yi = rownames(relatedness_matrix), relatedness_matrix)
   

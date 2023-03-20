@@ -4,7 +4,9 @@ fx_plot_frac_highly_related_over_time = function(relatedness_matrix = pairwise_r
                                        Population = c('Population', 'quarter_of_collection'),
                                        fill_color = c("dodgerblue3",  "firebrick3", "gold3", "gray50", "gray50", "gray50"),
                                        threshold = 0.99,
-                                       type_pop_comparison = 'within'){## c('within', 'between', 'both')
+                                       type_pop_comparison = 'within',
+                                       ncol = 4,
+                                       pop_levels = NULL){## c('within', 'between', 'both')
   
   pairwise_relatedness_l = data.frame(Yi = rownames(relatedness_matrix), relatedness_matrix)
   
@@ -23,22 +25,21 @@ fx_plot_frac_highly_related_over_time = function(relatedness_matrix = pairwise_r
   #   Date_Yi = metadata[grep(Yi, metadata[['samples']]),][[Population[2]]],
   #   Date_Yj = metadata[grep(Yj, metadata[['samples']]),][[Population[2]]])
 
+  pairwise_relatedness_l = merge(pairwise_relatedness_l, metadata[,c('samples', Population[1])], by.x = 'Yi', by.y = 'samples', all.x = TRUE)
   
-  pairwise_relatedness_l[['Population_Yi']] = apply(pairwise_relatedness_l, 1, function(x){
-    metadata[metadata[['samples']] == x['Yi'],][[Population[1]]]
-  })
+  names(pairwise_relatedness_l) = c(names(pairwise_relatedness_l)[-4], 'Population_Yi')
   
-  pairwise_relatedness_l[['Population_Yj']] = apply(pairwise_relatedness_l, 1, function(x){
-    metadata[metadata[['samples']] == x['Yj'],][[Population[1]]]
-  })
+  pairwise_relatedness_l = merge(pairwise_relatedness_l, metadata[,c('samples', Population[1])], by.x = 'Yj', by.y = 'samples', all.x = TRUE)
   
-  pairwise_relatedness_l[['Date_Yi']] = apply(pairwise_relatedness_l, 1, function(x){
-    metadata[metadata[['samples']] == x['Yi'],][[Population[2]]]
-  })
+  names(pairwise_relatedness_l) = c(names(pairwise_relatedness_l)[-5], 'Population_Yj')
   
-  pairwise_relatedness_l[['Date_Yj']] = apply(pairwise_relatedness_l, 1, function(x){
-    metadata[metadata[['samples']] == x['Yj'],][[Population[2]]]
-  })
+  pairwise_relatedness_l = merge(pairwise_relatedness_l, metadata[,c('samples', Population[2])], by.x = 'Yi', by.y = 'samples', all.x = TRUE)
+  
+  names(pairwise_relatedness_l) = c(names(pairwise_relatedness_l)[-6], 'Date_Yi')
+  
+  pairwise_relatedness_l = merge(pairwise_relatedness_l, metadata[,c('samples', Population[2])], by.x = 'Yj', by.y = 'samples', all.x = TRUE)
+  
+  names(pairwise_relatedness_l) = c(names(pairwise_relatedness_l)[-7], 'Date_Yj')
   
   pairwise_relatedness_l %<>% filter(!is.na(Population_Yi),
                                      !is.na(Population_Yj),
@@ -125,11 +126,11 @@ fx_plot_frac_highly_related_over_time = function(relatedness_matrix = pairwise_r
   if(type_pop_comparison == 'both'){
     
     plot_frac_highly_related = frac_highly_related %>%
-      ggplot(aes(x = Date_Yi, y = prop, fill = Pop_comparison)) + 
+      ggplot(aes(x = Date_Yi, y = prop, fill = factor(Pop_comparison, levels = pop_levels))) + 
       geom_col(alpha = .85)+
       geom_errorbar(aes(ymin = lower, ymax = upper), width = .2)+
       scale_fill_manual(values = fill_color)+
-      facet_wrap(Type_Pop_comparison~Pop_comparison)+
+      facet_wrap(Type_Pop_comparison~factor(Pop_comparison, levels = pop_levels))+
       theme_bw()+
       labs(y = paste0('Proportion of highly related samples, IBD >= ', threshold))+
       theme(axis.text = element_text(size = 12),
@@ -143,11 +144,11 @@ fx_plot_frac_highly_related_over_time = function(relatedness_matrix = pairwise_r
     
     plot_frac_highly_related = frac_highly_related %>%
       filter(Type_Pop_comparison == 'Within')%>%
-      ggplot(aes(x = Date_Yi, y = prop, fill = Pop_comparison)) + 
+      ggplot(aes(x = Date_Yi, y = prop, fill = factor(Pop_comparison, levels = pop_levels))) + 
       geom_col(alpha = .85)+
       geom_errorbar(aes(ymin = lower, ymax = upper), width = .2)+
       scale_fill_manual(values = fill_color)+
-      facet_wrap(~Pop_comparison)+
+      facet_wrap(~factor(Pop_comparison, levels = pop_levels), ncol = ncol)+
       theme_bw()+
       labs(y = paste0('Proportion of highly related samples, IBD >= ', threshold))+
       theme(axis.text = element_text(size = 12),
@@ -162,11 +163,11 @@ fx_plot_frac_highly_related_over_time = function(relatedness_matrix = pairwise_r
     
     plot_frac_highly_related = frac_highly_related %>%
       filter(Type_Pop_comparison == 'Between')%>%
-    ggplot(aes(x = Date_Yi, y = prop, fill = Pop_comparison)) + 
+    ggplot(aes(x = Date_Yi, y = prop, fill = factor(Pop_comparison, levels = pop_levels))) + 
       geom_col(alpha = .85)+
       geom_errorbar(aes(ymin = lower, ymax = upper), width = .2)+
       scale_fill_manual(values = fill_color)+
-      facet_wrap(~Pop_comparison)+
+      facet_wrap(~factor(Pop_comparison, levels = pop_levels), ncol = ncol)+
       theme_bw()+
       labs(y = paste0('Proportion of highly related samples, IBD >= ', threshold))+
       theme(axis.text = element_text(size = 12),
