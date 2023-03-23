@@ -352,6 +352,8 @@ markers = read.csv("markers.csv")
 
 ampseq = fx_cigar2loci_abd(cigar_object, markers = markers, min_abd = 10, min_ratio = .1)
 
+View(ampseq$loci_abd_table)
+
 ```
 
 ```{r 'Heatmap of read depth', fig.width=9, fig.height=12, fig.cap= '**Figure 2:** Read depth by loci (x-axis) and samples (y-axis).'}
