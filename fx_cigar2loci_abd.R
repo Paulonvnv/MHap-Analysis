@@ -1,5 +1,5 @@
 
-fx_cigar2loci_abd = function(cigar_object, min_abd = 10, min_ratio = .1, markers = NULL){
+fx_cigar2loci_abd = function(cigar_object, min_abd = 10, min_ratio = .1, markers = NULL, remove_controls = F){
   
   cigar_table = cigar_object[["cigar_table"]]
   
@@ -20,10 +20,13 @@ fx_cigar2loci_abd = function(cigar_object, min_abd = 10, min_ratio = .1, markers
       }
       
       if(length(alleles[which(alleles > min_abd)]) == 1){
-        ampseq_loci_abd_table[sample, locus] = paste(strsplit(names(alleles[which(alleles > min_abd)]), ",")[[1]][2], alleles[which(alleles > min_abd)], sep = ":")
+        ampseq_loci_abd_table[sample, locus] = paste(gsub(paste0(locus, '.'),'',names(alleles[which(alleles > min_abd)]), ","), alleles[which(alleles > min_abd)], sep = ":")
       }else if(length(alleles[which(alleles > min_abd)]) > 1){
+        allele_names = names(alleles)
+        alleles = as.integer(alleles)
+        names(alleles) = allele_names
         alleles = sort(alleles, decreasing = T)
-        ampseq_loci_abd_table[sample, locus] = gsub(paste(locus, ",", sep = ""), "", paste(paste(names(alleles[alleles/max(alleles) > min_ratio]), alleles[alleles/max(alleles) > min_ratio], sep = ":"), collapse = "_"))
+        ampseq_loci_abd_table[sample, locus] = gsub(paste0(locus, "."), "", paste(paste(names(alleles[alleles/max(alleles) > min_ratio]), alleles[alleles/max(alleles) > min_ratio], sep = ":"), collapse = "_"))
         
       }
     }
@@ -33,20 +36,32 @@ fx_cigar2loci_abd = function(cigar_object, min_abd = 10, min_ratio = .1, markers
   rm(ampseq_loci_vector)
   
   # Removing controls
+  if(remove_controls){
+    controls_ampseq_loci_abd_table = ampseq_loci_abd_table[cigar_object[["metadata"]][cigar_object[["metadata"]][["typeofSamp"]] == "Controls",][["samples"]],]
+    controls_metadata = cigar_object[["metadata"]][cigar_object[["metadata"]][["typeofSamp"]] == "Controls",]
+    
+    ampseq_loci_abd_table = ampseq_loci_abd_table[cigar_object[["metadata"]][cigar_object[["metadata"]][["typeofSamp"]] == "Samples",][["samples"]],]
+    metadata = cigar_object[["metadata"]][cigar_object[["metadata"]][["typeofSamp"]] == "Samples",]
+    
+    return(list(loci_abd_table = ampseq_loci_abd_table,
+                metadata = metadata,
+                controls = list(loci_abd_table = controls_ampseq_loci_abd_table,
+                                metadata = controls_metadata),
+                markers = markers,
+                loci_performance = NULL,
+                pop_summary = NULL))
+  }else{
+    
+    metadata = cigar_object[["metadata"]]
+    
+    return(list(loci_abd_table = ampseq_loci_abd_table,
+                metadata = metadata,
+                markers = markers,
+                loci_performance = NULL,
+                pop_summary = NULL))
+    
+  }
   
-  controls_ampseq_loci_abd_table = ampseq_loci_abd_table[cigar_object[["metadata"]][cigar_object[["metadata"]][["typeofSamp"]] == "Controls",][["samples"]],]
-  controls_metadata = cigar_object[["metadata"]][cigar_object[["metadata"]][["typeofSamp"]] == "Controls",]
-  
-  ampseq_loci_abd_table = ampseq_loci_abd_table[cigar_object[["metadata"]][cigar_object[["metadata"]][["typeofSamp"]] == "Samples",][["samples"]],]
-  metadata = cigar_object[["metadata"]][cigar_object[["metadata"]][["typeofSamp"]] == "Samples",]
-  
-  return(list(loci_abd_table = ampseq_loci_abd_table,
-              metadata = metadata,
-              controls = list(loci_abd_table = controls_ampseq_loci_abd_table,
-                              metadata = controls_metadata),
-              markers = markers,
-              loci_performance = NULL,
-              pop_summary = NULL))
   
 
 }
