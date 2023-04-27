@@ -11,7 +11,7 @@ output:
 editor_options: 
   markdown: 
     wrap: 72
-  chunk_output_type: inline
+  chunk_output_type: console
 ---
 
 This is a preliminary report of results of amplicon sequencing (microhaplotypes) of the *P. falciparum* samples collected from August 2020 to August 2022 in four municipalities located in the pacific coast of Colombia and Puerto Inirida located in the border with Venezuela. The report includes the following topics:
@@ -193,11 +193,32 @@ external_metadata %<>% mutate(
   grepl('SP019400', samples) ~ 'Puerto Inirida'
   ),
   date_of_symp = X2.9..Fecha.inicio.de.síntomas,
-  date_of_collection = X2.3..Fecha.de.reclutamiento.
+  date_of_collection = X2.3..Fecha.de.reclutamiento.,
+  Age = X2.6..Edad,
+  Ethnicity = case_when(
+    grepl('afro', X2.8..Grupo.étnico, ignore.case = T) ~ 'Afro-descendant',
+    grepl('ind', X2.8..Grupo.étnico, ignore.case = T) ~ 'Indigenous',
+    grepl('mestizo', X2.8..Grupo.étnico, ignore.case = T) ~ 'Mestizo',
+    grepl('otro', X2.8..Grupo.étnico, ignore.case = T) ~ 'Other'
+    ),
+  Feber = case_when(
+    grepl('sin',X2.10..Síntomas, ignore.case = T) ~ 'No',
+    grepl('^fiebre',X2.10..Síntomas, ignore.case = T) ~ 'Yes'
+    ),
+  Nationality = case_when(
+    grepl('col|vol', ignore.case = T, X2.2..Nacionalidad) ~ 'Colombian',
+    grepl('ven|jar', ignore.case = T, X2.2..Nacionalidad) ~ 'Venezuelan'
+  ),
+  LastTwoWeeksTravelHistory = case_when(
+    grepl('Si', X2.13..Viajes.en.los.últimos.días.o.máximo.2.semanas, ignore.case = T) ~ 'Yes',
+    grepl('No', X2.13..Viajes.en.los.últimos.días.o.máximo.2.semanas, ignore.case = T) ~ 'No'
+  ),
+  ParasiteCount = as.numeric(X3.2.5.Recuento.parasitario),
+  Parasitemia = 6000*as.numeric(external_metadata$X3.2.5.Recuento.parasitario)/as.numeric(external_metadata$X3.2.7..Leucocitos.contados)
  )
 
 
-external_metadata %<>% select(samples, Population, date_of_collection, date_of_symp)
+external_metadata %<>% select(samples, Population, date_of_collection, date_of_symp, Age, Ethnicity, Feber, LastTwoWeeksTravelHistory, ParasiteCount, Parasitemia)
 
 external_metadata[!grepl('(2020)|(2021)|(2022)|(2023)', external_metadata$date_of_collection),][['date_of_collection']] =
   external_metadata[!grepl('(2020)|(2021)|(2022)|(2023)', external_metadata$date_of_collection),][['date_of_symp']]
@@ -212,7 +233,9 @@ external_metadata[external_metadata$month_of_collection == '2023-10',][['month_o
 external_metadata[["group"]] = ifelse(external_metadata$samples %in% cigar_object$metadata$samples, "AMPseq", "noAMPseq")
 
 # Merging metadata
-cigar_object$metadata = merge(cigar_object$metadata, external_metadata[,c('samples', 'date_of_collection', 'date_of_symp', 'month_of_collection')], by = 'samples', all.x = TRUE)
+cigar_object$metadata = merge(cigar_object$metadata, external_metadata[,c('samples', 'date_of_collection', 'date_of_symp', 'month_of_collection',
+                                                                          'Age', 'Ethnicity', 'Feber', 'LastTwoWeeksTravelHistory', 'ParasiteCount', 'Parasitemia')],
+                              by = 'samples', all.x = TRUE)
 
 # Imputing missing data with the previous observation
 cigar_object$metadata[which(is.na(cigar_object$metadata$month_of_collection) & cigar_object$metadata$typeofSamp == 'Samples'),][['month_of_collection']] = cigar_object$metadata[which(is.na(cigar_object$metadata$month_of_collection) & cigar_object$metadata$typeofSamp == 'Samples') - 1,][['month_of_collection']]
@@ -350,11 +373,64 @@ source("fx_cigar2loci_abd.R")
 
 markers = read.csv("markers.csv")
 
-ampseq = fx_cigar2loci_abd(cigar_object, markers = markers, min_abd = 10, min_ratio = .1)
+ampseq = fx_cigar2loci_abd(cigar_object, markers = markers, min_abd = 10, min_ratio = .1, remove_controls = T)
 
-View(ampseq$loci_abd_table)
+ampseq$controls$metadata
 
 ```
+
+
+```{r 'Heatmap of read depth', fig.width=9, fig.height=12, fig.cap= '**Figure 2:** Read depth by loci (x-axis) and samples (y-axis).'}
+
+coverage_controls = sapply(1:ncol(ampseq$controls$loci_abd_table), function(mhap){
+  
+  temp_mhap = strsplit(ampseq$controls$loci_abd_table[,mhap], '_')
+  
+  sapply(1:length(temp_mhap), function(sample){
+    
+    sum(as.numeric(gsub('[^*]+:','', temp_mhap[[sample]])))
+    
+  })
+})
+
+colnames(coverage_controls) = colnames(ampseq$controls$loci_abd_table)
+rownames(coverage_controls) = rownames(ampseq$controls$loci_abd_table)
+
+coverage_controls = as.data.frame(coverage_controls)
+coverage_controls$samples = rownames(coverage_controls)
+
+coverage_controls$run = ampseq$controls$metadata$run
+
+coverage_controls %<>% pivot_longer(cols = all_of(colnames(coverage_controls)[c(-ncol(coverage_controls), -ncol(coverage_controls) + 1)]),
+                           names_to = 'Markers',
+                           values_to = 'Read_depth')
+
+sample_order = coverage_controls %>%
+  group_by(samples) %>%
+  summarise(Read_depth = sum(Read_depth, na.rm = T)) %>%
+  arrange(Read_depth) %>%
+  select(samples) %>% unlist
+
+
+plot_read_depth_heatmap = coverage_controls %>% ggplot(aes(x = Markers, y = factor(samples, levels = sample_order), fill = log10(Read_depth)))+
+  geom_tile()+
+  scale_fill_gradient(low="white", high="red",
+                      breaks = c(1, 2, 3, 4),
+                      labels = 10^c(1, 2, 3, 4))+
+  facet_wrap(run~., ncol = 1, scales = 'free_y')+
+  labs(y = 'Samples',
+       fill = "Read depth")+
+  theme_bw()+
+  scale_x_discrete(labels = 1:128)+
+  theme(axis.text.x = element_text(angle = 90, size = 6))
+
+plot_read_depth_heatmap
+
+```
+
+
+
+
 
 ```{r 'Heatmap of read depth', fig.width=9, fig.height=12, fig.cap= '**Figure 2:** Read depth by loci (x-axis) and samples (y-axis).'}
 
@@ -376,8 +452,9 @@ coverage = as.data.frame(coverage)
 coverage$samples = rownames(coverage)
 
 coverage$study_area = ampseq$metadata$Population
+coverage$run = ampseq$metadata$run
 
-coverage %<>% pivot_longer(cols = all_of(colnames(coverage)[c(-ncol(coverage), -ncol(coverage) + 1)]),
+coverage %<>% pivot_longer(cols = all_of(colnames(coverage)[c(-ncol(coverage), -ncol(coverage) + 1, -ncol(coverage) + 2)]),
                            names_to = 'Markers',
                            values_to = 'Read_depth')
 
@@ -393,7 +470,7 @@ plot_read_depth_heatmap = coverage %>% ggplot(aes(x = Markers, y = factor(sample
   scale_fill_gradient(low="white", high="red",
                       breaks = c(1, 2, 3, 4),
                       labels = 10^c(1, 2, 3, 4))+
-  facet_wrap(factor(study_area, levels = pop_levels)~., ncol = 1, scales = 'free_y')+
+  facet_wrap(factor(study_area, levels = pop_levels)~run, ncol = 5, scales = 'free_y')+
   labs(y = 'Samples',
        fill = "Read depth")+
   theme_bw()+
@@ -422,6 +499,141 @@ plot_read_depht_histogram = log_scale_histogram(coverage[!is.na(coverage$Read_de
 
 plot_read_depht_histogram
 ```
+```{r 'Distribution of read depth by study area', , fig.width=10, fig.height=10, fig.cap= '**Figure 4:** Histogram of the read depth by study area.'}
+
+samp_readD = coverage %>% group_by(samples) %>% summarise(FracAmpLoci = sum(!is.na(Read_depth))/n(),
+                                                          Read_depth = median(Read_depth, na.rm = T)
+                                                          )
+
+ampseq$metadata = merge(ampseq$metadata, samp_readD, by = 'samples')
+
+
+ggdraw()+
+  
+  draw_plot(ampseq$metadata %>% ggplot(aes(x = factor(Population, levels = pop_levels), y = log10(Parasitemia),
+                                           color = factor(Population, levels = pop_levels)))+
+  geom_violin()+
+  geom_jitter()+
+  scale_color_manual(values = pop_colors)+
+  scale_y_continuous(breaks = 0:7, labels = 10^(0:7))+
+  theme_bw()+
+  labs(title = 'A) Parasite load by study site',
+       y = 'Parasitemia')+
+  theme(legend.position = 'none',
+        axis.title.x = element_blank()),
+  x = 0,
+  y = .75,
+  width = 1,
+  height = .25)+
+  
+  draw_plot(ampseq$metadata %>% ggplot(aes(y = Read_depth, x = log10(Parasitemia), color = factor(Population, levels = pop_levels)))+
+  geom_point(alpha = .5)+
+  scale_color_manual(values = pop_colors)+
+  theme_bw()+
+  facet_wrap(.~ factor(Population, levels = pop_levels), ncol = 5)+
+  theme(legend.position = 'none',
+        axis.title.x = element_blank())+
+    labs(title = 'B) Read depth vs log(Parasitemia)',
+       y = 'Median read depth'),
+  x = 0,
+  y = .5,
+  width = 1,
+  height = .25)+
+  
+  draw_plot(ampseq$metadata %>% ggplot(aes(y = FracAmpLoci, x = log10(Parasitemia), color = factor(Population, levels = pop_levels)))+
+  geom_point(alpha = .5)+
+  scale_color_manual(values = pop_colors)+
+  theme_bw()+
+  facet_wrap(.~factor(Population, levels = pop_levels), ncol = 5)+
+  theme(legend.position = 'none',
+        axis.title.x = element_blank())+
+    labs(title = 'C) Fraction of amplified loci vs log(Parasitemia)'),
+  x = 0,
+  y = .25,
+  width = 1,
+  height = .25)+
+  
+  draw_plot(ampseq$metadata %>% ggplot(aes(y = log(FracAmpLoci/(1-FracAmpLoci)), x = log10(Parasitemia), color = factor(Population, levels = pop_levels)))+
+  geom_point(alpha = .5)+
+  scale_color_manual(values = pop_colors)+
+  theme_bw()+
+  facet_wrap(.~factor(Population, levels = pop_levels), ncol = 5)+
+  theme(legend.position = 'none')+
+    labs(title = 'D) Log odd ratio of the fraction of amplified loci vs log(Parasitemia)',
+         y = 'log(odd(RacAmpLoci))',
+         x = 'Log10(Parasitemia)'),
+  x = 0,
+  y = 0,
+  width = 1,
+  height = .25)
+
+
+
+
+ggdraw()+
+  
+  draw_plot(ampseq$metadata %>% ggplot(aes(x = factor(Population, levels = pop_levels), y = log10(ParasiteCount),
+                                           color = factor(Population, levels = pop_levels)))+
+  geom_violin()+
+  geom_jitter()+
+  scale_color_manual(values = pop_colors)+
+  scale_y_continuous(breaks = 0:7, labels = 10^(0:7))+
+  theme_bw()+
+  labs(title = 'A) Parasite Count by study site',
+       y = 'Parasite Count')+
+  theme(legend.position = 'none',
+        axis.title.x = element_blank()),
+  x = 0,
+  y = .75,
+  width = 1,
+  height = .25)+
+  
+  draw_plot(ampseq$metadata %>% ggplot(aes(y = Read_depth, x = log10(ParasiteCount), color = factor(Population, levels = pop_levels)))+
+  geom_point(alpha = .5)+
+  scale_color_manual(values = pop_colors)+
+  theme_bw()+
+  facet_wrap(.~ factor(Population, levels = pop_levels), ncol = 5)+
+  theme(legend.position = 'none',
+        axis.title.x = element_blank())+
+    labs(title = 'B) Read depth vs log(ParasiteCount)',
+       y = 'Median read depth'),
+  x = 0,
+  y = .5,
+  width = 1,
+  height = .25)+
+  
+  draw_plot(ampseq$metadata %>% ggplot(aes(y = FracAmpLoci, x = log10(ParasiteCount), color = factor(Population, levels = pop_levels)))+
+  geom_point(alpha = .5)+
+  scale_color_manual(values = pop_colors)+
+  theme_bw()+
+  facet_wrap(.~factor(Population, levels = pop_levels), ncol = 5)+
+  theme(legend.position = 'none',
+        axis.title.x = element_blank())+
+    labs(title = 'C) Fraction of amplified loci vs log(ParasiteCount)'),
+  x = 0,
+  y = .25,
+  width = 1,
+  height = .25)+
+  
+  draw_plot(ampseq$metadata %>% ggplot(aes(y = log(FracAmpLoci/(1-FracAmpLoci)), x = log10(ParasiteCount), color = factor(Population, levels = pop_levels)))+
+  geom_point(alpha = .5)+
+  scale_color_manual(values = pop_colors)+
+  theme_bw()+
+  facet_wrap(.~factor(Population, levels = pop_levels), ncol = 5)+
+  theme(legend.position = 'none')+
+    labs(title = 'D) Log odd ratio of the fraction of amplified loci vs log(ParasiteCount)',
+         y = 'log(odd(RacAmpLoci))',
+         x = 'Log10(ParasiteCount)'),
+  x = 0,
+  y = 0,
+  width = 1,
+  height = .25)
+
+
+
+```
+
+
 ## Amplification rate by locus
 
 The minimum proportion of samples that a marker should amplify in order to be keep it for further analysis was set to 0.65, and all markers below this `threshold` were discarded.
@@ -545,6 +757,9 @@ drug_resistant_haplotypes$haplo_freq_plot+
     'gray75', blues[c(4,2,3)], reds[c(4,5,7,9)], blues[2], reds[4], blues[c(3,4)], reds[c(5,6,7,9)] # MDR1
   ))+
   labs(y = 'Haplotype prevalence in infected individuals')
+
+  # View(drug_resistant_haplotypes$haplotype_counts %>% filter(gene_names == 'PfDHPS') %>%
+  # group_by(Population, haplotype)%>% summarise(freq = mean(freq)))
 
 
 ```
