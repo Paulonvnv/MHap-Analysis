@@ -1,5 +1,5 @@
 
-fx_cigar2loci_abd = function(cigar_object, min_abd = 10, min_ratio = .1, markers = NULL, markers_pattern = NULL, remove_controls = F){
+fx_cigar2loci_abd = function(cigar_object, min_abd = 1, min_ratio = .1, markers = NULL, markers_pattern = NULL, remove_controls = F){
   
   cigar_table = cigar_object[["cigar_table"]]
   
