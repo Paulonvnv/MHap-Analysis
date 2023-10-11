@@ -19,4 +19,6 @@ A RMarkdown tutorial (`MHap_Tutorial.rmd`) has been created to introduce the fin
 
 For people not familiarized with RMarkdown, all tutorials are also found in our wiki.
 
+$$T_i = \lambda$$
+
 $$\begin{array}{c|c:c:c:c:c:c} \text{sampleID}&Gene_1,Allele_1&Gene_1,Allele_2&...&Gene_1,Allele_k&... & Gene_m, Allele_{k_m}\\ \hline ID_1 & \text{Read counts} &&& \\ \hdashline ... &&&&\\ \hdashline ID_n &&&& \end{array}$$
