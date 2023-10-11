@@ -1,16 +1,15 @@
 # Micro-Haplotype (MHap) Analysis
-The purpose of this tutorial is to introduce researchers at the Laboratory of Genomic Epidemiology of Malaria at Harvard university in the analysis of genotyping information generated through amplicon sequencing (also called Microhaplotype genotyping). This tutorial will cover:
+The purpose of this repository is to introduce researchers at the Laboratory of Genomic Epidemiology of Malaria at Harvard university in the analysis of genotyping information generated through amplicon sequencing (also called Microhaplotype genotyping). This cover:
 
-Importing and handling tables in CIGAR format in R environment.
+1. Importing and handling tables in CIGAR format in R environment.
 
-Adding or generating metadata.
+2. Adding metadata.
 
-Performance of the genotyping process.
+3. Performance of the genotyping process.
 
-Molecular surveillance of drug resistance.
+4. Molecular surveillance of drug resistance.
 
-Monitoring transmission intensity.
+5. Monitoring transmission intensity.
 
-Measuring geographic connectivity.
+6. Measuring geographic connectivity.
 
-In this tutorial we will use a Colombian data set as a example. These samples comes from a collaboration with the group of Caucaseco, which has collected samples of P. falciparum from 2020 to 2022 in three municipalities located in the pacific coast of Colombia.
