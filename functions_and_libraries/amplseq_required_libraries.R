@@ -136,4 +136,11 @@ if(!require(Rcpp)){
   library(Rcpp)
 }
 
+if(!require(DT)){
+  install.packages('DT')
+  library(DT)
+}else{
+  library(DT)
+}
+
 
