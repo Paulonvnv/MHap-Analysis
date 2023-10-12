@@ -1320,8 +1320,8 @@ get_polygenomic = function(ampseq_object, strata, update_popsummary = T, na.rm =
   }
   
   if(!is.null(filters)){
-    ampseq_loci_abd_table = ampseq_loci_abd_table[metadata[[strata]] %in% filters,]
-    metadata = metadata[metadata[[strata]] %in% filters,]
+    ampseq_loci_abd_table = ampseq_loci_abd_table[grepl(filters,metadata[[strata]]),]
+    metadata = metadata[grepl(filters,metadata[[strata]]),]
   }
   
   polygenomic = NULL
