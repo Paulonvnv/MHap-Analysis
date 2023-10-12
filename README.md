@@ -17,7 +17,7 @@ The repository contains a set of functions created to upload and manipulate the 
 
 A RMarkdown tutorial (`MHap_Tutorial.rmd`) has been created to introduce the final users to all the set of functions. To run this tutorial a data set of 1300 samples is stored in the folder `data`. The output of the malaria-amplicon-pipeline is stored in the folder `sequencing_data` and the metadata of the samples is in the file `metadata.csv`. The samples comes from a collaboration with the group of Caucaseco, which has collected samples of *P. falciparum* from 2020 to 2022 in 5 municipalities located in Colombia. The data set has geographic information, however this information is encoded to protect the geographic origin of the participants.
 
-For people not familiarized with RMarkdown, all tutorials are also found in our wiki.
+For people not familiarized with RMarkdown, all tutorials are [here](https://paulonvnv.github.io/MHap-Analysis/).
 
 
 
