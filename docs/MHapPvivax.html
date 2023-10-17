@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Neafsey Lab" />
+
+
+<title>PvGTSeq: a targeted amplicon sequencing for Plasmodium vivax</title>
+
+<script src="site_libs/header-attrs-2.14/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<script src="site_libs/navigation-1.1/codefolding.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<script src="site_libs/htmlwidgets-1.5.4/htmlwidgets.js"></script>
+<link href="site_libs/datatables-css-0.0.0/datatables-crosstalk.css" rel="stylesheet" />
+<script src="site_libs/datatables-binding-0.23/datatables.js"></script>
+<link href="site_libs/dt-core-1.11.3/css/jquery.dataTables.min.css" rel="stylesheet" />
+<link href="site_libs/dt-core-1.11.3/css/jquery.dataTables.extra.css" rel="stylesheet" />
+<script src="site_libs/dt-core-1.11.3/js/jquery.dataTables.min.js"></script>
+<link href="site_libs/crosstalk-1.2.0/css/crosstalk.min.css" rel="stylesheet" />
+<script src="site_libs/crosstalk-1.2.0/js/crosstalk.min.js"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.tab('show');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+<style type="text/css">
+.code-folding-btn { margin-bottom: 4px; }
+</style>
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">MHap-Analysis</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li>
+  <a href="MHapPfalciparum.html">MHap-Pfalciparum</a>
+</li>
+<li>
+  <a href="MHapPvivax.html">MHap-Pvivax</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+<div class="btn-group pull-right float-right">
+<button type="button" class="btn btn-default btn-xs btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+<ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
+<li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
+<li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+</ul>
+</div>
+
+
+
+<h1 class="title toc-ignore"><em>PvGTSeq</em>: a targeted amplicon
+sequencing for <em>Plasmodium vivax</em></h1>
+<h4 class="author">Neafsey Lab</h4>
+
+</div>
+
+
+<p>The purpose of this tutorial is give insight on the bioinformatic
+analysis of the PvGTSeq panel. This tutorial will cover:</p>
+<ol style="list-style-type: decimal">
+<li><p>Denoising fastq files through the Dada2 based pipeline.</p></li>
+<li><p>Aligning ASVs to reference genome and summarizing the haplotype
+information in Pseudo-CIGAR format.</p></li>
+<li><p>Importing and handling tables in CIGAR format in R
+environment.</p></li>
+<li><p>Molecular surveillance of drug resistance.</p></li>
+<li><p>Genetic subdivision</p></li>
+</ol>
+<div id="dada2-based-pipeline-malaria-amplicon-pipeline"
+class="section level1">
+<h1>Dada2 based pipeline: malaria-amplicon-pipeline</h1>
+<p>This pipeline is based on Dada2 R Package. For more documentation and
+tutorials about Dada2 and its functionalities please look a the
+following links:</p>
+<ul>
+<li><a
+href="https://benjjneb.github.io/dada2/">https://benjjneb.github.io/dada2/</a></li>
+<li><a
+href="https://bioconductor.org/packages/devel/bioc/vignettes/dada2/inst/doc/dada2-intro.html">https://bioconductor.org/packages/devel/bioc/vignettes/dada2/inst/doc/dada2-intro.html</a></li>
+<li><a
+href="https://benjjneb.github.io/dada2/tutorial.html">https://benjjneb.github.io/dada2/tutorial.html</a></li>
+<li><a
+href="https://benjjneb.github.io/dada2/tutorial_1_8.html">https://benjjneb.github.io/dada2/tutorial_1_8.html</a></li>
+</ul>
+<p>The documentation of this pipeline is <a
+href="https://github.com/broadinstitute/malaria-amplicon-pipeline">here</a>.
+Before to start you will require to install <a
+href="https://docs.anaconda.com/anaconda/install/linux/">Anaconda 3</a>,
+and download and create the <a
+href="https://github.com/broadinstitute/malaria-amplicon-pipeline">ampseq
+enviroment</a>.</p>
+<div id="denoising-fastq-files" class="section level2">
+<h2>Denoising fastq files:</h2>
+<p>On the terminal, use the <code>environment.yml</code> file (or the
+<code>environment_mac.yml</code> for macos system) to create a conda
+virtual environment:</p>
+<pre class="bash"><code>conda env create --file environment.yml -p /path/to/env/&lt;name-of-environment&gt;/</code></pre>
+<p>To activate the conda environment write the following line in the
+terminal:</p>
+<pre class="bash"><code>source activate &lt;name-of-environment&gt;</code></pre>
+<p>All inputs (files and specifications on how to run the pipeline)
+should be provided using a <code>.json</code> file.</p>
+<p>Apart of the fastq files, there are three input files that are
+required to run the pipeline:</p>
+<ol style="list-style-type: decimal">
+<li><code>PvGTSeq271_fwd.fasta</code>: Fasta file with the sequence of
+the forward primers without including the adapters.</li>
+<li><code>PvGTSeq271_rvs.fasta</code>: Fasta file with the sequence of
+the reverse primers without including the adapters.</li>
+</ol>
+<p>Additional you require to generate a <code>.csv</code> file, called
+<code>metafile.csv</code> (you can name it as you want) with the path to
+all the fastq files. You can use the scripts <code>create_meta.R</code>
+or <code>create_meta.py</code> to generate that file.</p>
+<p>Your <code>.json</code> file should looks like this:</p>
+<pre class="bash"><code>{
+  &quot;##_COMMENT_##&quot;: &quot;INPUTS&quot;,
+  &quot;tool&quot;: &quot;&quot;,
+  &quot;run_dir&quot;: &quot;&quot;,
+  &quot;path_to_meta&quot;: &quot;PATHS_TO/PvGTSeq_metafile.csv&quot;,
+  &quot;preprocess&quot;: 1,
+  &quot;remove_primer&quot;: 1,
+  &quot;Class&quot;: &quot;parasite&quot;,
+  &quot;dada2_default&quot;: 0,
+  &quot;maxEE&quot;: &quot;5,5&quot;,
+  &quot;trimRight&quot;: &quot;2,2&quot;,
+  &quot;minLen&quot;: 30,
+  &quot;truncQ&quot;: &quot;5,5&quot;,
+  &quot;max_consist&quot;: 10,
+  &quot;omegaA&quot;: 1e-120,
+  &quot;matchIDs&quot;: 1,
+  &quot;justConcatenate&quot;: 0,
+  &quot;saveRdata&quot;:&quot;&quot;,
+  &quot;qvalue&quot;: 5,
+  &quot;length&quot;: 20,
+  &quot;pr1&quot;: &quot;PATHS_TO/PvGTSeq271_fwd.fasta&quot;,
+  &quot;pr2&quot;: &quot;PATHS_TO/PvGTSeq271_rvs.fasta&quot;,
+  &quot;pr_action&quot;: &quot;trim&quot;
+}</code></pre>
+<p>To run the denoising pipeline you can write the following lines in
+the terminal</p>
+<pre class="bash"><code>Rscript PATHS_TO/create_meta.R -i Fastq -o PvGTSeq_metafile.csv -fw _L001_R1_001.fastq.gz -rv _L001_R2_001.fastq.gz
+mkdir dada2
+python PATHS_TO/AmpliconPipeline.py \
+  --json PvGTSeq_inputs.json
+mv prim_fq preprocess_fq run_dada2 prim_meta.txt preprocess_meta.txt stderr.txt stdout.txt ./dada2 </code></pre>
+</div>
+<div id="post-dada2-filters-optional-processing-parasite-only"
+class="section level2">
+<h2>Post-DADA2 Filters (optional processing parasite only) :</h2>
+<p>Then we have to run an additional Post-processing. This step map the
+given ASV sequences to the target amplicons while keeping track of
+non-matching sequences with the number of nucleotide differences and
+insertions/deletions. It will then output a table of ASV sequences with
+the necessary information. Optionally, a FASTA file can be created in
+addition to the table output, listing the sequences in standard FASTA
+format. A filter tag can be provided to tag the sequences above certain
+nucleotide (SNV) and length differences due to INDELs and a bimera
+column to tag sequences which are bimeric (a hybrid of two
+sequences).</p>
+<p>For the analysis of the PvGTSeq amplicon panel you will require the
+folowing file as input: - <code>PvGTSeq271_refseqs.fasta</code>: Fasta
+file with the sequence of the inserts without including the forward and
+reverse primers.</p>
+<p>You can run this post-processing using the following code in the
+terminal</p>
+<pre class="bash"><code>Rscript PATHS_TO/postProc_dada2.R \
+  -s dada2/run_dada2/seqtab.tsv \
+  --strain PvP01 \
+  -ref PATHS_TO/PvGTSeq271_refseqs.fasta \
+  -b dada2/run_dada2/ASVBimeras.txt \
+  -o dada2/run_dada2/ASVTable.txt \
+  --fasta \
+  --parallel
+  
+cut -f1,3- dada2/run_dada2/ASVTable.txt &gt; dada2/run_dada2/ASVTable2.txt</code></pre>
+</div>
+<div id="asv-to-cigar-variant-calling" class="section level2">
+<h2>ASV to CIGAR / Variant Calling:</h2>
+<p>Finally we are going to change the representation of the ASV
+sequences in a kind of pseudo-CIGAR string format, while also masking
+homopolymer runs, low complexity runs and filtering out sequences tagged
+in the previous step. This step assumes Post-DADA2 step is used as it
+requires mapped ASV table as one of the inputs.</p>
+<p><strong>General idea:</strong></p>
+<ol style="list-style-type: decimal">
+<li>Parse DADA2 pipeline outputs to get ASVs → amplicon target.</li>
+</ol>
+<ol style="list-style-type: lower-alpha">
+<li>Fasta file of ASV sequences.</li>
+<li>ASV → amplicon table from the previous step.</li>
+<li>seqtab tsv file from DADA2.</li>
+</ol>
+<ol start="2" style="list-style-type: decimal">
+<li>Build multi-fasta file for each amplicon target containing one or
+more ASVs</li>
+<li>Run Muscle on each fasta file to generate alignment file
+(*.msa)</li>
+<li>Parse alignments per amplicon target, masking on polyN homopolymer
+runs (and optionally DUST-masker low complexity sequences)</li>
+<li>Output seqtab read count table, but the columns are amplicon,CIGAR
+instead of ASV sequence</li>
+<li>Optional output ASV to amplicon + CIGAR string table (–asv_to_cigar)
+An ASV matching perfectly to the 3D7 reference is currently indicated by
+“.” A complete list of inputs for running this step is given below</li>
+</ol>
+<p>To code in the terminal should looks like this:</p>
+<pre class="bash"><code>python PATHS_TO/ASV_to_CIGAR.py \
+  -d PATHS_TO/PvGTSeq271_refseqs.fasta \
+  --asv_to_cigar dada2/run_dada2/ASV_to_CIGAR.out.txt \
+  dada2/run_dada2/ASVSeqs.fasta \
+  dada2/run_dada2/ASVTable2.txt \
+  dada2/run_dada2/seqtab.tsv \
+  dada2/run_dada2/CIGARVariants_Bfilter.out.tsv \
+  --exclude_bimeras</code></pre>
+</div>
+</div>
+<div id="uploading-pseudo-cigar-tables" class="section level1">
+<h1>Uploading pseudo-CIGAR tables</h1>
+<p>Our first step will be to call all required packages and functions in
+the R environment:</p>
+<pre class="r"><code>source(&#39;docs/functions_and_libraries/amplseq_required_libraries.R&#39;)
+source(&#39;docs/functions_and_libraries/amplseq_functions.R&#39;)
+sourceCpp(&#39;docs/functions_and_libraries/hmmloglikelihood.cpp&#39;)</code></pre>
+<p>Then we will upload the pseudo-CIGAR table using the function
+<code>read_cigar_tables</code>:</p>
+<pre class="r"><code>cigar_object = read_cigar_tables(files = &#39;docs/data/Pvivax/dada2/run_dada2/CIGARVariants_Bfilter.out.tsv&#39;, sample_id_pattern = &#39;SP|CON|HR&#39;)</code></pre>
+<p>In this tutorial we are analyzing samples from Colombia (codes start
+with <code>SP</code>), Peru (codes start with <code>CON</code>) and
+Venezuela (codes start with <code>HR</code>). We are going to add that
+information using the function mutate from the package dplyr.</p>
+<pre class="r"><code># Merge the external metadata with our cigar_object
+cigar_object@metadata %&lt;&gt;% mutate(Population = 
+                                    case_when(
+                                      grepl(&#39;SP&#39;, Sample_id) ~ &#39;Colombia&#39;,
+                                      grepl(&#39;CON&#39;, Sample_id) ~ &#39;Peru&#39;,
+                                      grepl(&#39;HR&#39;, Sample_id) ~ &#39;Venezuela&#39;,
+                                      !grepl(&#39;SP|CON|HR&#39;, Sample_id) ~ &#39;Controls&#39;
+                                    ))</code></pre>
+<p>Finally we are going to convert our data to the ampseq format:</p>
+<pre class="r"><code># (alleles and abundance will be in cells)
+markers = read.csv(&quot;docs/reference/Pviv_P01/PvGTSeq271_markersTable.csv&quot;)
+ampseq = cigar2ampseq(cigar_object, markers = markers, min_abd = 1, min_ratio = .1, remove_controls = T)</code></pre>
+<div id="perfomance-and-filtering-of-our-data" class="section level2">
+<h2>Perfomance and filtering of our data</h2>
+<p>To inspect the read depth by each sample and amplicon we can use the
+function plot coverage:</p>
+<pre class="r"><code>coverage_by_country = plot_coverage(ampseq, variable = &quot;Population&quot;)
+coverage_by_country$plot_read_depth_heatmap+
+  theme(axis.title.y = element_text(size = 16))</code></pre>
+<div class="figure">
+<img src="MHapPvivax_files/figure-html/Describing%20the%20read%20depth%20coverage%20by%20run%20and%20study%20site-1.png" alt="**Figure 2:** Read depth coverage of each samples and amplicon." width="1152" />
+<p class="caption">
+<strong>Figure 2:</strong> Read depth coverage of each samples and
+amplicon.
+</p>
+</div>
+<p>Then we can also use the function loci_amplification_rate to measure
+the proportion of samples that have been amplified by each amplicon
+marker.</p>
+<pre class="r"><code>ampseq_filtered = locus_amplification_rate(ampseq, threshold = .65, chr_lengths = c(
+  1021664,
+  956327,
+  896704,
+  1012024,
+  1524814,
+  1042791,
+  1652210,
+  1761288,
+  2237066,
+  1548844,
+  2131221,
+  3182763,
+  2093556,
+  3153402
+))</code></pre>
+<p>Thus in this data set 271 loci had an amplification rate above 0.65,
+and 58 loci were discarded. All discarded loci are stored in the slot
+discarded_loci within the <code>ampseq_object</code>. The discarded loci
+were: .</p>
+<pre class="r"><code># Plot Amplification rate per loci ----
+
+ggdraw()+
+  draw_plot(ampseq_filtered@plots$amplification_rate_per_locus,
+            x = 0,
+            y = 0,
+            width = 1,
+            height = .5)+
+  draw_plot(ampseq_filtered@plots$all_loci_amplification_rate,
+            x = 0,
+            y = .5,
+            width = 1,
+            height = .5)</code></pre>
+<div class="figure">
+<img src="MHapPvivax_files/figure-html/Ploting%20loci%20performance-1.png" alt="**Figure 2:** Proportion of amplified samples per locus. Top figure shows the distribution of the amplification rate (or proportion of amplified samples) of loci, with the number of loci in the y-axis and the amplification rate in the x-axis. Bottom figure shows the the chromosome location of each locus (chromosomes in y-axis and position in the x-axis) and the gradient color represents its amplification rate." width="672" />
+<p class="caption">
+<strong>Figure 2:</strong> Proportion of amplified samples per locus.
+Top figure shows the distribution of the amplification rate (or
+proportion of amplified samples) of loci, with the number of loci in the
+y-axis and the amplification rate in the x-axis. Bottom figure shows the
+the chromosome location of each locus (chromosomes in y-axis and
+position in the x-axis) and the gradient color represents its
+amplification rate.
+</p>
+</div>
+<p>The next step is to measure the proportion of loci amplified per each
+sample, also called the amplification rate of the samples. For that
+purpose we are going to use the function sample_amplification_rate, and
+we are going to set the threshold equals to 0.6 (samples must amplify at
+least 60% of the total number of markers).</p>
+<pre class="r"><code>ampseq_filtered = sample_amplification_rate(ampseq_filtered, threshold = .6)
+
+ampseq_filtered@plots$samples_amplification_rate+
+         theme(axis.text = element_text(size = 12),
+               axis.title = element_text(size = 12))</code></pre>
+<div class="figure">
+<img src="MHapPvivax_files/figure-html/Filtering%20samples%20of%20low%20amplification%20rate-1.png" alt="**Figure 3:** Proportion of amplified loci per sample. The figure shows the distribution of the amplification rate (or proportion of amplified loci) of the samples, with the number of samples in the y-axis and the amplification rate in the x-axis." width="480" />
+<p class="caption">
+<strong>Figure 3:</strong> Proportion of amplified loci per sample. The
+figure shows the distribution of the amplification rate (or proportion
+of amplified loci) of the samples, with the number of samples in the
+y-axis and the amplification rate in the x-axis.
+</p>
+</div>
+</div>
+</div>
+<div id="molecular-surveillance-of-drug-resistance"
+class="section level1">
+<h1>Molecular surveillance of drug resistance</h1>
+<p>Our panel of markers includes 10 genes (36 markers in total) that
+could be associated with antimalarial resistance. In contrast to <em>P.
+falciparum</em> where there is informartion about which polymorphims are
+associated to resistance, in <em>P. vivax</em> that information is
+missing. However, it is possible to report all observed polymorphism
+respect to a reference sequence (in this case the strain Pv_P01). Just
+as an example we are going to identify the aminoacid changes for the
+genes <code>mrp1</code>, <code>mrp2</code>, <code>mdr1</code> and
+<code>mdr2</code></p>
+<pre class="r"><code>drug_resistant_haplotypes_plot = haplotypes_respect_to_reference(ampseq_object = ampseq_filtered,
+                                        gene_names = c(&#39;pvmrp1&#39;,
+                                                       &#39;pvmrp2&#39;,
+                                                       &#39;pvmdr1&#39;),
+                                        gene_ids = c(&#39;PVP01_0203000&#39;,
+                                                     &#39;PVP01_1447300&#39;,
+                                                     &#39;PVP01_1010900&#39;),
+                                        gff_file = &quot;docs/reference/Pviv_P01/genes.gff&quot;,
+                                        fasta_file = &quot;docs/reference/Pviv_P01/PvP01.v1.fasta&quot;)
+
+
+drug_resistant_haplotypes_plot$loci_aa_table %&gt;% datatable()</code></pre>
+<div id="htmlwidget-92c5b2b110f0bfbfd9d3" style="width:100%;height:auto;" class="datatables html-widget"></div>
+<script type="application/json" data-for="htmlwidget-92c5b2b110f0bfbfd9d3">{"x":{"filter":"none","vertical":false,"data":[["CON21-71-R1","CON21-71-R2","CON21-75-R1","CON21-76-R1","CON22-138-R1","CON22-237-R1","CON22-285-R1","CON22-320-R1","CON22-326-R1","CON22-327-R1","HRP0046-R1","HRP0144-R1","HRP0148-R1","HRP0174-R1","HRP0187-R1","SP0101254202-R1","SP0101254202-R2","SP0101254215-R1","SP0101254215-R2","SP0101254260-R1","SP0101254260-R2","SP0101254266-R1","SP0101254266-R2","SP0101254283-R1","SP0101254283-R2","SP0101254289-R1","SP0101254289-R2","SP0101254313-R1","SP0101254313-R2","SP0101254334-R2","SP0101254341-R1","SP0101254341-R2","SP0101254347-R1","SP0101254347-R2","SP0101254356-R2","SP0112286091-R1","SP0112286091-R2","SP0112286119-R1","SP0112286119-R2","SP0112286144-R1","SP0112286144-R2","SP0112286163-R1","SP0112286163-R2","SP0112286166-R1","SP0112286175-R1","SP0112286271-R1","SP0112286283-R1","SP0112286283-R2","SP0112286288-R2","SP0112286309-R1","SP0112286309-R2","SP0112286325-R1","SP0112286325-R2","SP0112286370-R1","SP0112286370-R2","SP0112286435-R1","SP0112286435-R2","SP0112286439-R1","SP0112286439-R2","SP0112286453-R1","SP0112286453-R2","SP0112286484-R1","SP0112286484-R2","SP0112286487-R1","SP0112286487-R2"],["A1606N","A1606N","A1606N",null,null,"A1606N","A1606N","A1606N","A1606N","A1606N","p.(=)",null,"p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)",null,null,null,null,"H1586Y","H1586Y",null,"p.(=)","p.(=)","p.(=)","p.(=)","H1586Y","H1586Y","p.(=)",null,"p.(=)","H1586Y","H1586Y","p.(=)","p.(=)",null,null,"A1606N","A1606N","p.(=)",null,null,"p.(=)","p.(=)","p.(=)",null,null,null,"p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)",null,"p.(=)",null],["V1544I","V1544I","V1544I","V1544I","V1544I","V1544I","V1544I","V1544I","V1544I","V1544I","p.(=)","p.(=)","p.(=)","p.(=)",null,"p.(=)","p.(=)","T1525I","T1525I",null,"p.(=)","T1525I","T1525I","p.(=)","p.(=)","T1525I","T1525I","p.(=)","p.(=)","T1525I","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)",null,"T1525I","V1544I","V1544I","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","T1525I","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","T1525I","T1525I","p.(=)","p.(=)","T1525I","T1525I"],["p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)",null,"p.(=)","p.(=)","p.(=)","C1018Y",null,"p.(=)","p.(=)","p.(=)","Y1064Y","Y1064Y","Y1064Y","Y1064Y",null,null,"Y1064Y","Y1064Y","p.(=)","p.(=)",null,"Y1064Y","Y1064Y","Y1064Y","Y1064Y","p.(=)","p.(=)","Y1064Y","p.(=)","Y1064Y","p.(=)","p.(=)","Y1064Y","Y1064Y",null,"Y1064Y","Y1064Y","Y1064Y","Y1064Y","Y1064Y",null,"Y1064Y","Y1064Y","Y1064Y",null,"p.(=)","Y1064Y","Y1064Y","p.(=)","p.(=)","Y1064Y","Y1064Y","Y1064Y","Y1064Y","Y1064Y","Y1064Y","Y1064Y",null,"Y1064Y","Y1064Y"],["p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","S653I","S653I",null,"p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","S653I","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","S653I","S653I","p.(=)","p.(=)","p.(=)","p.(=)"],["L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","p.(=)","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","p.(=)","p.(=)","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","p.(=)","L1076F","L1076F","L1076F","L1076F","L1076F","p.(=)","p.(=)","p.(=)","p.(=)","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","L1076F","p.(=)","p.(=)","L1076F","L1076F","L1076F","L1076F"],["p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)",null,null,"p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","M908M",null,"p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)",null,"p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)"],["p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","D500N","D500N","D500N","D500N","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","T529T","T529T","p.(=)","p.(=)","D500N","D500N","T529T","T529T","p.(=)","p.(=)","p.(=)","p.(=)",null,"p.(=)","p.(=)","p.(=)","p.(=)","p.(=)",null,"D500N","D500N","D500N","T529T","T529T","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","T529T","T529T","D500N","D500N","T529T","T529T","p.(=)","p.(=)","D500N","D500N","p.(=)","p.(=)","p.(=)","p.(=)"],["p.(=)","p.(=)","V221M","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","p.(=)","V221M","V221M","V221M","V221M","V221M","V221M","p.(=)","p.(=)","V221M","V221M","p.(=)","p.(=)","p.(=)","p.(=)","V221M","V221M","V221M","p.(=)","V221M","V221M","V221M","V221M","p.(=)","p.(=)",null,"p.(=)","p.(=)","p.(=)","p.(=)","V221M","V221M","V221M","V221M","V221M","V221M","V221M","V221M","V221M","p.(=)","p.(=)","V221M","V221M","V221M","V221M","p.(=)","p.(=)","V221M","V221M","p.(=)","p.(=)"],["L153M","L153M","L153M",null,"L153M","L153M",null,"L153M",null,null,"L153M",null,"L153M","L153M",null,"L153M","L153M","p.(=)","p.(=)","L153M","L153M","L153M",null,"L153M","L153M","p.(=)","p.(=)","L153M","L153M",null,"L153M","L153M","L153M","L153M","p.(=)","L153M","L153M","L153M","L153M",null,"L153M","L153M","L153M","L153M","L153M",null,"L153M",null,"L153M","L153M","L153M","L153M","L153M","L153M","L153M","L153M","L153M","L153M","L153M","L153M","L153M","L153M","L153M","L153M","L153M"],["Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","E88Q Y62C Y60Y","Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","E88Q Y62C Y60Y","E88Q Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","E88Q Y62C Y60Y","E88Q Y62C Y60Y","E88Q Y62C Y60Y","E88Q Y62C Y60Y","E88Q Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","E88Q Y62C Y60Y","E88Q Y62C Y60Y","E88Q Y60Y","Y62C Y60Y",null,"Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y62C Y60Y","Y60Y","Y60Y","E88Q Y62C Y60Y","E88Q Y62C Y60Y"]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>pvmrp1_2<\/th>\n      <th>pvmrp1_3<\/th>\n      <th>pvmrp1_7<\/th>\n      <th>pvmrp1_10<\/th>\n      <th>pvmdr1_1<\/th>\n      <th>pvmdr1_3<\/th>\n      <th>pvmdr1_4<\/th>\n      <th>pvmdr1_5<\/th>\n      <th>pvmrp2_1<\/th>\n      <th>pvmrp2_2<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"columnDefs":[{"orderable":false,"targets":0}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+</div>
+<div id="population-subdivision" class="section level1">
+<h1>Population subdivision</h1>
+<pre class="r"><code># generating the loci_object----
+loci_object = ampseq2loci(ampseq_filtered)</code></pre>
+<pre class="r"><code># measuring relatedness----
+pairwise_relatedness = pairwise_hmmIBD(loci_object, parallel = T)</code></pre>
+<pre class="r"><code>Relatedness_network = plot_network(pairwise_relatedness = pairwise_relatedness,
+                               threshold = .90,
+                               metadata = ampseq_filtered@metadata,
+                               sample_id = &#39;Sample_id&#39;,
+                               group_by = &#39;Population&#39;,
+                               levels = c(&#39;Colombia&#39;, &#39;Peru&#39;, &#39;Venezuela&#39;),
+                               colors = c(&#39;firebrick3&#39;, &#39;dodgerblue3&#39;, &#39;gold3&#39;)
+                              )</code></pre>
+<div class="figure">
+<img src="MHapPvivax_files/figure-html/network-1.png" alt="**Figure 4:** Network representation of pairwise genetic relatedness between samples. Each node represents a sample, and branches are displayed only for pairwise comparisons with a relatedness greater than 0.99. Colors were assigned based on the sampling location: Municipality 1 (Red), Municipality 2 (Blue), Municipality 3 (Gold), Municipality 4 (Green), and Municipality 5 (Coral)." width="480" />
+<p class="caption">
+<strong>Figure 4:</strong> Network representation of pairwise genetic
+relatedness between samples. Each node represents a sample, and branches
+are displayed only for pairwise comparisons with a relatedness greater
+than 0.99. Colors were assigned based on the sampling location:
+Municipality 1 (Red), Municipality 2 (Blue), Municipality 3 (Gold),
+Municipality 4 (Green), and Municipality 5 (Coral).
+</p>
+</div>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+<script>
+$(document).ready(function () {
+  window.initializeCodeFolding("show" === "show");
+});
+</script>
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

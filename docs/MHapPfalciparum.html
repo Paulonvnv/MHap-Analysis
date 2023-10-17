@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Neafsey Lab" />
+
+
+<title>PfAmplSeq: Targeted amplicon sequencing for Plasmodium falciparum</title>
+
+<script src="site_libs/header-attrs-2.14/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<script src="site_libs/navigation-1.1/codefolding.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<script src="site_libs/htmlwidgets-1.5.4/htmlwidgets.js"></script>
+<link href="site_libs/datatables-css-0.0.0/datatables-crosstalk.css" rel="stylesheet" />
+<script src="site_libs/datatables-binding-0.23/datatables.js"></script>
+<link href="site_libs/dt-core-1.11.3/css/jquery.dataTables.min.css" rel="stylesheet" />
+<link href="site_libs/dt-core-1.11.3/css/jquery.dataTables.extra.css" rel="stylesheet" />
+<script src="site_libs/dt-core-1.11.3/js/jquery.dataTables.min.js"></script>
+<link href="site_libs/crosstalk-1.2.0/css/crosstalk.min.css" rel="stylesheet" />
+<script src="site_libs/crosstalk-1.2.0/js/crosstalk.min.js"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.tab('show');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+<style type="text/css">
+.code-folding-btn { margin-bottom: 4px; }
+</style>
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">MHap-Analysis</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li>
+  <a href="MHapPfalciparum.html">MHap-Pfalciparum</a>
+</li>
+<li>
+  <a href="MHapPvivax.html">MHap-Pvivax</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+<div class="btn-group pull-right float-right">
+<button type="button" class="btn btn-default btn-xs btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+<ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
+<li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
+<li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+</ul>
+</div>
+
+
+
+<h1 class="title toc-ignore"><em>PfAmplSeq</em>: Targeted amplicon
+sequencing for <em>Plasmodium falciparum</em></h1>
+<h4 class="author">Neafsey Lab</h4>
+
+</div>
+
+
+<p>The purpose of this tutorial is to introduce researchers at the
+Laboratory of Genomic Epidemiology of Malaria at Harvard university in
+the analysis of genotyping information generated through amplicon
+sequencing (also called Microhaplotype genotyping). This tutorial will
+cover:</p>
+<ol style="list-style-type: decimal">
+<li><p>Importing and handling tables in CIGAR format in R
+environment.</p></li>
+<li><p>Adding metadata.</p></li>
+<li><p>Performance of the genotyping process.</p></li>
+<li><p>Molecular surveillance of drug resistance.</p></li>
+<li><p>Monitoring transmission intensity.</p></li>
+<li><p>Measuring geographic connectivity.</p></li>
+</ol>
+<p>In this tutorial we will use a data set of 1300 samples distributed
+across 8 sequencing runs as a example. These samples comes from a
+collaboration with the group of Caucaseco, which has collected samples
+of <em>P. falciparum</em> from 2020 to 2022 in 5 municipalities located
+in Colombia. The data set has geographic information, however this
+information is encoded to protect the origin of the participants.</p>
+<div id="importing-and-handling-tables-in-cigar-format-in-r-environment"
+class="section level2">
+<h2>Importing and handling tables in CIGAR format in R environment</h2>
+<p>Our first step will be to call all required packages and functions in
+the R environment:</p>
+<pre class="r"><code>source(&#39;docs/functions_and_libraries/amplseq_required_libraries.R&#39;)
+source(&#39;docs/functions_and_libraries/amplseq_functions.R&#39;)
+sourceCpp(&#39;docs/functions_and_libraries/hmmloglikelihood.cpp&#39;)</code></pre>
+<p>This tutorial start with .tsv table in CIGAR format that has been
+generated by the <a
+href="https://github.com/broadinstitute/malaria-amplicon-pipeline">malaria-amplicon-pipeline</a>
+of our lab. The output of this pipeline has the following structure:</p>
+<p><span class="math inline">\(\begin{array}{c|c:c:c:c:c:c}
+\text{sampleID}&amp;Gene_1,Allele_1&amp;Gene_1,Allele_2&amp;...&amp;Gene_1,Allele_k&amp;...
+&amp; Gene_m, Allele_{k_m}\\ \hline ID_1 &amp; \text{Read counts}
+&amp;&amp;&amp; \\ \hdashline ... &amp;&amp;&amp;&amp;\\ \hdashline ID_n
+&amp;&amp;&amp;&amp; \end{array}\)</span></p>
+<p>Where the <span class="math inline">\(Allele\)</span> is coded in
+CIGAR format, typing “.” for the reference allele, <span
+class="math inline">\([0-9]*[A,T,C,G]\)</span> for each point mutation
+observed, and <span
+class="math inline">\([0-9]*[D,I]=[A,T,C,G]*\)</span> for indels
+(Insertion and Deletions). The numbers denotes the position in the
+amplicon where the polymorphism is located</p>
+<p>These CIGAR tables are stored in the server of the lab using the
+following path structure:</p>
+<p><code>"STUDYNAME/RUNNAME/dada2/run_dada2/CIGARVariants.out.tsv"</code></p>
+<p>As this structure is maintained across all studies in the lab, we
+have created a function called <code>read_cigar_tables</code> that only
+requires two arguments: <code>paths</code> (name of the folder of the
+study or the <code>STUDYNAME</code>), and <code>sample_id_pattern</code>
+(a pattern string in the IDs of the samples that differentiate them from
+controls). For this particular example, the path will be
+<code>"data/sequencing_data/"</code> , while the pattern will be
+<code>"ID"</code>. In case all <code>".tvs"</code> files are stored in
+one folder, you can use the argument <code>files = list_of_files</code>
+instead of the argument <code>paths</code>, where
+<code>list_of_files</code> is a vector with the names of all files we
+want to read.</p>
+<pre class="r"><code>cigar_object = read_cigar_tables(paths = &quot;docs/data/sequencing_data/&quot;, sample_id_pattern = &quot;ID&quot;)</code></pre>
+<p>This function generates a S4 cigar object containing two data.frames,
+1) a <code>cigar_table</code>, where genotyping information is stored in
+cigar format; and 2) a <code>metadata</code> table with 3 variables
+(columns), <code>Sample_id</code> which contains samples Id’s,
+<code>run</code> which contains the run number (useful for comparing
+performance across batches of samples), and <code>typeofSamp</code>
+which differentiates between controls and samples of interest. In order
+to view these tables use <code>View(cigar_table$cigar_table)</code> or
+<code>View(cigar_table$metadata)</code> in the console. If there are
+duplicated samples, only the replicated with the highest read depth
+across all loci will be keept.</p>
+</div>
+<div id="adding-metadata" class="section level2">
+<h2>Adding Metadata</h2>
+<p>Metadata would come from different sources, sometimes the sample ID
+incorporates metadata in their coding system, other times metadata can
+be stored in a different table, having one column specifying the sample
+ID. In the case of this data set, we will perform the analysis at the
+level of Municipality and in intervals of three months starting from the
+first day of collection of samples. Then, to add sampling location,
+month of collection and other metadata we are going to merge (using the
+function <code>left_join()</code>) our <code>metadata</code> table in
+the <code>cigar_object</code> to a metadata table from an external
+source that contain all the metadata associated with these samples.
+Thus, we will upload a metadata table from an external source. For this
+purpose we are going to import the file called <code>metadata.csv</code>
+into our R environment.</p>
+<pre class="r"><code># Upload metadata from an external source
+metadata = read.csv(&#39;docs/data/metadata.csv&#39;)
+
+# Merge the external metadata with our cigar_object
+cigar_object@metadata = left_join(cigar_object@metadata,
+                              metadata,
+                              by = &#39;Sample_id&#39;)</code></pre>
+<p>Moreover, there are some artifacts that <code>dada2</code> pipeline
+doesn’t resolve well like the generation of chimeras (artificial fusion
+of two different haplotypes during the PCR amplification) in polyclonal
+samples. That is the case of the alleles <code>PF3D7_1302900,1G</code>
+and <code>PF3D7_0612900,215A</code> that are observed in polyclonal
+infections only. So we are going to proceed to remove both alleles from
+our <code>cigar_table</code>. Additionally, <code>PvDHFR</code> locus
+was amplified in order to detect mixed infections with <em>Plasmodium
+vivax</em>, so we are going to remove this locus too.</p>
+<pre class="r"><code># removing allele PF3D7_1302900,1G----
+# this polymorphism is always present as a minor allele in polygenomic samples, increasing the proportion of polygenomic infections to up to 27%
+
+cigar_object@cigar_table = cigar_object@cigar_table[,!grepl(&quot;PF3D7_1302900.1G&quot;, colnames(cigar_object@cigar_table))]
+cigar_object@cigar_table = cigar_object@cigar_table[,!grepl(&quot;PF3D7_0612900.215A&quot;, colnames(cigar_object@cigar_table))]
+
+# removing locus PvDHFR----
+# this loci belongs to P. vivax
+
+cigar_object@cigar_table = cigar_object@cigar_table[,!grepl(&quot;PvDHFR&quot;, colnames(cigar_object@cigar_table))]</code></pre>
+<p>We can use ggplot2 to plot the sample size (number of genotyped
+samples) by Municipality over time.</p>
+<pre class="r"><code># Define the temporal unit of analysis
+dates = sort(unique(cigar_object@metadata$Quarter_of_Collection))
+
+# Define the geographic unite of analysis
+pop_levels = levels(as.factor(cigar_object@metadata$Subnational_level2))
+pop_colors = c(&quot;firebrick3&quot;, &quot;dodgerblue3&quot;, &quot;gold3&quot;, &quot;darkseagreen3&quot;, &quot;lightsalmon2&quot;)
+
+plot_temporal_collection_of_samples = cigar_object@metadata %&gt;%
+  filter(!is.na(Subnational_level2)) %&gt;% # Remove samples with no geographic information (Controls)
+  summarise(nsamples= n(), .by = c(Subnational_level2, Quarter_of_Collection))%&gt;%
+  ggplot(aes(x = Quarter_of_Collection, y = nsamples, fill = factor(Subnational_level2,
+                                                              levels = pop_levels)))+
+  geom_col()+
+  theme_bw()+
+  scale_fill_manual(values = pop_colors)+
+  facet_wrap(.~factor(Subnational_level2,
+                      levels = pop_levels),
+             strip.position = &quot;top&quot;, ncol = 5)+
+  labs(title = &#39;Number of Samples collected over time&#39;,
+       y = &quot;Collected samples by PCD&quot;,
+       x = &quot;Quarter&quot;)+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5),
+        legend.position =  &quot;none&quot;)+
+  scale_x_discrete(limits = dates)
+
+plot_temporal_collection_of_samples</code></pre>
+<p><img src="MHapPfalciparum_files/figure-html/Ploting%20the%20number%20of%20collected%20samples%20by%20Municipality%20over%20time-1.png" width="672" /></p>
+</div>
+<div id="performance-of-the-genotyping-process" class="section level2">
+<h2>Performance of the genotyping process</h2>
+<p>A first step in analyzing the genotypic data is to measure the
+performance of the genotyping process in terms of the proportion of
+samples amplified by each locus (amplification rate by locus) and the
+proportion of loci amplified per each sample (amplification rate per
+sample). In order to perform that task, we are going to convert our
+cigar table to a more manageable format called ampseq format, where
+amplicons or genes are going to be in columns, samples in rows, and the
+allele in cigar format is going to be in each cell of the matrix
+together with the read count of that allele in the sample.</p>
+<p><span class="math inline">\(\begin{array}{c|c:c:c:c}
+\text{sampleID}&amp;Gene_1&amp;Gene_2&amp;...&amp; Gene_m\\ \hline ID_1
+&amp; Allele_{i_{i \in Alleles_{Gene_1}}}\text{:Read count}
+&amp;&amp;&amp; \\ \hdashline ... &amp;&amp;&amp;&amp;\\ \hdashline ID_n
+&amp;&amp;&amp;&amp; \end{array}\)</span></p>
+<p>For that purpose we are going to use the function
+<code>cigar2ampseq</code>. This function requires 4 arguments. First a
+<code>cigar_object</code> (containing the cigar_table and the metadata).
+Then <code>markers</code>, which is a table with the set of markers and
+their names (in a column named <code>amplicon</code>). This argument is
+optional, and in case is <code>NULL</code>, the name of the amplicons
+will be extracted from the columns in the <code>cigar_object</code>, but
+information regarding chormosome location and length of the amplicon
+will be missing. The next arguments are <code>min_abd</code> and
+<code>min_ratio</code>, which are the minimum abundance (minimum read
+count) required to call an allele and the minimum ratio between the
+minor and major alleles in a polyclonal sample. By default these two
+arguments are 10 and 0.1 respectively. The last argument is
+<code>remove_controls</code>, by default is <code>FALSE</code>, but if
+change ti <code>TRUE</code> the information of the controls will be
+stored in a separated slot. Thus, this function automatically
+differentiate between controls and samples of interest, and its output
+is a <code>ampseq_object</code> S4 list with 6 slots: <code>gt</code>
+where the genotype information of the samples of interest is stored in a
+<code>ampseq</code> format; the <code>metadata</code> of the samples of
+interest; <code>controls</code> with all the information of the
+controls; <code>markers</code> containing the information of the markers
+such as the chromosome location; and other empty slots required for the
+next steps such as <code>loci_performance</code> and
+<code>pop_summary</code>.</p>
+<pre class="r"><code># (alleles and abundance will be in cells)
+markers = read.csv(&quot;docs/reference/Pfal_3D7/markers.csv&quot;)
+ampseq = cigar2ampseq(cigar_object, markers = markers, min_abd = 10, min_ratio = .1, remove_controls = T)</code></pre>
+<div id="read-depth-coverage" class="section level3">
+<h3>Read depth coverage</h3>
+<p>Once the data has been converted to the ampseq format, we can explore
+the read depth coverage by samples and by marker, and make comparisons
+between treatments, geographic regions or sequencing runs. For that we
+can use the function <code>plot_coverage()</code> which requires two
+arguments, the <code>ampseq</code> object and the <code>variable</code>
+from metadata that we want to use to split the information.</p>
+<pre class="r"><code>coverage_by_municipality = plot_coverage(ampseq, variable = &quot;Subnational_level2&quot;)</code></pre>
+<p>The output of this function is a list with three plots</p>
+<ol style="list-style-type: decimal">
+<li>A heatmap of the read depth (color intensity) of every marker
+(x-axis) and every sample (y-axis) by category of the chosen variable
+(panels)</li>
+</ol>
+<pre class="r"><code>coverage_by_municipality$plot_read_depth_heatmap</code></pre>
+<p><img src="MHapPfalciparum_files/figure-html/unnamed-chunk-1-1.png" width="768" /></p>
+<ol start="2" style="list-style-type: decimal">
+<li>A Jitter-Violin plot of the read depth (y-axis in log10 scale) of
+every marker and every sample (dots) by category of the chosen variable
+(x-axis)</li>
+</ol>
+<pre class="r"><code>coverage_by_municipality$plot_read_depth_violin </code></pre>
+<p><img src="MHapPfalciparum_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+<ol start="3" style="list-style-type: decimal">
+<li>A Jitter-Violin plot of the total read depth (y-axis in log10 scale)
+of every sample (dots) by category of the chosen variable (x-axis)</li>
+</ol>
+<pre class="r"><code>coverage_by_municipality$plot_read_depth_violin_by_sample </code></pre>
+<p><img src="MHapPfalciparum_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+</div>
+<div id="amplification-rate-by-locus" class="section level3">
+<h3>Amplification rate by locus</h3>
+<p>We can also use the function <code>loci_amplification_rate</code> to
+measure the proportion of samples that have been amplified by each
+amplicon marker. This function requires two arguments, the
+<code>ampseq_object</code> and <code>threshold</code>, which defines the
+minimum proportion of samples that a marker should amplify in order to
+be keep it for further analysis (default 0.65). All markers below this
+<code>threshold</code> will be removed and stored in a different slot in
+our object.</p>
+<pre class="r"><code>ampseq_filtered = locus_amplification_rate(ampseq, threshold = .65)</code></pre>
+<p>Thus in this data set 128 loci had an amplification rate above 0.65,
+and 15 loci were discarded. All discarded loci are stored in the slot
+<code>discarded_loci</code> within the <code>ampseq_object</code>. The
+discarded loci were: .</p>
+<pre class="r"><code># Plot Amplification rate per loci ----
+
+ggdraw()+
+  draw_plot(ampseq_filtered@plots$amplification_rate_per_locus,
+            x = 0,
+            y = 0,
+            width = 1,
+            height = .5)+
+  draw_plot(ampseq_filtered@plots$all_loci_amplification_rate,
+            x = 0,
+            y = .5,
+            width = 1,
+            height = .5)</code></pre>
+<div class="figure">
+<img src="MHapPfalciparum_files/figure-html/Ploting%20loci%20performance-1.png" alt="**Figure 2:** Proportion of amplified samples per locus. Top figure shows the distribution of the amplification rate (or proportion of amplified samples) of loci, with the number of loci in the y-axis and the amplification rate in the x-axis. Bottom figure shows the the chromosome location of each locus (chromosomes in y-axis and position in the x-axis) and the gradient color represents its amplification rate." width="672" />
+<p class="caption">
+<strong>Figure 2:</strong> Proportion of amplified samples per locus.
+Top figure shows the distribution of the amplification rate (or
+proportion of amplified samples) of loci, with the number of loci in the
+y-axis and the amplification rate in the x-axis. Bottom figure shows the
+the chromosome location of each locus (chromosomes in y-axis and
+position in the x-axis) and the gradient color represents its
+amplification rate.
+</p>
+</div>
+</div>
+<div id="amplification-rate-by-sample" class="section level3">
+<h3>Amplification rate by sample</h3>
+<p>The next step is to measure the proportion of loci amplified per each
+sample, also called the amplification rate of the samples. For that
+purpose we are going to use the function
+<code>sample_amplification_rate</code> that also requires only two
+arguments, the <code>ampseq_object</code> and a <code>threshold</code>,
+which is the minmum proportion of loci that a sample should amplified
+(by default 0.8).</p>
+<pre class="r"><code>ampseq_filtered = sample_amplification_rate(ampseq_filtered)
+
+ampseq_filtered@plots$samples_amplification_rate+
+         theme(axis.text = element_text(size = 12),
+               axis.title = element_text(size = 12))</code></pre>
+<div class="figure">
+<img src="MHapPfalciparum_files/figure-html/Filtering%20samples%20of%20low%20amplification%20rate-1.png" alt="**Figure 3:** Proportion of amplified loci per sample. The figure shows the distribution of the amplification rate (or proportion of amplified loci) of the samples, with the number of samples in the y-axis and the amplification rate in the x-axis." width="480" />
+<p class="caption">
+<strong>Figure 3:</strong> Proportion of amplified loci per sample. The
+figure shows the distribution of the amplification rate (or proportion
+of amplified loci) of the samples, with the number of samples in the
+y-axis and the amplification rate in the x-axis.
+</p>
+</div>
+</div>
+</div>
+<div id="molecular-surveillance-of-drug-resistance"
+class="section level2">
+<h2>Molecular surveillance of drug resistance</h2>
+<p>Surveillance of polymorphisms or allelic variants associated with
+resistance against antimalarials is of the utmost importance in public
+health. That is why our panel of markers includes 5 genes (9 markers in
+total, some genes are genotyped by more than one marker) that have
+polymorphisms associated with antimalarial resistance. In this section
+we will identify the different haplotypes of these genes present in our
+data set, and we will determine the frequency of each haplotype in each
+study area and in each quarter of the year. For this we will use the
+function <code>drug_resistant_haplotypes</code> which has 7 arguments.
+The first argument is the <code>ampseq_object</code>. The second is a
+table with the reference alleles for each gene, and the polymorphisms
+associated with resistance. The structure of this table is as
+follows:</p>
+<p><span class="math display">\[\begin{array}{c|c:c:c} \text{Chromosome}
+&amp; \text{Gene_ID} &amp; \text{Description} &amp; \text{Mutation}
+&amp; \text{Anotation} \\ \text{Pf3D7_04_v3} &amp; \text{PF3D7_0417200}
+&amp; dhfr &amp; \text{N51I} &amp; \text{Pyrimethamine resistance} \\
+... \end{array}\]</span></p>
+<p>Where the mutation describes the reference amino acid (sensitive to
+the drug), the position in the amino acid chain, and finally the amino
+acid associated with resistance.</p>
+<p>The third and fourth arguments refer to the common name of the gene
+(or the name by which it is identified in the <code>markers</code> table
+in the <code>ampseq_object</code>) and the gene ID in the gff file of
+the referential strain (in this case strain 3D7). The fifth and sixth
+arguments are the .gff and .fasta files of the genome of the reference
+strain, and the last argument, <code>variables</code>, is a vector that
+has the columns of the <code>metadata</code> table that will be used to
+define the subpopulations and generate the report graph. For this
+particular example we will define as
+<code>variables = c('Sample_id', 'Subnational_level2', 'Quarter_of_Collection')</code>,
+where <code>Sample_id</code>, is the column that we will use to map the
+data, <code>Subnational_level2</code> is the column to define the area
+of study, and <code>Quarter_of_Collection</code> defines the time
+scale.</p>
+<p>The function generates a list with 3 tables and a graph. The first
+table contains the haplotypes found in each sample (rows) for each gene
+(columns). Each number in the haplotype indicates a position in the
+amino acid chain, the letter before the number indicates the reference
+allele (with sensitive phenotype), and the letter after the number is
+the allele observed in the sample. If the letters are in capital
+letters, that allele in that position has been previously reported as
+resistant, whereas the letters in lower case indicate that it is the
+first time that position has been reported as polymorphic. In case the
+sample is polyclonal, each allele observed is separated by the following
+symbol <code>|</code>, and the order in which they are reported is based
+on their read count. Null data, defined as sections of the gene that
+have not been amplified, are completed with the question mark
+<code>?</code>.</p>
+<p>The second table contains the inferred phenotype for each sample
+(rows) for each gene (columns). The third table contains the count of
+each haplotype in the population (number of times observed) and its
+frequency in the population (defined based on geographic and temporal
+information). It is important to note that polyclonal samples are
+included in this calculation, so the denominator is defined as the total
+number of haplotypes found in the populations. Remember that if we run
+this analysis after filtering not amplified samples and loci, some
+polymorphism will not be included. To report all mutations included in
+our panel of markers associated with drug resistance, we have to recover
+that information from the slot <code>discarded_loci</code>.</p>
+<pre class="r"><code>drug_resistant_haplotypes_plot = drug_resistant_haplotypes(ampseq_filtered,
+                                                         reference_alleles = &#39;docs/reference/Pfal_3D7/drugR_alleles.csv&#39;,
+                                        gene_names = c(&#39;PfDHFR&#39;,
+                                                       &#39;PfMDR1&#39;,
+                                                       &#39;PfDHPS&#39;,
+                                                       &#39;PfKelch13&#39;,
+                                                       &#39;PF3D7_1447900&#39;),
+                                        gene_ids = c(&#39;PF3D7_0417200&#39;,
+                                                     &#39;PF3D7_0523000&#39;,
+                                                     &#39;PF3D7_0810800&#39;,
+                                                     &#39;PF3D7_1343700&#39;,
+                                                     &#39;PF3D7_1447900&#39;),
+                                        gff_file = &quot;docs/reference/Pfal_3D7/PlasmoDB-59_Pfalciparum3D7.gff&quot;,
+                                        fasta_file = &quot;docs/reference/Pfal_3D7/PlasmoDB-59_Pfalciparum3D7_Genome.fasta&quot;,
+                                        variables = c(&#39;Sample_id&#39;, &#39;Subnational_level2&#39;, &#39;Quarter_of_Collection&#39;),
+                                        na.var.rm = TRUE,
+                                        filters = c(&#39;Subnational_level2;Municipality 1,Municipality 2,Municipality 3,Municipality 4,Municipality 5&#39;,                               &#39;Quarter_of_Collection;2020-Q4,2021-Q1,2021-Q2,2021-Q3,2021-Q4,2022-Q1,2022-Q2,2022-Q3&#39;))</code></pre>
+<p>The colors assigned to the haplotypes in the bar blot are randomly
+chosen, see below:</p>
+<pre class="r"><code>drug_resistant_haplotypes_plot$haplo_freq_plot</code></pre>
+<p><img src="MHapPfalciparum_files/figure-html/unnamed-chunk-4-1.png" width="1152" /></p>
+<p>However, we can manually assign colors based on the resistance
+profile of the haplotye:</p>
+<pre class="r"><code>blues = brewer.pal(9, &#39;Blues&#39;)
+reds = brewer.pal(9, &#39;Reds&#39;)
+
+drug_resistant_haplotypes_plot$haplo_freq_plot+
+  theme(axis.text.x = element_text(angle = 90))+
+  scale_fill_manual(values = c(
+    &#39;gray75&#39;,blues[6], reds[3], # MDR2
+    reds[c(8,7)], blues[3], reds[6], blues[6], reds[c(9,3)], # DFHR
+    &#39;gray75&#39;,blues[4], reds[5], blues[c(2,6)], reds[c(4,9,6,8)], # DHPS
+    blues[6], #K13
+    &#39;gray75&#39;, reds[c(5,4)], blues[2], reds[6] # MDR1
+  ))+
+  labs(y = &#39;Haplotype prevalence in infected individuals&#39;)</code></pre>
+<div class="figure">
+<img src="MHapPfalciparum_files/figure-html/Plot%20drug%20resistance-1.png" alt="**Figure 4:** Frequency of haplotypes of genes associated with drug resistance. y-axis shows the frequency in the sub-population, x-axis shows the quarter of the year where the sample was collected, rows panels corresponds to the five study areas, and column panels represents each genotyped gene. Colors were assigned based on the possible phenotype, dark blue indicates sensitive, while dark red indicates resistance. Light colors where assigned for partial haplotype information, and gray for complete missging data" width="1152" />
+<p class="caption">
+<strong>Figure 4:</strong> Frequency of haplotypes of genes associated
+with drug resistance. y-axis shows the frequency in the sub-population,
+x-axis shows the quarter of the year where the sample was collected,
+rows panels corresponds to the five study areas, and column panels
+represents each genotyped gene. Colors were assigned based on the
+possible phenotype, dark blue indicates sensitive, while dark red
+indicates resistance. Light colors where assigned for partial haplotype
+information, and gray for complete missging data
+</p>
+</div>
+</div>
+<div id="monitoring-transmission-intensity" class="section level2">
+<h2>Monitoring transmission intensity</h2>
+<p>The transmission of Malaria has an effect on the evolutionary
+processes that affect the parasite population. Thus, various genetic
+indicators are used to identify changes in the intensity of transmission
+at a spatial and temporal level. One of these indicators is the
+prevalence of polyclonal infections, or the coexistence of two or more
+different clones (haplotypes) within the infected individual. As the
+human parasite genome is haploid, the presence of a single haplotype is
+expected. The presence of two or more different haplotypes in the sample
+may be due to the transmission of two or more different genotypes from
+the same bite (co-infection), or the acquisition of parasites by
+multiple infections or independent bites (super-infection); and both
+processes are related to the intensity of transmission. In low
+transmission there are few infective bites, so there is little chance
+that a person can acquire a super-infection or co-infection, and
+therefore most infections are monoclonal. On the other hand, when the
+necessary conditions exist for the increase in the mosquito population
+and the interaction between it and the human is favored,
+super-infections and co-infections increase, generating an increase in
+the prevalence of polyclonal infections.</p>
+<p>The genetic relatedness between parasites is also affected by the
+intensity of transmission. As we mentioned previously, in low
+transmission scenarios monoclonal infections are favored, so when an
+infected person is bitten, a single haplotype is transmitted and
+self-fertilization of the parasite occurs in the mosquito (sexual
+reproduction of two genetically identical or related haplotypes). This
+mechanism of propagation by inbreeding is called clonal propagation, and
+it causes all the alleles of a haplotype to segregate together and not
+independently, thus increasing the genetic relatedness in the
+population.</p>
+<p>The parasite effective population size (number of individuals in the
+population that explains the magnitude of the effect of genetic drift in
+the population) and its diversity, are also influenced by transmission.
+The increase in transmission is a consequence of the reproductive
+success of the different lineages of circulating parasites and the
+increase in their effective population size. These circumstances
+increase the introduction of new variants in the population (increase in
+the population mutation rate or <span
+class="math inline">\(\theta\)</span>), the number of polymorphic sites,
+the richness of alleles of each polymorphic site (number of alleles per
+locus), and genetic diversity in terms of heterozygosity of the
+population (probability of selecting two different alleles by chance).
+On the other hand, when transmission decreases and the effective
+population size is reduced, and genetic drift causes the random fixation
+of alleles, and the diversity of the population is reduced. However, the
+effective size of the population and its diversity are also strongly
+influenced by the introduction of new variants as a result of migration
+and the genetic structure of the parasite population, so the
+relationship between these metrics and transmission is not linear.</p>
+<div id="complexity-of-infection-and-transmission"
+class="section level3">
+<h3>Complexity of infection and transmission</h3>
+<p>In this section we will focus on describing the relationship between
+the intensity of transmission, inferred through the number of samples
+collected, and the proportion of polyclonal infections. To do this, we
+will first use the function <code>get_polygenomic</code> to identify
+polyclonal infections, determine their complexity of infection (number
+of different clones coexisting in the sample), and the number of
+heterozygous loci per sample. This information is automatically added to
+the <code>metadata</code> table of the ampseq_object. We will then
+proceed to describe the distribution of heterozygous loci per sample,
+the COI, and the proportion of polyclonal infections in each population.
+Finally, we will describe the temporal change in the proportion of
+polyclonal infections and its association with the number of samples
+collected.</p>
+<pre class="r"><code>ampseq_filtered = get_polygenomic(ampseq_object = ampseq_filtered, 
+                                  strata = &quot;Subnational_level2&quot;,
+                                  na.rm = FALSE,
+                                  filters = NULL)</code></pre>
+<p>The function <code>get_polygenomic</code> generates 3 tables:</p>
+<ol style="list-style-type: decimal">
+<li>A vector that describes for each loci the proportion of polyclonal
+samples detected. This vector is added to the loci_performance table in
+our ampseq_object if we set <code>update_popsummary = T</code>. This
+information is useful in order to identify genotyping errors that are
+not filtered out in the denoising pipeline and the identification of
+chimeras by dada2. That is the case of the alleles
+<code>PF3D7_1302900,1G</code> and <code>PF3D7_0612900,215A</code> for
+instance.</li>
+</ol>
+<pre class="r"><code>ampseq_filtered@loci_performance %&gt;% 
+  select(loci, prop_poly_detected)%&gt;%datatable(rownames = F)%&gt;%
+  formatRound(columns=&#39;prop_poly_detected&#39;, digits=3)</code></pre>
+<div id="htmlwidget-eb806632493ae76d9497" style="width:100%;height:auto;" class="datatables html-widget"></div>
+<script type="application/json" data-for="htmlwidget-eb806632493ae76d9497">{"x":{"filter":"none","vertical":false,"data":[["PF3D7_0103600","PF3D7_0104100_1","PSOP24","PF3D7_0207300","PfSERA3","PfSERA2_1","PF3D7_0211700","PF3D7_0220800","PfCSP_1","B9","PF3D7_0401900","Pfs16","PF3D7_0411900_1","PF3D7_0411900_2","PfDHFR_1","PfDHFR_2","PF3D7_0419900_2","PF3D7_0422500","PF3D7_0424400","PF3D7_0501800","PF3D7_0503200","PF3D7_0504400","P38","PF3D7_0508900","PF3D7_0519300","PfMDR1_1","PfMDR1_3","PF3D7_0525100","PF3D7_0612900","PF3D7_0615900","MSP10","CS","PF3D7_0630600","RAMA","PF3D7_0710400","PF3D7_0711500","PF3D7_0716300","PF3D7_0724700","PF3D7_0728200","PF3D7_0729700","PF3D7_0802000","PF3D7_0806200","PF3D7_0806300","PF3D7_0807800","PF3D7_0809400","PfDHPS_2","PfDHPS_1","PF3D7_0827100","GAMA","PF3D7_0830800_1","RhopH3","PF3D7_0910000","PF3D7_0935400","PF3D7_1007900","PF3D7_1008700","PF10_0119","PF3D7_1018600","PF3D7_1022000","PF3D7_1034900_1","PF3D7_1035100","PF3D7_1035700","PF3D7_1110200","PF3D7_1114900","PF3D7_1126100_1","PF3D7_1126100_2","PF3D7_1129100","PfAMA_1","PF11_0373","PF3D7_1145400","PF3D7_1211900","GRP94","PF3D7_1224000","PF3D7_1233600","PF3D7_1239800_1","PF3D7_1246500","PF3D7_1250100","PF3D7_1250400","PF3D7_1252100","PF3D7_1302700","PF3D7_1302900","MAL13P1.50","PF13_0125","PF3D7_1329100","PF3D7_1332900","MSRP4","MSRP3","PfTRAP_1","PF3D7_1340400","PfKelch13C580Y","PF3D7_1346400","PF3D7_1352900","PF3D7_1353100","PF3D7_1354200","PF3D7_1407800","PF3D7_1407900","PF3D7_1408000","PF3D7_1408100_1","PF3D7_1409700","PF3D7_1410300","PF3D7_1418100","Pf113","PF3D7_1429500","PF3D7_1429800","PF3D7_1447900","PF3D7_1448500","GEST","PF3D7_1455300","PF3D7_1464700","PF3D7_1466800","PF3D7_1469600","PF3D7_1472300","PF3D7_1473700","PF3D7_1475900"],[0,0.00185185185185185,0.012962962962963,0.0166666666666667,0,0.0240740740740741,0.00555555555555556,0.0175925925925926,0.0212962962962963,0.0157407407407407,0.00833333333333333,0.0231481481481481,0.00555555555555556,0.012962962962963,0.0148148148148148,0.00833333333333333,0.00462962962962963,0.0111111111111111,0.00462962962962963,0,0.00740740740740741,0.0231481481481481,0.00277777777777778,0,0.0240740740740741,0,0,0.0037037037037037,0.0407407407407407,0.0111111111111111,0.0101851851851852,0.00462962962962963,0,0,0,0.00277777777777778,0,0.000925925925925926,0.0157407407407407,0,0.012037037037037,0.0203703703703704,0.00833333333333333,0.0157407407407407,0.00462962962962963,0.012962962962963,0.000925925925925926,0.0287037037037037,0.0037037037037037,0,0,0.00185185185185185,0.0101851851851852,0.0037037037037037,0,0,0,0,0,0.00833333333333333,0.0212962962962963,0.00925925925925926,0.0037037037037037,0.000925925925925926,0,0.00277777777777778,0.0259259259259259,0.0194444444444444,0,0.0148148148148148,0,0,0.0037037037037037,0.00740740740740741,0.00185185185185185,0,0,0.0194444444444444,0,0.0138888888888889,0.000925925925925926,0.0175925925925926,0.0111111111111111,0,0.0277777777777778,0,0,0.0222222222222222,0.000925925925925926,0,0.00462962962962963,0,0,0.012037037037037,0,0,0.000925925925925926,0.0037037037037037,0.0240740740740741,0.0277777777777778,0,0.0175925925925926,0.0148148148148148,0.000925925925925926,0.0203703703703704,0.00462962962962963,0.0231481481481481,0.000925925925925926,0.00277777777777778,0,0.00462962962962963,0.0157407407407407,0.0175925925925926]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>loci<\/th>\n      <th>prop_poly_detected<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"columnDefs":[{"targets":1,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 3, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":1}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render"],"jsHooks":[]}</script>
+<ol start="2" style="list-style-type: decimal">
+<li>A table that describes for each sample:</li>
+</ol>
+<ul>
+<li>The number of heterozygous loci (NPolyLoci) or heterozygous
+amplicons in the sample.</li>
+<li>The name of the heterozygous loci (Polyloci).</li>
+<li>The observed alleles in each heterozygous loci (alleles_at_loci)
+where alleles within the same loci are separated by “_”, while alleles
+from different loci are separated by”/“.</li>
+<li>The number of alleles observed in each heterozygous loci
+(nalleles_per_loci) where values from different loci are separated by
+“/”.</li>
+<li>And finally the complexity of the infection (coi) defined as the
+maximum number of alleles observed in any of the heterozygous loci in
+the sample. As this definition is permissible as samples the only have
+one heterozygous loci can be considered polyclonal. The user can easily
+change that definition to a more stringent incorporating the information
+of the minimum number of heterozygous loci required to be considered
+polyclonal. In future updates we will incorporate the Within host
+divergence (<span class="math inline">\(F_{ws}\)</span>) index.</li>
+</ul>
+<p>This table is added to the metadata table in our ampseq_object if we
+set <code>update_popsummary = T</code>.</p>
+<pre class="r"><code>ampseq_filtered@metadata %&gt;%
+  select(Sample_id,NPolyLoci, Polyloci, alleles_at_loci, nalleles_per_loci, coi)%&gt;%
+  datatable(rownames = F)</code></pre>
+<div id="htmlwidget-112f371e5df42176aebb" style="width:100%;height:auto;" class="datatables html-widget"></div>
+<script type="application/json" data-for="htmlwidget-112f371e5df42176aebb">{"x":{"filter":"none","vertical":false,"data":[["ID00001","ID00002","ID00003","ID00004","ID00005","ID00007","ID00008","ID00009","ID00010","ID00011","ID00012","ID00013","ID00014","ID00015","ID00016","ID00017","ID00018","ID00019","ID00020","ID00022","ID00023","ID00024","ID00025","ID00026","ID00027","ID00028","ID00029","ID00030","ID00032","ID00033","ID00034","ID00035","ID00036","ID00037","ID00038","ID00039","ID00040","ID00042","ID00043","ID00044","ID00046","ID00047","ID00048","ID00049","ID00050","ID00239","ID00240","ID00241","ID00242","ID00243","ID00244","ID00245","ID00250","ID00251","ID00252","ID00253","ID00255","ID00256","ID00257","ID00258","ID00259","ID00260","ID00261","ID00262","ID00263","ID00264","ID00816","ID00817","ID00818","ID00819","ID00820","ID00821","ID00822","ID00823","ID00825","ID00826","ID00828","ID00829","ID00830","ID00831","ID00832","ID00833","ID00834","ID00835","ID00836","ID00837","ID00838","ID00839","ID00840","ID00841","ID00843","ID00844","ID00845","ID00846","ID00847","ID00849","ID00850","ID00852","ID00853","ID00854","ID00855","ID00856","ID00857","ID00858","ID00859","ID00860","ID00861","ID00862","ID00863","ID00864","ID00865","ID00866","ID00867","ID00868","ID00869","ID00871","ID00872","ID00873","ID00874","ID00875","ID00876","ID00877","ID00878","ID00879","ID00880","ID00881","ID00882","ID00883","ID00884","ID00885","ID00886","ID00887","ID00888","ID00890","ID00891","ID00892","ID00893","ID00894","ID00895","ID00896","ID00897","ID00898","ID00899","ID00900","ID00903","ID00905","ID00906","ID00907","ID00908","ID00909","ID00910","ID00911","ID00072","ID00073","ID00074","ID00075","ID00121","ID00122","ID00123","ID00158","ID00375","ID00427","ID00428","ID00429","ID00431","ID00432","ID00433","ID00434","ID00435","ID00437","ID00438","ID00439","ID00440","ID00441","ID00442","ID00443","ID00444","ID00445","ID00446","ID00447","ID00448","ID00449","ID00450","ID00451","ID00452","ID00453","ID00454","ID00455","ID00456","ID00457","ID00458","ID00459","ID00460","ID00461","ID00462","ID00463","ID00464","ID00465","ID00466","ID00467","ID00468","ID00469","ID00470","ID00471","ID00472","ID00473","ID00474","ID00475","ID00476","ID00477","ID00479","ID00480","ID00481","ID00482","ID00483","ID00484","ID00485","ID00487","ID00488","ID00490","ID00491","ID00492","ID00493","ID00494","ID00495","ID00496","ID00497","ID00498","ID00499","ID00500","ID00501","ID00502","ID00503","ID00504","ID00505","ID00506","ID00507","ID00508","ID00509","ID00510","ID00511","ID00512","ID00513","ID00514","ID00515","ID00516","ID00517","ID00518","ID00519","ID00520","ID00521","ID00522","ID00524","ID00525","ID00526","ID00529","ID00530","ID00952","ID00971","ID00972","ID00973","ID00974","ID00975","ID00976","ID00977","ID00978","ID00979","ID00980","ID00983","ID00986","ID00987","ID00988","ID00989","ID01001","ID01002","ID01003","ID01004","ID01005","ID01006","ID01007","ID01008","ID01009","ID01010","ID01011","ID01012","ID01013","ID01014","ID01015","ID01016","ID01017","ID01018","ID01019","ID01020","ID01021","ID01022","ID01023","ID01024","ID01025","ID01026","ID01027","ID01028","ID01029","ID01030","ID01031","ID01032","ID01033","ID00054","ID00052","ID00055","ID00056","ID00057","ID00058","ID00059","ID00060","ID00061","ID00062","ID00063","ID00065","ID00066","ID00067","ID00069","ID00070","ID00081","ID00083","ID00086","ID00087","ID00088","ID00089","ID00090","ID00092","ID00093","ID00094","ID00095","ID00096","ID00098","ID00099","ID00101","ID00102","ID00104","ID00105","ID00106","ID00107","ID00248","ID00249","ID00269","ID00270","ID00272","ID00273","ID00274","ID00275","ID00276","ID00277","ID00279","ID00293","ID00294","ID00296","ID00297","ID00298","ID00300","ID00301","ID00302","ID00303","ID00306","ID00307","ID00309","ID00310","ID00311","ID00312","ID00313","ID00314","ID00315","ID00316","ID00317","ID00318","ID00319","ID00320","ID00321","ID00322","ID00323","ID00324","ID00326","ID00327","ID00328","ID00330","ID00332","ID00333","ID00334","ID00335","ID00336","ID00338","ID00339","ID00340","ID00342","ID00343","ID00344","ID00345","ID00347","ID00348","ID00349","ID00350","ID00362","ID00363","ID00371","ID00372","ID00373","ID00376","ID00377","ID00380","ID00382","ID00383","ID00384","ID00389","ID00390","ID00391","ID00394","ID00396","ID00397","ID00398","ID00399","ID00400","ID00401","ID00402","ID00403","ID00404","ID00405","ID00406","ID00407","ID00408","ID00410","ID00412","ID00414","ID00415","ID00416","ID00417","ID00418","ID00420","ID00421","ID00422","ID00423","ID00424","ID00425","ID00076","ID00109","ID00111","ID00113","ID00114","ID00115","ID00116","ID00117","ID00118","ID00119","ID00124","ID00125","ID00126","ID00127","ID00128","ID00129","ID00130","ID00132","ID00133","ID00134","ID00135","ID00136","ID00137","ID00139","ID00140","ID00141","ID00142","ID00143","ID00144","ID00146","ID00147","ID00148","ID00149","ID00150","ID00151","ID00159","ID00163","ID00164","ID00265","ID00266","ID00267","ID00268","ID00280","ID00283","ID00284","ID00285","ID00286","ID00287","ID00288","ID00289","ID00290","ID00291","ID00351","ID00352","ID00354","ID00355","ID00356","ID00357","ID00358","ID00359","ID00360","ID00361","ID00364","ID00365","ID00366","ID00368","ID00369","ID00370","ID00426","ID00430","ID00531","ID00532","ID00533","ID00534","ID00535","ID00536","ID00537","ID00539","ID00540","ID00541","ID00542","ID00543","ID00544","ID00545","ID00546","ID00547","ID00548","ID00549","ID00550","ID00551","ID00552","ID00912","ID00913","ID00914","ID00916","ID00917","ID00918","ID00919","ID00920","ID00921","ID00922","ID00923","ID00924","ID00925","ID00926","ID00927","ID00928","ID00929","ID00930","ID00931","ID00932","ID00933","ID00934","ID00935","ID00936","ID00937","ID00939","ID00940","ID00941","ID00943","ID00944","ID00947","ID00948","ID00949","ID00950","ID00951","ID00953","ID00954","ID00955","ID00956","ID00957","ID00958","ID00960","ID00961","ID00962","ID00963","ID00964","ID00965","ID00966","ID00967","ID00969","ID00970","ID00990","ID00991","ID00993","ID00994","ID00995","ID00996","ID00997","ID00998","ID00999","ID01000","ID01034","ID01035","ID01036","ID01038","ID01039","ID01040","ID01041","ID01042","ID01043","ID01044","ID01045","ID01046","ID01047","ID01048","ID01049","ID01050","ID01051","ID01052","ID01053","ID01054","ID01056","ID01057","ID01058","ID01059","ID01060","ID01061","ID01063","ID01065","ID01066","ID01067","ID01069","ID01070","ID01072","ID01073","ID01074","ID01075","ID01076","ID01077","ID01078","ID01079","ID01080","ID01081","ID01082","ID01083","ID01084","ID01085","ID01086","ID01087","ID01088","ID01089","ID01090","ID01091","ID01094","ID01097","ID01098","ID01099","ID01100","ID01101","ID01102","ID01103","ID01104","ID01105","ID01106","ID01107","ID01108","ID01109","ID01110","ID01111","ID01112","ID01113","ID01115","ID01116","ID01117","ID01118","ID01119","ID01120","ID01121","ID01122","ID01123","ID01125","ID01158","ID01159","ID01160","ID01163","ID01165","ID01168","ID01169","ID01170","ID01171","ID01172","ID01174","ID01175","ID01176","ID01178","ID01179","ID01180","ID01181","ID01182","ID01183","ID01185","ID01186","ID01187","ID01188","ID01189","ID01190","ID01191","ID01192","ID01193","ID01194","ID01195","ID01208","ID01209","ID01210","ID01212","ID01214","ID01215","ID01216","ID01217","ID01218","ID01219","ID01220","ID01221","ID01222","ID01223","ID01224","ID01225","ID01226","ID01227","ID01228","ID01229","ID01230","ID01231","ID01232","ID01233","ID01234","ID01235","ID01236","ID01237","ID01238","ID01239","ID01240","ID01241","ID01242","ID01243","ID01244","ID01245","ID01246","ID01247","ID01248","ID01249","ID00810","ID00811","ID00812","ID00813","ID00814","ID00815","ID01250","ID01251","ID01252","ID01253","ID00165","ID00166","ID00167","ID00168","ID00169","ID00170","ID00171","ID00172","ID00173","ID00174","ID00175","ID00176","ID00177","ID00178","ID00179","ID00180","ID00181","ID00182","ID00224","ID00225","ID00226","ID00227","ID00236","ID00237","ID00238","ID00553","ID00554","ID00555","ID00556","ID00557","ID00558","ID00559","ID00560","ID00565","ID00566","ID00567","ID00568","ID00569","ID00570","ID00571","ID00572","ID00573","ID00575","ID00577","ID00578","ID00579","ID00604","ID00605","ID00606","ID00607","ID00608","ID00609","ID00610","ID00611","ID00616","ID00617","ID00619","ID00621","ID00622","ID00623","ID00625","ID00626","ID00627","ID00628","ID00631","ID00636","ID00637","ID00638","ID00639","ID00640","ID00641","ID00643","ID00644","ID00645","ID00647","ID00650","ID00654","ID00655","ID00656","ID00657","ID00658","ID00659","ID00660","ID00661","ID00662","ID00663","ID00665","ID00666","ID00667","ID00668","ID00669","ID00670","ID00671","ID00672","ID00673","ID00674","ID00675","ID00676","ID00677","ID00678","ID00679","ID00680","ID00681","ID00682","ID00683","ID00684","ID00685","ID00686","ID00687","ID00690","ID00691","ID00692","ID00693","ID00695","ID00696","ID00697","ID00698","ID00699","ID00700","ID00701","ID00702","ID00703","ID00704","ID00705","ID00706","ID00707","ID00708","ID00792","ID00793","ID00794","ID00795","ID00796","ID00797","ID00798","ID00799","ID00800","ID00808","ID00809","ID01254","ID01255","ID01256","ID01257","ID01258","ID01259","ID01260","ID01261","ID01262","ID01264","ID01265","ID01266","ID01267","ID01268","ID01269","ID01270","ID01271","ID00184","ID00185","ID00186","ID00187","ID00188","ID00189","ID00190","ID00191","ID00193","ID00194","ID00196","ID00197","ID00198","ID00199","ID00201","ID00202","ID00203","ID00204","ID00205","ID00206","ID00207","ID00208","ID00209","ID00210","ID00211","ID00212","ID00213","ID00214","ID00216","ID00217","ID00218","ID00219","ID00220","ID00222","ID00223","ID00228","ID00229","ID00230","ID00231","ID00232","ID00233","ID00235","ID00562","ID00563","ID00564","ID00580","ID00581","ID00582","ID00583","ID00584","ID00585","ID00586","ID00589","ID00592","ID00593","ID00594","ID00601","ID00602","ID00603","ID00709","ID00710","ID00711","ID00712","ID00713","ID00714","ID00715","ID00716","ID00717","ID00718","ID00719","ID00727","ID00729","ID00730","ID00731","ID00732","ID00733","ID00734","ID00735","ID00736","ID00737","ID00738","ID00739","ID00740","ID00741","ID00742","ID00743","ID00744","ID00745","ID00746","ID00752","ID00753","ID00754","ID00755","ID00756","ID00757","ID00758","ID00759","ID00760","ID00766","ID00767","ID00768","ID00769","ID00770","ID00771","ID00772","ID00773","ID00774","ID00775","ID00776","ID00777","ID00778","ID00780","ID00781","ID00782","ID00784","ID00785","ID00786","ID00787","ID00788","ID00789","ID00791","ID00801","ID00805","ID00806","ID00807","ID01126","ID01127","ID01128","ID01129","ID01131","ID01132","ID01133","ID01134","ID01136","ID01137","ID01139","ID01140","ID01141","ID01142","ID01143","ID01145","ID01146","ID01147","ID01149","ID01150","ID01151","ID01152","ID01153","ID01154","ID01156","ID01157","ID01166","ID01167","ID01199","ID01201","ID01202","ID01203","ID01204","ID01205","ID01206","ID00561","ID00599","ID00664","ID00726","ID00763","ID00803","ID00804","ID01037","ID01275","ID01276","ID01283","ID01293"],[0,0,2,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,11,0,0,15,0,0,0,0,0,0,25,0,8,9,0,33,0,0,0,0,13,0,0,0,0,0,15,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,2,5,0,0,0,0,0,0,8,0,0,0,0,0,0,6,0,1,1,0,1,0,0,0,0,0,0,2,0,0,28,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,15,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,2,29,0,0,43,0,0,0,0,2,0,0,0,20,0,12,0,0,4,0,0,0,17,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,0,6,0,0,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,9,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,23,0,0,8,0,0,0,5,21,0,3,0,0,0,0,0,0,0,1,0,0,2,2,0,0,0,0,3,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,10,0,0,0,5,0,0,0,0,0,0,0,0,0,15,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,9,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,21,0,3,1,1,7,0,0,0,0,0,0,0,0,0,0,2,2,27,0,0,0,0,0,11,0,1,14,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,1,0,40,0,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,11,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,4,0,0,0,0,0,8,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,12,0,0,0,0,3,0,0,0,10,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,11,0,0,0,0,15,0,1,19,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,10,0,0,0,0,0,30,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,5,0,0,0,0,16,0,0,0,0,0,0,0,14,0,0,0,0,31,0,0,0,0,0,0,0,0,1,0,0,1,0,1,0,38,0,0,0,0,0,0,0,0,1,17,0,0,0,1,0,0,0,0,0,7,0,0,0,10,22,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],["","","PF3D7_0419900_2/PF11_0373","","","","PF3D7_0411900_2","","PF3D7_1418100","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","PfCSP_1/B9/PF3D7_0519300/PF3D7_0612900/PF3D7_0615900/MSP10/PF3D7_0728200/PF13_0125/PF3D7_1329100/PF3D7_1466800/PF3D7_1475900","","","B9/Pfs16/PfDHFR_1/PF3D7_0504400/PF3D7_0519300/PF3D7_0728200/PF3D7_0802000/PF3D7_1035100/PfAMA_1/PF11_0373/PF3D7_1252100/PF3D7_1429500/PF3D7_1448500/PF3D7_1455300/PF3D7_1475900","","","","","","","PSOP24/PF3D7_0220800/PF3D7_0411900_2/PfDHFR_2/PF3D7_0422500/PF3D7_0504400/PF3D7_0519300/PF3D7_0612900/MSP10/PF3D7_0809400/PfDHPS_2/PF3D7_0827100/PF3D7_1035100/PF3D7_1035700/PF3D7_1211900/PF3D7_1302900/PF13_0125/MSRP4/PF3D7_1340400/PF3D7_1418100/PF3D7_1429800/PF3D7_1448500/PF3D7_1455300/PF3D7_1473700/PF3D7_1475900","","PfDHFR_1/PfDHFR_2/PF3D7_0728200/PF3D7_0806200/PF3D7_0807800/PF3D7_1252100/PF13_0125/PF3D7_1429500","PfCSP_1/PF3D7_0612900/PF3D7_0728200/PF3D7_0827100/MSRP4/PF3D7_1340400/PF3D7_1407800/PF3D7_1410300/PF3D7_1418100","","PSOP24/PfSERA2_1/PF3D7_0220800/PfCSP_1/B9/Pfs16/PF3D7_0411900_2/PfDHFR_1/PfDHFR_2/PF3D7_0422500/PF3D7_0504400/PF3D7_0519300/PF3D7_0612900/MSP10/PF3D7_0827100/PF3D7_0935400/PF3D7_1035700/PF3D7_1114900/PF3D7_1211900/PF3D7_1239800_1/PF3D7_1252100/PF3D7_1302900/PF13_0125/PF3D7_1329100/PF3D7_1407800/PF3D7_1409700/PF3D7_1410300/PF3D7_1418100/PF3D7_1429500/PF3D7_1448500/PF3D7_1455300/PF3D7_1473700/PF3D7_1475900","","","","","Pfs16/PF3D7_0411900_2/PfDHFR_1/PF3D7_0504400/PF3D7_0519300/PF3D7_1035700/PfAMA_1/PF11_0373/PF3D7_1252100/PF13_0125/PF3D7_1418100/PF3D7_1448500/PF3D7_1455300","","","","","","PSOP24/PF3D7_0220800/PfCSP_1/Pfs16/PF3D7_0424400/PF3D7_0612900/PF3D7_0827100/PF3D7_1211900/PF3D7_1252100/PF13_0125/PF3D7_1410300/PF3D7_1418100/PF3D7_1429500/PF3D7_1448500/PF3D7_1455300","","","","PSOP24","","","","","","","","","","","PF3D7_1340400","","","","","","","","","PF3D7_1473700/PF3D7_1475900","PfCSP_1/PF3D7_0612900/PF3D7_0806200/PF3D7_0806300/PF3D7_1475900","","","","","","","PfCSP_1/PF3D7_0612900/PF3D7_0728200/PF3D7_0827100/MSRP4/PF3D7_1340400/PF3D7_1410300/PF3D7_1418100","","","","","","","PF3D7_0207300/PF3D7_0220800/PF3D7_1114900/PF3D7_1418100/PF3D7_1448500/PF3D7_1455300","","PF11_0373","PF3D7_0419900_2","","PF3D7_1114900","","","","","","","PF3D7_0422500/PF3D7_1340400","","","PSOP24/PF3D7_0220800/PfCSP_1/B9/Pfs16/PF3D7_0411900_1/PF3D7_0411900_2/PfDHFR_1/PF3D7_0504400/PF3D7_0519300/PF3D7_0612900/MSP10/PF3D7_0827100/PfAMA_1/PF11_0373/PF3D7_1211900/PF3D7_1252100/PF3D7_1302900/PF13_0125/PF3D7_1329100/PF3D7_1340400/PF3D7_1409700/PF3D7_1410300/PF3D7_1418100/PF3D7_1429500/PF3D7_1448500/PF3D7_1455300/PF3D7_1475900","","","","","","","","","","","","","","","","","","","PF3D7_0207300/PfSERA2_1/PF3D7_0612900/PF3D7_1035700/PF11_0373/PF3D7_1418100/PF3D7_1473700","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","PfSERA2_1","","","","","","","","","","","","","","","","","PF3D7_0104100_1/PF3D7_0220800/PF3D7_0422500/PF3D7_0503200/PF3D7_0504400/PF3D7_0612900/PfDHPS_2/PF3D7_0827100/PfAMA_1/PF11_0373/PF3D7_1329100/PF3D7_1340400/PF3D7_1418100/PF3D7_1429500/PF3D7_1429800","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","PF3D7_0728200/PF3D7_0827100/MSRP4/PF3D7_1340400","","","","","","","","","","","","","PF3D7_0519300/PfAMA_1","B9/PF3D7_0411900_1/PF3D7_0411900_2/PfDHFR_2/PF3D7_0519300/MSP10/PF3D7_0802000/PF3D7_0806200/PF3D7_0806300/PF3D7_0807800/PF3D7_0809400/PfDHPS_2/PF3D7_0827100/PF3D7_0935400/PF3D7_1035700/PF3D7_1110200/PfAMA_1/PF11_0373/PF3D7_1211900/PF3D7_1239800_1/PF3D7_1302900/PF3D7_1329100/PF3D7_1340400/PF3D7_1429500/PF3D7_1429800/PF3D7_1448500/GEST/PF3D7_1455300/PF3D7_1475900","","","PSOP24/PF3D7_0207300/PfSERA2_1/B9/Pfs16/PF3D7_0411900_1/PF3D7_0411900_2/PfDHFR_2/PF3D7_0422500/PF3D7_0424400/PF3D7_0504400/PF3D7_0519300/PF3D7_0612900/PF3D7_0615900/MSP10/PF3D7_0711500/PF3D7_0728200/PF3D7_0806200/PF3D7_0806300/PF3D7_0807800/PF3D7_0809400/PfDHPS_2/PF3D7_0827100/PF3D7_0935400/PF3D7_1035100/PF3D7_1035700/PF3D7_1110200/PfAMA_1/PF11_0373/PF3D7_1211900/PF3D7_1252100/PF3D7_1302900/PF13_0125/MSRP4/PF3D7_1407800/PF3D7_1410300/PF3D7_1418100/PF3D7_1429800/PF3D7_1448500/GEST/PF3D7_1455300/PF3D7_1466800/PF3D7_1475900","","","","","PF3D7_0504400/PF3D7_1340400","","","","PF3D7_0207300/PfSERA2_1/PF3D7_0211700/PfCSP_1/B9/Pfs16/PF3D7_0411900_1/PF3D7_0411900_2/PfDHFR_1/PF3D7_0504400/PF3D7_0519300/PF3D7_0612900/PF3D7_0802000/PfAMA_1/PF11_0373/PF3D7_1211900/PF3D7_1302900/MSRP4/PF3D7_1429800/PF3D7_1455300","","PF3D7_0211700/PF3D7_0401900/PfDHFR_1/PF3D7_0504400/PF3D7_0519300/PF3D7_0612900/PF3D7_0802000/PF3D7_1110200/PF3D7_1211900/PF3D7_1302900/MSRP4/PF3D7_1455300","","","PF3D7_0401900/PF3D7_0612900/PF3D7_1035700/PfAMA_1","","","","PF3D7_0207300/PfSERA2_1/B9/PF3D7_0401900/Pfs16/PfDHFR_1/PF3D7_0504400/PF3D7_0612900/PfDHPS_2/PF3D7_1110200/PfAMA_1/PF11_0373/PF3D7_1211900/PF3D7_1302900/MSRP4/PF3D7_1429800/PF3D7_1455300","","","","","","","","","","","","","","","","","PfDHFR_1/PF3D7_0422500/PF3D7_0519300/PF3D7_0728200/PF3D7_0827100/PF3D7_1035100/PfAMA_1/PF11_0373/PF3D7_1252100/PF3D7_1329100/MSRP4/PF3D7_1429500/PF3D7_1448500/PF3D7_1475900","","","","","","","","","","","","","","","","","","","","","","","","","","PF3D7_1252100","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","PF3D7_0612900/PF11_0373","","","","","","","","","","","","","","","","","","","","PF3D7_0612900/PF3D7_0806200","PF3D7_0207300/CS/PF3D7_0807800/PF3D7_1129100","","","","","","","","","","","","","","","","","","","PF3D7_0207300/PfSERA2_1/PF3D7_0220800/Pfs16/PF3D7_0615900/PF3D7_0827100/GAMA/PF3D7_0935400","","PF3D7_0220800/Pfs16/PF3D7_0615900/PF3D7_0935400/PF3D7_1035700/PF3D7_1418100","","","","PfSERA2_1/PF3D7_0525100/GAMA/PF3D7_1410300/PF3D7_1418100","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","PF3D7_0419900_2","","","","","","","","","","","","","","","","","","","","","PfSERA2_1/PF3D7_0519300/PF3D7_0806200/PF3D7_0827100/PF3D7_1035700","","","","","","","","","","","","","","","GAMA","","","","","","","","","","","PF3D7_0827100","","PF3D7_0220800/PF3D7_0503200/P38/PF3D7_0525100/PF3D7_0612900/PF3D7_0615900/PF3D7_0806200/PF3D7_0807800/PF3D7_1472300","PF3D7_1429500","","","","","","","","","","PF3D7_0827100","","","","","","","","","","PF3D7_1408100_1","PSOP24/PF3D7_0220800/B9/Pfs16/PF3D7_0411900_2/PfDHFR_1/PF3D7_0422500/PF3D7_0504400/PF3D7_0612900/MSP10/PfDHPS_2/PF3D7_0935400/PF3D7_1035700/PF3D7_1211900/PF3D7_1239800_1/PF3D7_1252100/PF3D7_1302900/PF3D7_1329100/PF3D7_1407800/PF3D7_1409700/PF3D7_1410300/PF3D7_1455300/PF3D7_1475900","","","PSOP24/PF3D7_0220800/B9/PF3D7_0827100/PfAMA_1/PF3D7_1407800/PF3D7_1410300/PF3D7_1475900","","","","Pfs16/PF3D7_0504400/PF3D7_0612900/PfAMA_1/PF3D7_1352900","PfSERA2_1/B9/Pfs16/PfDHFR_1/PfDHFR_2/PF3D7_0503200/PF3D7_0504400/PF3D7_0612900/PF3D7_0728200/PF3D7_0806200/PF3D7_0807800/PF3D7_0827100/PfAMA_1/PF13_0125/PF3D7_1352900/PF3D7_1418100/PF3D7_1429500/PF3D7_1429800/PF3D7_1448500/GEST/PF3D7_1455300","","MSRP4/PF3D7_1410300/PF3D7_1418100","","","","","","","","PfSERA2_1","","","PfSERA2_1/PF3D7_0401900","MSRP4/PF3D7_1410300","","","","","PF3D7_1007900/MSRP4/PF3D7_1410300","","PF3D7_1448500","","","","","","","","","","","","","","PF3D7_1473700","PSOP24/PF3D7_0220800/PF3D7_0724700/PF3D7_0827100/PF3D7_1211900/PF3D7_1302900/MAL13P1.50/PF13_0125/PF3D7_1340400/PF3D7_1448500","","","","PF3D7_0504400/PF3D7_0612900/MSP10/PF3D7_1239800_1/PF3D7_1455300","","","","","","","","","","PF3D7_0220800/PfCSP_1/PF3D7_0422500/PF3D7_0504400/PF3D7_0519300/PF3D7_0612900/MSP10/PF3D7_0728200/PF3D7_1252100/PF3D7_1302900/PF3D7_1329100/MSRP4/PF3D7_1418100/PF3D7_1448500/PF3D7_1475900","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","PF3D7_0612900/MSRP4","","","","","","","","","","PF3D7_0207300/PfSERA2_1/PF3D7_0504400/PF3D7_0519300/CS/PF3D7_0806200/PF3D7_0806300/MSRP4/PF3D7_1340400","","","","","","","","","PF3D7_1340400","","","","","","","","","","","","","","","","","","","","","","PF3D7_1340400","","","","","","","","","","","PF3D7_0211700/PfCSP_1/B9/Pfs16/PF3D7_0504400/PF3D7_0519300/PF3D7_0612900/PF3D7_0728200/PF3D7_0802000/PF3D7_1110200/PfAMA_1/PF3D7_1252100/MSRP4/PF3D7_1410300/PF3D7_1418100/PF3D7_1429500/PF3D7_1429800/PF3D7_1448500/GEST/PF3D7_1455300/PF3D7_1473700","","PF3D7_0612900/PF3D7_0809400/PF3D7_1448500","PF3D7_1211900","PF3D7_0806200","PfCSP_1/PF3D7_0807800/PF3D7_0827100/MSRP4/PF3D7_1340400/PF3D7_1418100/PF3D7_1429500","","","","","","","","","","","PF3D7_1211900/PF3D7_1473700","MSRP4/PF3D7_1455300","PSOP24/Pfs16/PF3D7_0411900_2/PfDHFR_1/PF3D7_0422500/PF3D7_0612900/MSP10/PF3D7_0802000/PF3D7_0806200/PF3D7_0807800/PfDHPS_2/PF3D7_1035100/PF3D7_1035700/PfAMA_1/PF11_0373/PF3D7_1211900/PF3D7_1233600/PF3D7_1252100/PF3D7_1302900/PF13_0125/PF3D7_1329100/PF3D7_1340400/PF3D7_1418100/PF3D7_1429500/PF3D7_1448500/PF3D7_1455300/PF3D7_1473700","","","","","","PfDHFR_1/PF3D7_0612900/PF3D7_1035700/PfAMA_1/PF11_0373/PF3D7_1252100/PF3D7_1302900/MSRP4/PF3D7_1448500/PF3D7_1455300/PF3D7_1473700","","Pfs16","PF3D7_0211700/Pfs16/PF3D7_0519300/PF3D7_0612900/PF3D7_1110200/PF3D7_1252100/MSRP4/PF3D7_1340400/PF3D7_1410300/PF3D7_1429500/PF3D7_1429800/PF3D7_1448500/PF3D7_1455300/PF3D7_1473700","","","","","","","","","","","PF3D7_1407800/PF3D7_1410300","","","","","","PF3D7_0504400","","PSOP24/PF3D7_0207300/PfSERA2_1/PfCSP_1/B9/Pfs16/PF3D7_0411900_2/PfDHFR_2/PF3D7_0422500/PF3D7_0503200/PF3D7_0504400/PF3D7_0519300/PF3D7_0615900/PF3D7_0728200/PF3D7_0802000/PF3D7_0806200/PF3D7_0806300/PF3D7_0807800/PF3D7_0809400/PfDHPS_2/PF3D7_0827100/PF3D7_0935400/PF3D7_1035100/PF3D7_1035700/PF3D7_1110200/PfAMA_1/PF11_0373/PF3D7_1211900/PF3D7_1252100/PF3D7_1302900/PF13_0125/MSRP4/PF3D7_1407800/PF3D7_1410300/PF3D7_1418100/PF3D7_1429800/PF3D7_1448500/GEST/PF3D7_1455300/PF3D7_1475900","","","","","","","","","","","PfCSP_1/PF3D7_0728200/PfAMA_1","","","","","","","","","","","","","PF3D7_1472300","","","","","","","","","","PF3D7_0207300/PfSERA2_1/PF3D7_0220800/PF3D7_0519300/PF3D7_0612900/PF3D7_0615900/PF3D7_0802000/PF3D7_0806200/PF3D7_0806300/PfDHPS_2/PF3D7_1035700/PF3D7_1418100/PF3D7_1429800/PF3D7_1455300","","","","","","","","","","","","","","","","","","","","","","","","","PfSERA2_1/PF3D7_0612900/PF3D7_0806200/PF3D7_0807800/PF3D7_0827100/PF3D7_1035700/PfAMA_1/PF11_0373/MSRP4/PF3D7_1340400/PF3D7_1429800","","","","","","","","","","","","PF3D7_0827100","","","","","","","","PF3D7_0827100/PF3D7_1035700/PF13_0125","","","","","","","","PF3D7_0802000","","","","","","","","","","","","","","","","","","","","","","","","PF3D7_0401900","","","","","","","PF3D7_1035700/PfAMA_1/PF3D7_1352900/PF3D7_1466800","","","","","","Pfs16/PF3D7_1007900/PF3D7_1035700/PfAMA_1/PF3D7_1239800_1/PF3D7_1352900/PF3D7_1407800/PF3D7_1418100","PF3D7_0419900_2","","","","","","","","","","","","","","","","","PF3D7_0207300/PfSERA2_1/PF3D7_0211700/PF3D7_0419900_2/PF3D7_0424400/PF3D7_0504400/PF3D7_0612900/PF3D7_0615900/PF3D7_0728200/PF3D7_0827100/PF3D7_1473700/PF3D7_1475900","","","","","PF3D7_0612900/PF11_0373/PF3D7_1418100","","","","PF3D7_0401900/PF3D7_0519300/PF3D7_0525100/PF3D7_0612900/PF3D7_0806200/PF3D7_0807800/PfDHPS_2/PF3D7_0827100/PfAMA_1/PF11_0373","","PF3D7_0503200/PF3D7_0504400/PF3D7_1407800","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","PfCSP_1/PF3D7_0401900/PfDHFR_1/PfDHFR_2/PF3D7_0519300/PF3D7_0806200/PF3D7_0806300/PF3D7_0807800/PfDHPS_2/PF3D7_1252100/PF3D7_1410300","","","","","PfCSP_1/PF3D7_0401900/PfDHFR_1/PfDHFR_2/PF3D7_0519300/PF3D7_0615900/PF3D7_0802000/PF3D7_0806200/PF3D7_0806300/PF3D7_0807800/PfDHPS_2/PF3D7_1239800_1/PF3D7_1252100/PF3D7_1410300/PF3D7_1464700","","PSOP24","PSOP24/PF3D7_0207300/PfSERA2_1/PF3D7_0220800/B9/PF3D7_0401900/PF3D7_0504400/PF3D7_0612900/PF3D7_0806200/PF3D7_0806300/PF3D7_0807800/PfDHPS_2/PF3D7_0910000/PF3D7_1110200/PF3D7_1252100/PF13_0125/PF3D7_1340400/PF3D7_1407800/PF3D7_1455300","","","","","","","","","","","","","","","PF3D7_0422500","","","","","PF3D7_0220800/Pfs16/PF3D7_0411900_2/PF3D7_0612900/PF3D7_0615900/PF3D7_0806200/PF3D7_0807800/PF3D7_1233600/PF3D7_1410300/PF3D7_1418100","","","","","","PF3D7_0220800/PfCSP_1/B9/Pfs16/PF3D7_0424400/PF3D7_0503200/P38/PF3D7_0525100/PF3D7_0612900/PF3D7_0615900/CS/PF3D7_0711500/PF3D7_0728200/PF3D7_1035100/PF3D7_1035700/PF3D7_1126100_1/PfAMA_1/PF11_0373/PF3D7_1233600/PF3D7_1239800_1/PF3D7_1246500/PF13_0125/PF3D7_1329100/MSRP4/PF3D7_1340400/PF3D7_1410300/PF3D7_1418100/PF3D7_1429500/PF3D7_1429800/PF3D7_1472300","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","PfCSP_1","PF3D7_0207300/PfSERA2_1/PF3D7_0827100/PF3D7_0935400/PF3D7_1410300","","","","","PF3D7_0207300/PfSERA2_1/PfCSP_1/PF3D7_0424400/P38/CS/PF3D7_0728200/PF3D7_0802000/PfDHPS_1/PF3D7_0827100/GAMA/PF3D7_0935400/PF3D7_1233600/PF3D7_1352900/PF3D7_1410300/PF3D7_1472300","","","","","","","","PF3D7_0207300/PfSERA2_1/PF3D7_0211700/Pfs16/PF3D7_0612900/PF3D7_0935400/PF3D7_1035700/PF13_0125/PF3D7_1329100/MSRP4/PF3D7_1340400/PF3D7_1429800/PF3D7_1473700/PF3D7_1475900","","","","","PF3D7_0207300/PfSERA2_1/PF3D7_0220800/PfCSP_1/B9/PF3D7_0411900_1/PF3D7_0411900_2/PF3D7_0503200/PF3D7_0612900/PF3D7_0711500/PF3D7_0806200/PF3D7_0827100/PF3D7_0935400/PF3D7_1007900/PF3D7_1035100/PF3D7_1035700/PF3D7_1114900/PF3D7_1129100/PfAMA_1/PF13_0125/MSRP4/PF3D7_1340400/PF3D7_1407800/PF3D7_1409700/PF3D7_1410300/PF3D7_1429500/PF3D7_1429800/PF3D7_1447900/PF3D7_1448500/PF3D7_1472300/PF3D7_1473700","","","","","","","","","PfSERA2_1","","","PfSERA2_1","","PfKelch13C580Y","","PF3D7_0104100_1/PSOP24/PF3D7_0207300/PfSERA2_1/PfCSP_1/B9/Pfs16/PF3D7_0411900_1/PF3D7_0411900_2/PfDHFR_1/PF3D7_0422500/PF3D7_0519300/PF3D7_0612900/PF3D7_0615900/MSP10/PF3D7_0802000/PF3D7_0806200/PF3D7_0807800/PfDHPS_2/PF3D7_1035100/PF3D7_1035700/PfAMA_1/PF11_0373/PF3D7_1211900/PF3D7_1246500/PF3D7_1252100/PF3D7_1302900/PF13_0125/PF3D7_1329100/MSRP4/PF3D7_1340400/PF3D7_1410300/PF3D7_1418100/PF3D7_1429500/PF3D7_1448500/PF3D7_1455300/PF3D7_1473700/PF3D7_1475900","","","","","","","","","PF3D7_1110200","PF3D7_0207300/PfSERA2_1/PF3D7_0220800/PfCSP_1/PF3D7_0504400/PF3D7_0519300/PF3D7_0612900/PF3D7_0806200/PF3D7_0807800/PF3D7_0827100/PfAMA_1/MSRP4/PF3D7_1340400/PF3D7_1418100/PF3D7_1429500/PF3D7_1473700/PF3D7_1475900","","","","PF3D7_0910000","","","","","","PfCSP_1/PF3D7_0612900/PF3D7_0827100/PF3D7_1007900/MSRP4/PF3D7_1410300/PF3D7_1418100","","","","Pfs16/PF3D7_0519300/PF3D7_0612900/PF3D7_0827100/PF3D7_1035700/PF13_0125/MSRP4/PF3D7_1407800/PF3D7_1455300/PF3D7_1473700","PfCSP_1/Pfs16/PF3D7_0503200/PF3D7_0504400/PF3D7_0519300/PF3D7_0612900/CS/PF3D7_0728200/PF3D7_0802000/PF3D7_1110200/PF3D7_1129100/PfAMA_1/PF3D7_1239800_1/PF3D7_1252100/MSRP4/PF3D7_1407800/PF3D7_1410300/PF3D7_1418100/PF3D7_1429500/PF3D7_1429800/PF3D7_1473700/PF3D7_1475900","","","","","","","","","","","","","","",""],["","",".:1339_147A:159/156C:988_156C159C:464","","","",".:169_22T:137","","96C126G:2751_96C126G170A:366","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","84T97G190C203C214G217C264T:196_84T106A111C112C203C214G217C264T:79/212A216G:1243_212A226G:1178/114C115A:2055_27G:443/113T215T:2470_113T167G:889/237T238C:691_237T:269/164G:2599_104A164G:891/.:933_25T180A:279/21A:1559_21A134T:286/104C:388_.:380/82T:455_.:146/.:416_31A41A75G84G109A139C:222","","","212A216G:845_212A226G:238/148T:2050_.:279/128T:3414_.:632/.:1881_76A:233/114C115A:741_27G:107/25T180A:827_.:201/.:162_160C:102/34G63G69A168A183G243G:265_34G160A168A183G243G:46/.:170_63A67A71G107A109T139T146G147T164G:41/156C:1579_.:353/119A:778_146T:144/88A180A:1032_.:246/.:1338_158A164T:165/229G:3498_.:550/31A41A75G84G109A139C:196_.:20","","","","","","","237T:2131_.:792/143T:1339_.:517/146T:455_.:146/2A:1071_.:542/123T:544_.:133/76A:2067_39A:707/114C115A:879_27G:224/113T215T:1008_113T167G:353/164G:638_104A164G:511/.:116_187T:57/.:117_12C:50/203T228C:4742_159C228C:2031/34G160A168A183G243G:325_34G63G69A168A183G243G:92/1T54G151G:548_1T54G202A212A231G251A:237/.:220_21T:171/21T128C:518_21T32A128C:230/21A:1114_21A134T:284/141A:331_132T141A:126/183C245C:1163_183C:343/96C126G:1395_.:1096/211A226C:340_37C67G76A211A226C:199/158A164T:1256_.:508/.:1423_229G:1172/111A:901_.:357/.:217_31A109A139C:145","","128T:1193_.:487/2A:487_.:174/.:154_25T180A:69/.:1978_63A135T186C:394/53T177A178A:141_.:35/146T:79_119A:76/21A:797_21A84T:89/88A180A:121_.:91","84T91T97G195C203C205G214T217C226G264T:172_84T97G190C203C214G217C264T:35/167G215T:1767_113T167G:325/.:822_25T180A:185/.:7180_203T228C:2456/141A:551_132T141A:122/183C193T:2082_183C245C:668/.:436_197C:121/120T:484_51G53T:132/96C:4672_96C126G:1504","",".:1842_237T:1251/84A93T159C193C202C:1993_84A93T159C193C202C243T:276/143T:1550_.:710/84T91T97G195C203C205G214T217C226G264T:48_84T106A111C112C203C214G217C264T:47/212A226G:601_212A:528/148T:1568_.:847/.:387_146T:112/.:2498_128T:1719/2A:1373_.:254/.:625_123T:211/76A:2119_.:563/114C115A:822_27G:164/113T167G:464_113T215T:443/164G:989_104A164G:613/203T228C:4496_159C228C:944/149A:289_93A149A:70/1T54G202A212A231G251A:203_202A212A231G251A:200/259A:1119_.:232/21T:272_.:173/54G:91_.:87/119A:410_146T:391/21T32A128C:447_21T128C:261/21A:1800_21A134T:273/.:174_104C:91/197C:196_.:56/84G134T217C233T:86_134T:43/51G53T:163_.:65/96C126G:1195_.:623/88A180A:947_.:171/158A164T:1209_.:181/229G:2482_.:2058/.:891_111A:334/.:207_31A109A139C:98","","","","","148T:666_.:174/.:99_146T:65/128T:506_.:186/76A:408_.:100/27G:390_114C115A:289/1T54G151G:228_1T54G202A212A231G251A:72/63A67A71G107A109T139T146G147T164G:137_.:40/.:1399_156C:319/146T:140_119A:97/21A:910_21A134T:180/.:1422_96C126G:273/.:632_158A164T:193/229G:636_.:560","","","","","","237T:2401_.:983/.:1534_143T:296/84T91T97G195C203C205G214T217C226G264T:98_84T97G190C203C214G217C264T:35/148T:2358_.:435/129A175C196G199A:36_3A33T196G199A:18/167G215T:1885_113T215T:396/.:6660_203T228C:1235/21T:509_.:91/119A:1761_146T:350/21A:1439_21A134T:302/120T:295_51G53T:74/96C:3191_96C126G:562/88A180A:1820_.:267/.:1198_158A164T:202/229G:2857_.:523","","","",".:2009_237T:223","","","","","","","","","","","183C245C:965_183C245C250T:223","","","","","","","","",".:367_111A:112/31A109A139C:180_.:29","84T97G190C203C214G217C264T:44_84T106A111C112C203C214G217C264T:29/113T167G:742_113T215T:312/63A135T186C:2431_.:252/11G:790_11G80A:86/31A41A75G84G109A139C:242_.:56","","","","","","","84T91T97G195C203C205G214T217C226G264T:57_84T97G190C203C214G217C264T:34/113T167G:406_167G215T:259/25T180A:296_.:189/203T228C:4224_.:3033/132T141A:186_141A:101/183C193T:940_183C245C:362/51G53T:314_120T:57/96C:719_96C126G:199","","","","","","",".:210_115T122A:33/143T:1723_.:177/259A:1711_.:226/.:2382_96C107C:305/.:871_33T149C164T:101/.:1133_93G131T229G:126","","156C:5180_103A156C:575",".:3727_157T:519","",".:5715_259A:573","","","","","","",".:696_123T:312/183C193T:1737_183C:361","","",".:1041_237T:940/.:565_143T:253/84T91T97G195C203C205G214T217C226G264T:38_84T106A111C112C203C214G217C264T:11/212A226G:314_212A216G:291/148T:1203_.:831/206A:219_.:158/146T:172_.:67/128T:1589_.:1408/.:217_76A:160/114C115A:213_27G:95/113T215T:587_167G215T:332/164G:320_104A164G:145/203T228C:2436_.:2320/63A67A71G107A109T139T146G147T164G:49_.:19/.:1189_156C:486/21T:109_.:78/146T:537_119A:375/21T32A128C:355_21T128C:237/21A134T:860_21A:248/.:91_104C:89/183C:1106_183C193T:374/84G134T217C233T:129_134T:63/120T:230_.:112/96C:1662_.:639/.:602_88A180A:276/.:796_158A164T:473/.:852_229G:624/31A41A75G84G109A139C:76_.:46","","","","","","","","","","","","","","","","","","","115T122A:25_.:14/84A93T159C193C202C:162_84A93T193C202C:125/113T167G:172_167G215T:78/1T54G151G:27_1T54G202A212A231G251A:25/156C159C:110_156C:97/96C126G:44_96C107C:44/105A111A:167_111A:136","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","84A93T159C193C202C:914_84A93T193C202C:188","","","","","","","","","","","","","","","","","132A133G:139_50A132A133G:87/.:914_143T:415/123T:535_.:125/73D.AATGAA132C:81_63T66A:45/76A:1084_.:400/113T215T:979_113T167G:440/.:537_12C:223/159C:2910_159C228C:1093/34A63A71G137C146G158A164G:246_.:71/156C159C:1166_156C:499/.:343_104C:172/183C245C:598_183C:176/96C:693_96C126G:387/180A:443_88A180A:124/.:294_211A226C:102","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","",".:346_25T180A:65/.:3197_203T228C:729/132T141A:538_141A:121/183C245C:605_183C193T:62","","","","","","","","","","","","","27G:197_114C115A:58/63A67A71G107A109T139T146G147T164G:92_63A71G107A:19","212A226G:1482_212A216G:897/206A:711_.:168/146T:571_.:106/2A:996_.:198/114C115A:798_27G:249/164G:940_104A164G:202/160C:907_70T:115/63A135T186C:4819_.:911/11G:1950_.:370/.:1018_53T177A178A:189/.:208_187T:57/.:405_12C:53/203T228C:3663_159C228C:864/93A149A:496_149A:166/202A212A231G251A:399_1T54G202A212A231G251A:62/35T112C137A:203_69C112C137A:83/63A71G107A:392_63A67A71G107A109T139T146G147T164G:103/156C:1120_.:214/.:1495_21T:292/54G:381_.:113/21T32A128C:892_125G128C146C:144/.:307_104C:101/183C193T:781_183C:189/.:909_88A180A:293/.:345_37C67G76A211A226C:141/148T164T:1206_.:203/42G43C53A:279_41T43C53A:42/93G229G:1623_.:662/.:164_31A41A75G84G109A139C:98","","","237T:1996_.:701/.:210_115T122A:67/84A93T193C202C:1969_84A93T159C193C202C:1532/212A216G:647_212A226G:331/148T:767_.:403/.:409_206A:232/.:263_146T:208/.:555_2A:218/.:427_123T:227/129A175C196G199A:17_3A33T196G199A:17/.:1133_76A:349/114C115A:572_27G:205/113T167G:1001_113T215T:180/237T:261_237T238C:201/164G:468_104A164G:381/.:39_87T91D.AAT96C138C234A:14/25T180A:184_.:85/.:2289_63A135T186C:618/.:859_11G:294/53T177A178A:516_.:141/.:171_187T:150/12C:207_.:111/159C228C:3014_203T228C:561/149A:461_93A149A:180/34G63G69A168A183G243G:121_34G160A168A183G243G:103/202A212A231G251A:130_1T54G151G:62/35T112C137A:92_.:39/63A71G107A:194_63A67A71G107A109T139T146G147T164G:134/156C:1283_.:646/21T:502_21T57T:360_.:187/119A:1597_146T:290/21T32A128C:468_21T128C:223/21A:817_21A134T:117/132T141A:728_141A:314/197C:281_.:80/51G53T:204_.:30/96C126G:497_.:252/.:200_211A226C:143/148T164T:370_158A164T:262/42G43C53A:130_41T43C53A:69/229G:1578_.:478/.:156_82T:148/31A41A75G84G109A139C:113_.:57","","","","","39A:322_.:125/183C245C:116_183C193T:114","","","",".:60_115T122A:39/84A93T159C193C202C:590_84A93T193C202C:199/.:533_99D.AATATTCATCATGAAAAGGTTTATCATGAA:154/84T97G190C203C214G217C264T:25_84T91T97G195C203C205G214T217C226G264T:15/212A216G:500_212A226G:158/.:192_148T:111/.:119_206A:118/146T:67_.:57/.:833_128T:360/.:197_76A:168/114C115A:200_27G:38/113T167G:321_113T215T:201/160C:111_.:94/63A67A71G107A109T139T146G147T164G:60_.:21/156C:276_.:136/21T:263_.:70/21T32A128C:189_125G128C146C:120/132T141A:294_141A:154/37C67G76A211A226C:103_211A226C:78/229G:444_.:287","","99D.AATATTCATCATGAAAAGGTTTATCATGAA:1314_.:371/.:1387_2T94D.GCCTTTGTTAGTT:768/.:771_128T:621/76A:1049_.:576/27G:642_114C115A:275/113T215T:1469_113T167G:203/160C:982_.:270/.:226_69C112C137A:74/.:973_21T:129/21T32A128C:691_125G128C146C:253/132T141A:995_141A:340/229G:1315_.:348","","",".:1808_2T94D.GCCTTTGTTAGTT:350/113T215T:1012_113T167G:144/202A212A231G251A:309_1T54G202A212A231G251A:41/63A71G107A:323_.:43","","","",".:186_115T122A:56/84A93T159C193C202C:1404_84A93T193C202C:1176/212A216G:860_212A226G:513/.:939_2T94D.GCCTTTGTTAGTT:533/.:379_148T:264/.:897_128T:133/.:662_76A:341/113T215T:632_113T167G:317/12C:166_.:133/69C112C137A:108_.:62/63A67A71G107A109T139T146G147T164G:145_.:72/.:666_156C:405/.:675_21T:192/125G128C146C:495_21T32A128C:134/141A:616_132T141A:151/37C67G76A211A226C:276_211A226C:116/229G:1190_.:738","","","","","","","","","","","","","","","","",".:368_128T:343/123T:176_.:82/.:197_27G:104/25T180A:143_.:80/203T228C:801_159C228C:723/34G63G168A183G243G:99_34G160A168A183G243G:54/63A67A71G107A109T139T146G147T164G:150_48A71G107A109T118A134A138G139T144A146G164G167G:61/.:797_156C:311/146T:466_119A:236/104C:90_.:85/141A:206_132T141A:183/180A:501_.:182/.:271_158A164T:108/31A41A75G84G109A139C:52_.:15","","","","","","","","","","","","","","","","","","","","","","","","","","119A:293_146T:85","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","167G215T:600_113T167G:89/156C:1071_156C159C:499","","","","","","","","","","","","","","","","","","","","113T167G:231_69T167G215T:80/.:157_63A135T186C:31",".:91_115T122A:16/112G:564_.:228/.:866_177A178A:249/95T:257_.:97","","","","","","","","","","","","","","","","","","","115T122A:37_.:34/84A93T159C193C202C:1067_84A93T193C202C:1066/.:435_143T:154/.:424_148T:116/237T238C:165_89A90A237T:82/159C:1470_203T228C:812/.:254_62T:97/149A:530_93A149A:204","",".:1824_143T:255/.:2956_148T:436/237T238C:775_89A90A237T:104/149A:1358_93A149A:221/202A212A231G251A:477_1T54G151G:54/96C:1246_96C126G:446","","","","84A93T193C202C:5031_84A93T159C193C202C:971/132G:682_.:123/62T:744_.:131/.:224_51G53T:49/96C107C:1096_96C126G:486","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","",".:5629_158G:747","","","","","","","","","","","","","","","","","","","","","84A93T193C202C:1480_84A93T159C193C202C:228/.:389_114C115A:74/63A186C:2181_63A135T186C:247/159C228C:2881_203T228C:319/1T54G151G:122_202A212A231G251A:19","","","","","","","","","","","","","","","62T:2026_.:271","","","","","","","","","","","203T228C:1076_203T219T228C:148","",".:1567_143T:218/73D.AATGAA132C:389_63T66A:41/.:100_126T228T:31/.:1472_132G:158/113T167G:2334_167G215T:467/237T238C:536_89A90A237T:67/.:7828_63A135T186C:1077/177A178A:1115_.:130/105G199G:493_113I.GATA199G:92","88A180A:570_.:149","","","","","","","","","","159C:9372_159C249G:2330","","","","","","","","","",".:1273_261G:267",".:2331_237T:1154/143T:755_.:243/212A226G:966_212A216G:368/148T:1803_.:1075/.:439_146T:198/128T:1076_.:573/.:321_123T:207/76A:1205_.:595/113T167G:1217_113T215T:360/164G:627_104A164G:362/12C:58_.:45/93A149A:779_149A:105/1T54G202A212A231G251A:264_202A212A231G251A:155/21T:292_.:142/54G:169_.:99/119A:423_146T:387/21T32A128C:876_21T128C:228/.:384_104C:152/197C:255_.:121/84G134T217C233T:65_134T:27/51G53T:141_.:45/229G:2643_.:1384/31A41A75G84G109A139C:95_.:75","","",".:3704_237T:672/143T:1141_.:227/212A226G:1379_212A216G:330/203T228C:3630_.:632/.:259_63A67A71G107A109T139T146G147T164G:32/197C:371_.:77/51G53T:159_.:82/.:106_31A41A75G84G109A139C:52","","","","148T:2391_.:257/.:1442_76A:207/167G215T:2159_69T167G215T:342/.:192_63A67A71G107A109T139T146G147T164G:25/242T252T:178_121G242T252G:46","84A93T159C193C202C:266_84A93T193C202C:189/212A:417_212A216G:202/.:1202_148T:264/.:581_128T:238/.:340_2A:128/73D.AATGAA132C:110_63T66A:35/.:209_76A:131/113T167G:242_69T167G215T:132/25T180A:194_.:70/.:568_63A135T186C:108/53T177A178A:212_.:110/203T228C:1287_159C228C:1249/63A67A71G107A109T139T146G147T164G:131_63A71G107A:39/21A:923_21A134T:311/121G242T252G:103_242T252T:43/96C126G:485_96C:225/.:398_88A180A:316/.:166_37C67G76A211A226C:73/148T164T:204_.:65/41T43C53A:63_42G43C53A:38/.:180_229G:124","","132T141A:561_141A:141/51G53T:153_120T:38/96C126G:728_96C:125","","","","","","","","84A93T193C202C:1629_84A93T157A193C202C:239","","","84A93T159C193C202C238A:590_84A93T159C193C202C:507/2T73D.GTTGTCTTTGTTA95T163A:310_2T73D.GTTGTCTTTGTTA95T:92","141A:505_132T141A:162/120T:64_51G53T:60","","","","","106T:306_.:149/141A:1589_132T141A:519/120T:238_51G53T:195","",".:980_80C:417","","","","","","","","","","","","","","111A:163_111A173D.TTGTTCATATGATG200G205T210C213C214C216T:30",".:4781_237T:1914/.:273_143T:110/1C127C:131_1C:83/203T228C:4995_159C228C:1044/.:528_21T:274/21T128C:314_21T32A128C:70/.:101_67T:58/21A134T:832_21A:129/183C:304_183C245C:146/158A164T:702_.:266","","","","39A:2622_.:305/113T215T:5566_113T167G:751/104A164G:2201_164G:326/.:776_54G:95/93G229G:5511_229G:802","","","","","","","","","","143T:1043_.:143/84T106A111C112C203C214G217C264T:27_84T91T97G195C203C205G214T217C226G264T:21/123T:997_.:493/76A:354_39A:46/27G:151_114C115A:34/113T215T:496_113T167G:109/164G:757_104A164G:651/.:130_25T180A:63/146T:600_119A:417/21T128C:698_125G128C146C:697_21T32A128C:189/.:447_104C:121/132T141A:587_141A:278/.:1553_96C126G:780/.:299_158A164T:121/.:17_31A41A75G84G109A139C:16","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","113T167G:246_167G215T:100/141A:469_132T141A:133","","","","","","","","","",".:91_115T122A:39/84A93T193C202C:3898_84A93T159C193C202C:1363/39A:568_.:505/27G:720_114C115A:301/112G:154_.:120/.:2553_63A135T186C:1358/.:1473_11G:912/132T141A:618_141A:332/183C:608_183C193T:303","","","","","","","","","183C193T:250_183C:174","","","","","","","","","","","","","","","","","","","","","","183C:379_183C245C:159","","","","","","","","","","","99D.AATATTCATCATGAAAAGGTTTATCATGAA:613_.:298/84T91T97G195C203C205G214T217C226G264T:79_84T97G190C203C214G217C264T:47/212A:442_212A216G:225/.:361_148T:161/39A:345_.:232/114C115A:341_27G:119/113T167G:289_167G215T:271/.:97_25T180A:77/160C:568_70T:156/69C112C137A:98_35T112C137A:26/63A67A71G107A109T139T146G147T164G:125_63A71G107A:95/146T:807_119A:722/141A:514_132T141A:98/51G53T:148_120T:31/96C126G:265_96C107C:249/88A180A:230_.:120/37C67G76A211A226C:178_.:54/.:411_148T164T:123/41T43C53A:82_42G43C53A:33/.:423_229G:117/.:2531_111A:423","","113T167G:120_167G215T:99/187T:83_.:43/.:188_148T164T:63",".:232_21T:105",".:222_50T:142","84T91T97G195C203C205G214T217C226G264T:35_84T97G190C203C214G217C264T:24/.:237_53T177A178A:29/.:1222_203T228C:568/141A:510_132T141A:167/183C193T:347_183C245C:190/96C126G:414_96C:96/88A180A:562_.:138","","","","","","","","","","","21T:404_.:159/.:931_111A:577","141A:659_132T141A:87/229G:1707_.:275","237T:335_.:231/148T:1479_.:1175/.:285_146T:160/128T:2518_.:601/.:929_123T:229/113T167G:2919_113T215T:660/164G:765_104A164G:296/.:580_160C:185/63A186C:3832_63A135T186C:918/53T177A178A:539_.:88/12C:669_.:180/34G63G69A168A183G243G:70_34G160A168A183G243G:34/1T54G202A212A231G251A:98_1T54G151G:19/48A71G107A109T118A134A138G139T144A146G164G167G:733_63A67A71G107A109T139T146G147T164G:137/156C:746_.:197/21T:1372_.:377/.:374_187A:100/119A:2513_146T:610/21T32A128C:1737_21T128C:833/21A:635_21A134T:162/104C:600_.:126/183C245C:902_183C:176/96C126G:1063_.:237/88A180A:335_.:112/.:1465_158A164T:487/229G:2440_.:728/.:5661_111A:699","","","","","","128T:294_.:154/113T167G:581_113T215T:66/1T54G202A212A231G251A:47_1T54G151G:17/48A71G107A109T118A134A138G139T144A146G164G167G:127_63A67A71G107A109T139T146G147T164G:26/156C:243_.:120/119A:618_146T:313/21T32A128C:205_21T128C:133/132T141A:396_141A:126/.:192_158A164T:68/229G:344_.:107/.:1053_111A:196","","148T:1869_.:238",".:563_99D.AATATTCATCATGAAAAGGTTTATCATGAA:172/.:888_148T:119/27G:237_114C115A:79/167G215T:2066_113T167G:542/69C112C137A:103_35T112C137A:34/146T:1554_119A:674/141A:622_132T141A:111/183C193T:911_183C:284/120T:231_51G53T:59/88A180A:107_.:40/37C67G76A211A226C:159_.:50/.:593_148T164T:171/.:1535_229G:495/.:3589_111A:660","","","","","","","","","","",".:442_197C:123/120T:157_51G53T:38","","","","","",".:882_94T:97","","237T:237_.:202/.:96_115T122A:15/84A93T193C202C:5180_84A93T159C193C202C:1777/84T97G190C203C214G217C264T:93_84T106A111C112C203C214G217C264T:40/212A216G:198_212A226G:151/148T:938_.:883/.:168_146T:139/.:603_2A:513/123T:1195_.:821/63T66A:42_73D.AATGAA:39/39A:413_76A:345/27G:425_114C115A:337/89A90A237T:185_237T238C:103/25T180A:258_.:173/70T:354_160C:245/.:2012_63A135T186C:643/.:1698_11G:543/53T177A178A:215_.:150/.:88_187T:45/12C:442_.:200/203T228C:656_159C228C:653/93A149A:77_149A:77/34G160A168A183G243G:51_34G63G69A168A183G243G:34/202A212A231G251A:63_1T54G151G:35/35T112C137A:106_.:61/63A67A71G107A109T139T146G147T164G:202_63A71G107A:195/.:355_156C:327/21T:689_.:490/119A:2346_146T:451/21T128C:1687_21T32A128C:1137/21A:214_21A134T:143/132T141A:669_141A:488/197C:250_.:112/51G53T:357_.:99/96C126G:626_.:485/.:250_211A226C:92/158A164T:844_148T164T:549/42G43C53A:117_41T43C53A:84/229G:1361_.:827/31A41A75G84G109A139C:29_.:19","","","","","","","","","","","84T97G190C203C214G217C264T:215_84T91T97G195C203C205G214T217C226G264T:39/25T180A:474_.:217/63A71G107A:195_63A67A71G107A109T139T146G147T164G:85","","","","","","","","","","","","","113I.GATA199G:122_113D.ATAATAATAATAATA199G:13","","","","","","","","","",".:179_115T122A:60/84A93T193C202C:2411_84A93T159C193C202C:966/.:962_143T:859/.:714_114C115A:176/113T167G:2356_167G215T:714/89A90A237T:425_237T238C:152/.:321_160C:218/.:2047_63A135T186C:1791/11G:1048_.:1028/12C:239_.:212/1T54G202A212A231G251A:92_1T54G151G:65/96C107C:943_96C:187/37C67G76A211A226C:236_211A226C:105/.:2625_229G:312","","","","","","","","","","","","","","","","","","","","","","","","","84A93T159C193C202C:267_84A93T193C202C:135/113T167G:788_69T167G215T:151/.:1120_63A135T186C:408/177A178A:323_.:46/159C:3016_203T228C:327/202A212A231G251A:40_1T54G151G:39/34A63A71G137C146G158A164G:63_63A67A71G107A109T139T146G147T164G:39/156C159C:214_156C:128/132T141A:250_141A:97/183C:352_183C193T:90/.:58_37C67G76A211A226C:48","","","","","","","","","","","","159C:1112_203T228C:122","","","","","","","","159C:1470_203T228C:362/1T54G151G:54_202A212A231G251A:26/21A134T:194_21A:105","","","","","","","","160C:381_.:125","","","","","","","","","","","","","","","","","","","","","","","","2T:629_2T60A:285","","","","","","","202A212A231G251A:210_1T54G151G:68/34A63A71G137C146G158A164G:806_63A67A71G107A109T139T146G147T164G:199/121G242T252G:349_242T252T:65/.:97_82T:78","","","","","","148T:1394_.:906/106T:95_.:59/1T54G151G:101_202A212A231G251A:56/63A67A71G107A109T139T146G147T164G:442_34A63A71G137C146G158A164G:185/.:158_54G:103/242T252T:60_121G242T252G:45/.:296_197C:183/96C:555_96C107C:367",".:15160_122T:1935","","","","","","","","","","","","","","","","",".:180_115T122A:82/84A93T193C202C:6173_84A93T159C193C202C:3600/22A99D.AATATTCATCATGAAAAGGTTTATCATGAA:959_99D.AATATTCATCATGAAAAGGTTTATCATGAA:719/122A:9704_.:2929/129A175C196G199A:32_.:30/.:1827_76A:1070/113T167G:3389_167G215T:1644/237T:483_237T238C:222/.:580_25T180A:386/159C:2495_203T228C:1136/105A111A:2396_111A:1324/31A139C175T:111_31A41A75G84G109A139C:49","","","","","113T167G:1072_69T167G215T:123/156C:1021_156C159C:147/96C126G:439_96C:325","","","",".:1175_2T91D.GTTGCCTTTGTTA:603/114C115A:308_.:161/132G:342_.:263/113T167G:1688_167G215T:873/63A135T186C:3159_63A186C:644/.:562_53T177A178A:209/.:680_12C:181/159C:1257_159C228C:372/.:230_34A63A71G137C146G158A164G:75/156C:599_156C159C:242","","73D.AATGAA132C:176_63T66A:32/76A:1058_.:135/.:536_197C:67","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","84T91T97G195C203C205G214T217C226G264T:28_84T97G190C203C214G217C264T:17/2T112I.TGTCTTTGTTATTTTTGTT:640_2T94D.GCCTTTGTTAGTT:578/128T:450_.:324/2A:237_.:132/114C115A:156_.:98/.:968_63A186C:949/11G:423_.:390/53T177A178A:214_177A178A:176/.:69_12C:63/119A:705_146T:495/51G53T:94_.:37","","","","","84T97G190C203C214G217C264T:81_84T91T97G195C203C205G214T217C226G264T:58/2T94D.GCCTTTGTTAGTT:2584_2T112I.TGTCTTTGTTATTTTTGTT:801/.:1278_128T:546/.:587_2A:224/.:337_114C115A:201/89A90A237T:200_237T238C:79/160C:247_.:132/.:2504_63A186C:1165/.:1573_11G:757/177A178A:556_53T177A178A:347/.:395_12C:159/54G:116_.:74/119A:1537_146T:682/.:168_51G53T:96/.:385_106G:292","","237T:1321_.:184","237T:1410_.:244/.:75_115T122A:43/84A93T193C202C:1914_84A93T159C193C202C:781/143T:669_78C:315/212A216G:323_212A226G:94/2T112I.TGTCTTTGTTATTTTTGTT:1456_2T94D.GCCTTTGTTAGTT:417/76A:684_.:199_39A:124/113T167G:891_167G215T:234_113T215T:225/63A186C:2026_63A135T186C:370_.:329/11G:1168_.:137/.:908_53T177A178A:121/12C:276_.:62/.:2208_174G:230/.:106_69C112C137A:22/119A:1510_146T:353/21A:861_21A134T:136/183C245C:439_183C193T:93/197C:276_.:60/.:1679_229G:432","","","","","","","","","","","","","","",".:399_29G:109","","","","","143T:469_.:294/148T:658_.:557/.:226_146T:90/167G215T:985_113T167G:811/89A90A237T:387_237T238C:194/63A135T186C:1004_.:315/.:578_177A178A:440/.:240_187A:130/.:397_51G53T:120/96C107C:1482_.:213","","","","","","143T:1764_.:720/84T97G190C203C214G217C264T:135_84T97G196T201G203C214G217C264T:62_84T91T97G195C203C205G214T217C226G264T:55/212A216G:588_212A:470/148T:3808_.:1461/129A175C196G199A:59_3A33T129A196G199A:31/63T66A:321_73D.AATGAA132C:136/.:62_126T228T:49/.:795_132G:462/167G215T:2376_69T167G215T:1601/89A90A237T:474_237T238C:421/.:339_112G:96/171A234A:108_87T91D.AAT96C138C234A:41/25T180A:732_.:386/34G63G168A183G243G:152_34G63G69A168A183G243G:112/202A212A231G251A:242_1T54G151G:159/129C:114_202C:66/34A63A71G137C146G158A164G:309_63A67A71G107A109T139T146G147T164G:238/156C:1661_156C159C:1514/.:167_187A:150/.:354_54G:145/.:184_30A:176/21A:1990_21A134T:1306/.:883_104C:569/141A:870_132T141A:577/183C193T:551_183C:540/.:216_51G53T:204/96C107C:906_96C:504/180A:791_88A180A:691/37C67G76A211A226C:360_.:302/105G199G:125_113I.GATA199G:123","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","84T97G196T201G203C214G217C264T:151_84T97G190C203C214G217C264T:17","115T122A:29_.:16/84A93T159C193C202C:388_84A93T193C202C:275/203T228C:916_159C:486/149A:259_93A149A:128/51G53T:33_120T:26","","","","",".:476_115T122A:94/84A93T193C202C:6607_84A93T159C193C202C:2623/84T91T97G195C203C205G214T217C226G264T:154_84T97G196T201G203C214G217C264T:51/3A33T129A196G199A:105_129A175C196G199A:22/.:114_126T228T:72/.:508_112G:362/25T180A:764_.:602/.:896_160C:273/.:240_9G:89/203T228C:5421_159C:1669/.:2059_62T:500/149A:1267_93A149A:609/187A:435_.:114/242T252T:355_121G242T252G:163/51G53T:403_120T:345/105G199G:147_113I.GATA199G:102","","","","","","","","115T122A:148_.:66/84A93T159C193C202C:886_84A93T193C202C:259/99D.AATATTCATCATGAAAAGGTTTATCATGAA:759_22A99D.AATATTCATCATGAAAAGGTTTATCATGAA:401/148T:920_.:537/167G215T:817_69T167G215T:434/149A:178_93A149A:135/202A212A231G251A:72_1T54G151G:62/21A:598_21A134T:487/104C:157_.:110/132T141A:295_141A:82/183C:188_183C193T:95/.:130_37C67G76A211A226C:57/111A:757_105A111A:639/31A139C175T:47_31A41A75G84G109A139C:27","","","","",".:334_115T122A:135/84A93T193C202C:3785_84A93T159C193C202C:882/143T:1447_78C:904/84T97G196T201G203C214G217C264T:94_84T97G190C203C214G217C264T:38/212A:1235_212A216G:543/206A:588_.:443/146T:464_.:284/63T66A:343_73D.AATGAA132C:109/113T167G:1734_167G215T:1003/87T91D.AAT96C138C234A:77_.:22/63A186C:3910_63A135T186C:1912/203T228C:4053_159C:2095/93A149A:810_149A:375/.:291_106T:116/34G63G168A183G243G:362_34G63G69A168A183G243G:113/1T54G151G:346_202A212A231G251A:96/.:284_259A:120/.:146_95T:66/34A63A71G137C146G158A164G:267_.:125/21A:3089_21A134T:1184/132T141A:1355_141A:559/183C:786_183C193T:259/.:690_197C:233/84G:103_84G134T217C233T:33/51G53T:387_79A82A:136/180A:1029_88A180A:537/.:454_211A226C:191/.:131_112C149G:67/.:1247_164T:515/105G199G:472_113I.GATA199G:136/105A111A:2233_111A:646","","","","","","","","","84A93T193C202C:1325_74A84A93T193C202C:188","","","84A93T193C202C:1211_84A93T159C193C202C:429","",".:664_140G:161","","132A133G:248_50A132A133G:110/.:2231_237T:549/115T122A:122_.:51/84A93T159C193C202C:3670_84A93T193C202C:1452/84T106A111C112C203C214G217C264T:16_84T97G190C203C214G217C264T:15/212A226G:556_212A216G:225/.:2174_148T:700/206A:305_.:189/146T:339_.:137/.:1374_128T:458/123T:439_.:242/27G:483_.:164/113T215T:1546_113T167G:540/237T238C:488_237T:168/104A164G:767_164G:326/160C:161_.:124/63A135T186C:3508_63A186C:1316/.:1165_53T177A178A:466/.:336_12C:149/34G160A168A183G243G:193_34G63G69A168A183G243G:66/1T54G151G:150_1T54G202A212A231G251A:91/63A67A71G107A109T139T146G147T164G:444_48A71G107A109T118A134A138G139T144A146G164G167G:110/.:1508_156C:568/.:557_21T:252/30A:108_.:69/146T:1223_119A:759/21T128C:1565_21T32A128C:939/21A134T:2265_21A:694/.:350_104C:164/141A:1944_132T141A:525/183C:574_183C245C:295/.:206_120T:118/.:516_96C126G:229/.:463_88A180A:138/158A164T:1122_.:588/.:3247_229G:1389/111A:2203_.:473/.:99_31A109A139C:33","","","","","","","","",".:120_69C112C137A:36","115T122A:67_.:36/84A93T159C193C202C:907_84A93T193C202C:505/143T:313_.:141/84T97G190C203C214G217C264T:30_84T91T97G195C203C205G214T217C226G264T:12/.:454_76A:328/.:115_114C115A:87/167G215T:804_113T167G:310/63A135T186C:914_63A186C:744/.:628_53T177A178A:393/203T228C:1128_.:1052/48A71G107A109T118A134A138G139T144A146G164G167G:104_.:30/141A:533_132T141A:405/183C193T:194_183C245C:85/96C:327_96C126G:122/88A180A:286_.:135/111A:622_.:238/31A109A139C:32_31A41A75G84G109A139C:22","","","",".:1373_97A:146","","","","","","84T97G190C203C214G217C264T:43_84T91T97G195C203C205G214T217C226G264T:13/113T167G:318_167G215T:184/203T228C:1186_.:955/.:122_106T:81/132T141A:616_141A:145/51G53T:108_120T:77/96C:121_96C126G:63","","","",".:1790_148T:221/27G:273_114C115A:185/69T167G215T:1124_167G215T:411/159C228C:1967_.:298/202A212A231G251A:175_1T54G202A212A231G251A:25/21A134T:1143_21A:242/132T141A:669_141A:114/197C:365_.:70/.:1676_229G:783/.:1296_111A:720","84T91T97G195C203C205G214T217C226G264T:50_84T97G190C203C214G217C264T:21/.:2735_148T:874/73D.AATGAA:87_63T66A:51/39A:1108_.:456/27G:463_114C115A:209/167G215T:1699_113T167G:503/112G:260_.:109/.:385_25T180A:198/160C:259_70T:112/69C112C137A:114_35T112C137A:39/.:113_95T:83/63A67A71G107A109T139T146G147T164G:293_63A71G107A:70/.:174_54G:87/146T:1011_119A:388/141A:1329_132T141A:428/.:436_197C:250/120T:179_51G53T:90/96C107C:590_96C126G:340/88A180A:268_.:206/37C67G76A211A226C:256_.:143/.:2035_111A:590/31A109A139C:75_31A41A75G84G109A139C:22","","","","","","","","","","","","","","",""],["","","2/2","","","","2","","2","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","2/2/2/2/2/2/2/2/2/2/2","","","2/2/2/2/2/2/2/2/2/2/2/2/2/2/2","","","","","","","2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2","","2/2/2/2/2/2/2/2","2/2/2/2/2/2/2/2/2","","2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2","","","","","2/2/2/2/2/2/2/2/2/2/2/2/2","","","","","","2/2/2/2/2/2/2/2/2/2/2/2/2/2/2","","","","2","","","","","","","","","","","2","","","","","","","","","2/2","2/2/2/2/2","","","","","","","2/2/2/2/2/2/2/2","","","","","","","2/2/2/2/2/2","","2","2","","2","","","","","","","2/2","","","2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2","","","","","","","","","","","","","","","","","","","2/2/2/2/2/2/2","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","2","","","","","","","","","","","","","","","","","2/2/2/2/2/2/2/2/2/2/2/2/2/2/2","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","2/2/2/2","","","","","","","","","","","","","2/2","2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2","","","2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/3/2/2/2/2/2/2/2/2/2/2/2/2/2","","","","","2/2","","","","2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2","","2/2/2/2/2/2/2/2/2/2/2/2","","","2/2/2/2","","","","2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2","","","","","","","","","","","","","","","","","2/2/2/2/2/2/2/2/2/2/2/2/2/2","","","","","","","","","","","","","","","","","","","","","","","","","","2","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","2/2","","","","","","","","","","","","","","","","","","","","2/2","2/2/2/2","","","","","","","","","","","","","","","","","","","2/2/2/2/2/2/2/2","","2/2/2/2/2/2","","","","2/2/2/2/2","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","2","","","","","","","","","","","","","","","","","","","","","2/2/2/2/2","","","","","","","","","","","","","","","2","","","","","","","","","","","2","","2/2/2/2/2/2/2/2/2","2","","","","","","","","","","2","","","","","","","","","","2","2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2","","","2/2/2/2/2/2/2/2","","","","2/2/2/2/2","2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2","","2/2/2","","","","","","","","2","","","2/2","2/2","","","","","2/2/2","","2","","","","","","","","","","","","","","2","2/2/2/2/2/2/2/2/2/2","","","","2/2/2/2/2","","","","","","","","","","2/2/2/2/2/2/2/2/2/3/2/2/2/2/2","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","2/2","","","","","","","","","","2/2/2/2/2/2/2/2/2","","","","","","","","","2","","","","","","","","","","","","","","","","","","","","","","2","","","","","","","","","","","2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2","","2/2/2","2","2","2/2/2/2/2/2/2","","","","","","","","","","","2/2","2/2","2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2","","","","","","2/2/2/2/2/2/2/2/2/2/2","","2","2/2/2/2/2/2/2/2/2/2/2/2/2/2","","","","","","","","","","","2/2","","","","","","2","","2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2","","","","","","","","","","","2/2/2","","","","","","","","","","","","","2","","","","","","","","","","2/2/2/2/2/2/2/2/2/2/2/2/2/2","","","","","","","","","","","","","","","","","","","","","","","","","2/2/2/2/2/2/2/2/2/2/2","","","","","","","","","","","","2","","","","","","","","2/2/2","","","","","","","","2","","","","","","","","","","","","","","","","","","","","","","","","2","","","","","","","2/2/2/2","","","","","","2/2/2/2/2/2/2/2","2","","","","","","","","","","","","","","","","","2/2/2/2/2/2/2/2/2/2/2/2","","","","","2/2/2","","","","2/2/2/2/2/2/2/2/2/2","","2/2/2","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","2/2/2/2/2/2/2/2/2/2/2","","","","","2/2/2/2/2/2/2/2/2/2/2/2/2/2/2","","2","2/2/2/2/2/2/3/3/3/2/2/2/2/2/2/2/2/2/2","","","","","","","","","","","","","","","2","","","","","2/2/2/2/2/2/2/2/2/2","","","","","","2/3/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","","2","2/2/2/2/2","","","","","2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2","","","","","","","","2/2/2/2/2/2/2/2/2/2/2/2/2/2","","","","","2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2","","","","","","","","","2","","","2","","2","","2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2","","","","","","","","","2","2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2","","","","2","","","","","","2/2/2/2/2/2/2","","","","2/2/2/2/2/2/2/2/2/2","2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2/2","","","","","","","","","","","","","","",""],[1,1,2,1,1,1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,2,1,2,2,1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,2,2,1,1,1,1,1,1,2,1,1,1,1,1,1,2,1,2,2,1,2,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,2,2,1,1,3,1,1,1,1,2,1,1,1,2,1,2,1,1,2,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,2,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1,2,2,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,2,2,1,1,2,1,1,1,2,2,1,2,1,1,1,1,1,1,1,2,1,1,2,2,1,1,1,1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,1,1,1,2,1,1,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1,2,2,2,2,1,1,1,1,1,1,1,1,1,1,2,2,2,1,1,1,1,1,2,1,2,2,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,2,1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,2,1,1,1,1,1,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,2,1,1,1,2,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,2,1,2,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,2,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,1,1,1,1,2,1,1,1,1,1,1,1,2,1,1,1,1,2,1,1,1,1,1,1,1,1,2,1,1,2,1,2,1,2,1,1,1,1,1,1,1,1,2,2,1,1,1,2,1,1,1,1,1,2,1,1,1,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>Sample_id<\/th>\n      <th>NPolyLoci<\/th>\n      <th>Polyloci<\/th>\n      <th>alleles_at_loci<\/th>\n      <th>nalleles_per_loci<\/th>\n      <th>coi<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"columnDefs":[{"className":"dt-right","targets":[1,5]}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<ol start="3" style="list-style-type: decimal">
+<li>A pop summary table that summarize the mean COI in each population,
+the total number of polyclonal infections, and the proportion polyclonal
+infections with its confident intervals at 95%.</li>
+</ol>
+<pre class="r"><code>ampseq_filtered@pop_summary%&gt;%
+  datatable(rownames = F) %&gt;%
+  formatRound(columns=c(&#39;mean_coi&#39;, &#39;prop_poly&#39;, &#39;prop_poly_lower&#39;, &#39;prop_poly_upper&#39;),
+              digits=3)</code></pre>
+<div id="htmlwidget-c45e54dbefcc95ef55d9" style="width:100%;height:auto;" class="datatables html-widget"></div>
+<script type="application/json" data-for="htmlwidget-c45e54dbefcc95ef55d9">{"x":{"filter":"none","vertical":false,"data":[["Total","Municipality 1","Municipality 2","Municipality 3","Municipality 4","Municipality 5"],[1080,473,194,392,17,4],[1.11388888888889,1.07610993657505,1.06701030927835,1.18622448979592,1.05882352941176,1],[119,35,12,71,1,0],[0.110185185185185,0.0739957716701903,0.0618556701030928,0.181122448979592,0.0588235294117647,0],[0.0921296798753605,0.0520791306406406,0.0323670509538578,0.144254354641047,0.00148817439126664,0],[0.13039486787018,0.101409960044861,0.105556000748784,0.222885987339108,0.286889396667221,0.602364635616475]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th>pop<\/th>\n      <th>n<\/th>\n      <th>mean_coi<\/th>\n      <th>n_poly<\/th>\n      <th>prop_poly<\/th>\n      <th>prop_poly_lower<\/th>\n      <th>prop_poly_upper<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"columnDefs":[{"targets":2,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 3, 3, \",\", \".\", null);\n  }"},{"targets":4,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 3, 3, \",\", \".\", null);\n  }"},{"targets":5,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 3, 3, \",\", \".\", null);\n  }"},{"targets":6,"render":"function(data, type, row, meta) {\n    return type !== 'display' ? data : DTWidget.formatRound(data, 3, 3, \",\", \".\", null);\n  }"},{"className":"dt-right","targets":[1,2,3,4,5,6]}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render","options.columnDefs.1.render","options.columnDefs.2.render","options.columnDefs.3.render"],"jsHooks":[]}</script>
+<p>We can visually inspect all this information by using histograms.
+Here is an example with the number of heterozygous loci per sample by
+sampling location. We will use the function log_scale_histogram because
+the number of samples with only one heterozygous loci is high with
+respect to the number of samples with more than 10 heterozygous
+loci.</p>
+<pre class="r"><code>plot_log_NPolyLoci_by_pop = log_scale_histogram(data = ampseq_filtered@metadata[ampseq_filtered@metadata$NPolyLoci != 0,],
+                                                var = &quot;NPolyLoci&quot;, binwidth = 1, group_by = &quot;Subnational_level2&quot;,
+                                                levels = pop_levels, x_label = &quot;Number of heterozygous loci per sample&quot;,
+                                                fill_color = pop_colors,
+                                                y_breaks = c(1, 5,10, 30), ncol = 4)+
+  labs(title = &#39;Distribution of # heterozygous loci per sample&#39;, 
+       y = &quot;# Samples&quot;,
+       x = &quot;# heterozygous loci per sample&quot;)
+
+plot_log_NPolyLoci_by_pop</code></pre>
+<div class="figure">
+<img src="MHapPfalciparum_files/figure-html/Distribution%20of%20the%20number%20of%20heterozygous%20loci%20per%20sample%20by%20sampling%20location-1.png" alt="**Figure 5:** Distribution of the number of heterozygous loci per samples per population." width="672" />
+<p class="caption">
+<strong>Figure 5:</strong> Distribution of the number of heterozygous
+loci per samples per population.
+</p>
+</div>
+<p>We can do the same with the COI by sample.</p>
+<pre class="r"><code>plot_log_coi_by_pop = log_scale_histogram(data = ampseq_filtered@metadata,
+                                          var = &quot;coi&quot;,
+                                          binwidth = 1,
+                                          group_by = &quot;Subnational_level2&quot;,
+                                          levels = pop_levels,
+                                          x_label = &quot;COI&quot;,
+                                          fill_color = pop_colors,
+                                          y_breaks = c(1,2, 5,10, 20, 50, 100,200, 400), ncol = 5)+
+  labs(title = &#39;Distribution of COI by sampling location&#39;,
+       y = &quot;# Samples&quot;)
+
+plot_log_coi_by_pop</code></pre>
+<div class="figure">
+<img src="MHapPfalciparum_files/figure-html/Distribution%20of%20COI%20by%20sampling%20location-1.png" alt="**Figure 6:** Distribution of the complexity of infection (COI) by study area. y-axis is in logarithm scale." width="672" />
+<p class="caption">
+<strong>Figure 6:</strong> Distribution of the complexity of infection
+(COI) by study area. y-axis is in logarithm scale.
+</p>
+</div>
+<p>In the case of the proportion of polyclonal infections by study area,
+we can use a a barplot.</p>
+<pre class="r"><code>plot_poly_by_pop = ampseq_filtered@pop_summary %&gt;% ggplot(aes(x = factor(pop, levels = c(pop_levels, &quot;Total&quot;)),
+                                                          y = prop_poly,
+                                                          fill = factor(pop, levels = c(pop_levels, &quot;Total&quot;))))+
+  geom_col(alpha = .6) +
+  geom_errorbar(aes(ymin = prop_poly_lower, ymax = prop_poly_upper), width = .2)+
+  theme_bw() +
+  labs(title = &quot;Frequency of polyclonal infections&quot;,
+       y = &quot;Frecquency&quot;) +
+  scale_fill_manual(values = c(pop_colors, &quot;gray30&quot;))+
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_blank(),
+        legend.position = &quot;none&quot;)
+
+plot_poly_by_pop</code></pre>
+<div class="figure">
+<img src="MHapPfalciparum_files/figure-html/Proportion%20of%20polyclonal%20infections%20by%20sampling%20location-1.png" alt="**Figure 7:** Proportion of polyclonal infections per study area." width="672" />
+<p class="caption">
+<strong>Figure 7:</strong> Proportion of polyclonal infections per study
+area.
+</p>
+</div>
+<p>We can also explore temporal trends in the proportion of polyclonal
+infections. First we are going to create a new variable in our metadata
+concatenating the information of the study area
+(<code>Subnational_level2</code>) and the information of the
+<code>Quarter_of_Collection</code>.</p>
+<pre class="r"><code>ampseq_filtered@metadata %&lt;&gt;% mutate(Pop_quarter = paste(Subnational_level2, Quarter_of_Collection, sep = &#39;_&#39;))</code></pre>
+<p>Then we will use again the function <code>get_polygenomic</code>,
+using our new variable in the slot of <code>strata</code> and the slot
+<code>filters</code> equals to
+<code>'Municipality 1|Municipality 2|Municipality 3'</code>, in this way
+we will just calculate the proportion of polyclonal infections for the
+populations that have samples for most time points. As we don’t want to
+overwrite our previous analysis, we will set
+<code>update_popsummary = F</code> and store the output in a new
+object.</p>
+<pre class="r"><code>poly_by_pop_over_time = get_polygenomic(ampseq_object = ampseq_filtered,
+                                        strata = &quot;Pop_quarter&quot;,
+                                        update_popsummary = F,
+                                        na.rm = TRUE,
+                                        filters = &#39;Municipality 1|Municipality 2|Municipality 3&#39;)
+
+poly_by_pop_over_time</code></pre>
+<pre><code>##                       pop    n mean_coi n_poly  prop_poly prop_poly_lower
+## 1                   Total 1059 1.115203    118 0.11142587    0.0931027507
+## 2  Municipality 1_2020-Q3    2 1.000000      0 0.00000000    0.0000000000
+## 3  Municipality 1_2020-Q4   11 1.000000      0 0.00000000    0.0000000000
+## 4  Municipality 1_2021-Q1   13 1.000000      0 0.00000000    0.0000000000
+## 5  Municipality 1_2021-Q2   22 1.045455      1 0.04545455    0.0011501475
+## 6  Municipality 1_2021-Q3   56 1.017857      1 0.01785714    0.0004520015
+## 7  Municipality 1_2021-Q4   99 1.090909      9 0.09090909    0.0424164701
+## 8  Municipality 1_2022-Q1  102 1.068627      7 0.06862745    0.0280352646
+## 9  Municipality 1_2022-Q2  119 1.075630      8 0.06722689    0.0294685350
+## 10 Municipality 1_2022-Q3   49 1.183673      9 0.18367347    0.0875903353
+## 11 Municipality 2_2020-Q4   29 1.103448      3 0.10344828    0.0218637368
+## 12 Municipality 2_2021-Q1   30 1.033333      1 0.03333333    0.0008435709
+## 13 Municipality 2_2021-Q2   11 1.000000      0 0.00000000    0.0000000000
+## 14 Municipality 2_2021-Q3   38 1.026316      1 0.02631579    0.0006660362
+## 15 Municipality 2_2021-Q4   16 1.062500      1 0.06250000    0.0015811117
+## 16 Municipality 2_2022-Q1   13 1.000000      0 0.00000000    0.0000000000
+## 17 Municipality 2_2022-Q2   23 1.043478      1 0.04347826    0.0011001686
+## 18 Municipality 2_2022-Q3   34 1.176471      5 0.14705882    0.0495284553
+## 19 Municipality 3_2020-Q3   13 1.230769      3 0.23076923    0.0503810735
+## 20 Municipality 3_2020-Q4   51 1.196078     10 0.19607843    0.0982434165
+## 21 Municipality 3_2021-Q1   61 1.278689     17 0.27868852    0.1714720843
+## 22 Municipality 3_2021-Q2   25 1.120000      3 0.12000000    0.0254653966
+## 23 Municipality 3_2021-Q3   27 1.222222      5 0.18518519    0.0630000065
+## 24 Municipality 3_2021-Q4   19 1.210526      4 0.21052632    0.0605245377
+## 25 Municipality 3_2022-Q1   29 1.068966      1 0.03448276    0.0008726469
+## 26 Municipality 3_2022-Q2  110 1.136364     15 0.13636364    0.0783762502
+## 27 Municipality 3_2022-Q3   57 1.228070     13 0.22807018    0.1273971076
+##    prop_poly_upper
+## 1        0.1319392
+## 2        0.8418861
+## 3        0.2849142
+## 4        0.2470526
+## 5        0.2284444
+## 6        0.0955259
+## 7        0.1655690
+## 8        0.1362970
+## 9        0.1281695
+## 10       0.3202212
+## 11       0.2735152
+## 12       0.1721695
+## 13       0.2849142
+## 14       0.1380990
+## 15       0.3023207
+## 16       0.2470526
+## 17       0.2194866
+## 18       0.3105657
+## 19       0.5381315
+## 20       0.3311574
+## 21       0.4082875
+## 22       0.3121903
+## 23       0.3808299
+## 24       0.4556531
+## 25       0.1776443
+## 26       0.2149201
+## 27       0.3583634</code></pre>
+<p>Now we can generate a bar plot using ggplot</p>
+<pre class="r"><code>plot_poly_by_pop_over_time = poly_by_pop_over_time %&gt;%
+  filter(pop != &#39;Total&#39;)%&gt;%
+  mutate(
+  Population = stringr::str_split(pop, &#39;_&#39;, simplify = TRUE)[,1],
+  Date = stringr::str_split(pop, &#39;_&#39;, simplify = TRUE)[,2],
+  prop_poly_lower = case_when(
+      prop_poly == 0 ~ 0,
+      prop_poly != 0 ~ prop_poly_lower),
+      prop_poly_upper = case_when(
+        prop_poly == 0 ~ 0,
+        prop_poly != 0 ~ prop_poly_upper)
+  )%&gt;%
+  ggplot(aes(x = Date,
+             y = prop_poly,
+             ymin = prop_poly_lower,
+             ymax = prop_poly_upper,
+             fill = factor(Population, levels = pop_levels)))+
+  geom_col()+
+  geom_errorbar(width = .2)+
+  facet_wrap(~factor(Population, levels = pop_levels), ncol = 5)+
+  theme_bw()+
+  scale_fill_manual(values = pop_colors)+
+  labs(title = &#39;Temporal change of the proportion of polyclonal infections&#39;,
+       y = &quot;Polyclonal infections&quot;,
+       x = &quot;Date of Collection&quot;)+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5),
+        legend.position =  &quot;none&quot;)
+
+plot_poly_by_pop_over_time</code></pre>
+<div class="figure">
+<img src="MHapPfalciparum_files/figure-html/Temporal%20change%20of%20complexity%20of%20infection-1.png" alt="**Figure 8:** Proportion of polyclonal infections per study area over year quarters." width="672" />
+<p class="caption">
+<strong>Figure 8:</strong> Proportion of polyclonal infections per study
+area over year quarters.
+</p>
+</div>
+<p>Finally, we can test if there is correlation between the proportion
+of polyclonal infections and the number of collected samples per
+temporal unit (as an approximation of the malaria burden).</p>
+<p>For that we will joint our table <code>poly_by_pop_over_time</code>
+with a summary of our metadata table.</p>
+<pre class="r"><code>nsamples_vs_proppoly = 
+  left_join(poly_by_pop_over_time%&gt;% 
+              select(pop, prop_poly), metadata %&gt;%
+              mutate(Quarter_of_Collection = 
+                       paste(substr(Date_of_Collection, 1, 4), quarters.Date(Date_of_Collection), sep=&#39;-&#39;)) %&gt;%
+              summarise(nsamples= n(), .by = c(Subnational_level2, Quarter_of_Collection)) %&gt;% 
+              mutate(pop = paste(Subnational_level2, Quarter_of_Collection, sep = &#39;_&#39;)), by = &#39;pop&#39;) %&gt;%
+  filter(Subnational_level2 %in% c(&#39;Municipality 1&#39;, &#39;Municipality 2&#39;, &#39;Municipality 3&#39;))</code></pre>
+<p>Then we can plot the correlation using the function
+<code>ggscatter</code>.</p>
+<pre class="r"><code>plot_cor_proppoly_nsamples = ggscatter(nsamples_vs_proppoly, x = &quot;prop_poly&quot;, y = &quot;nsamples&quot;, 
+          add = &quot;reg.line&quot;, conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = &quot;spearman&quot;,
+          title = &#39;# Samples vs. Prop. Poly&#39;,
+          xlab = &quot;Proportion of polyclonal samples&quot;, ylab = &quot;Number of samples&quot;, facet.by = &#39;Subnational_level2&#39;)
+
+plot_cor_proppoly_nsamples</code></pre>
+<div class="figure">
+<img src="MHapPfalciparum_files/figure-html/unnamed-chunk-10-1.png" alt="**Figure 9:** Spearman correlation of the number of collected samples and proportion of polyclonal infections per year quarters. Each point represent the measurement of each year quarter in each study area." width="672" />
+<p class="caption">
+<strong>Figure 9:</strong> Spearman correlation of the number of
+collected samples and proportion of polyclonal infections per year
+quarters. Each point represent the measurement of each year quarter in
+each study area.
+</p>
+</div>
+</div>
+<div id="relatedness-and-transmission" class="section level3">
+<h3>Relatedness and Transmission</h3>
+<p>Relatedness is defined as the probability that, at any locus in the
+genome, the alleles sampled from two different individuals are identical
+by descent (IBD). A Hidden Markov Model based method was developed for
+the estimation of relatedness (HMMIBD), where the relatedness or <span
+class="math inline">\(r\)</span> is estimated as a function of the
+haplotype of the two sampled parasites (<span
+class="math inline">\(Y_i\)</span> and <span
+class="math inline">\(Y_j\)</span>), the frequency of the alleles in the
+population, the physical distance between loci, the recombination rate
+(<span class="math inline">\(\rho\)</span>), a switching rate of the
+Markov chain (<span class="math inline">\(k\)</span>), and a constant
+genotyping error rate (<span
+class="math inline">\(\varepsilon\)</span>).</p>
+<p>In this section we will measure the pairwise genetic relatedness, and
+calculate the proportion of pairwise comparisons that have a relatedness
+<span class="math inline">\(\ge 0.99\)</span> within and between
+operational units. For that we are going to use the following
+functions:</p>
+<ol style="list-style-type: decimal">
+<li><code>ampseq2loci</code>: converts the <code>ampseq_object</code>
+into a <code>loci_object</code> that only contains the allele
+information (read abundance is removed). This function only requires the
+<code>ampseq_object</code> as an input argument.</li>
+</ol>
+<pre class="r"><code># generating the loci_object----
+loci_object = ampseq2loci(ampseq_filtered)</code></pre>
+<ol start="2" style="list-style-type: decimal">
+<li><code>pairwise_hmmIBD</code>: computes pairwise genetic relatedness
+using the HMMIBD algorithm implemented in <a
+href="https://github.com/aimeertaylor/paneljudge">panlejugde R
+package</a>. As an input it requires a <code>loci_object</code> and
+automatically all pairwise comparisons will be computed. Its output is a
+long format data.frame of all pairwise comparisons. This function is
+computationally exhaustive, so it has parallel argument to speed up the
+calculation. In the current example, the matrix is been generated
+separately in the cluster at Broadinstitute, and the <code>.csv</code>
+file is loaded by using the function <code>read.csv</code>.</li>
+</ol>
+<pre class="r"><code># measuring relatedness----
+
+if(file.exists(&#39;docs/data/pairwise_relatedness.csv&#39;)){
+  pairwise_relatedness = read.csv(&#39;docs/data/pairwise_relatedness.csv&#39;)
+}else{
+  pairwise_relatedness = NULL
+  
+  for(w in 1:500){
+    start = Sys.time()
+    pairwise_relatedness = rbind(pairwise_relatedness,
+                                 pairwise_hmmIBD(loci_object, parallel = T, w = w, n = 500))
+    time_diff = Sys.time() - start
+    
+    print(paste0(&#39;step &#39;, w, &#39; done in &#39;, time_diff, &#39; secs&#39;))
+    
+  }
+  
+  write.csv(pairwise_relatedness, &#39;docs/data/pairwise_relatedness.csv&#39;, row.names = F, quote = F)
+}</code></pre>
+<ol start="3" style="list-style-type: decimal">
+<li><code>plot_relatedness_distribution</code>: visualizes the
+distribution of the pairwise relatedness within and between the
+different study areas. Its arguments are
+<code>relatedness_matrix</code>, <code>metadata</code>,
+<code>Population</code>, and <code>fill_color</code>.</li>
+</ol>
+<pre class="r"><code>plot_relatedness_distribution_within = plot_relatedness_distribution(
+  pairwise_relatedness = pairwise_relatedness,
+  metadata = ampseq@metadata,
+  Population = &#39;Subnational_level2&#39;,
+  fill_color = pop_colors,
+  type_pop_comparison = &#39;within&#39;,
+  ncol = 5,
+  pop_levels = pop_levels
+)
+
+plot_relatedness_distribution_within$plot</code></pre>
+<div class="figure">
+<img src="MHapPfalciparum_files/figure-html/relatedness%20distribution%20within%20study%20areas-1.png" alt="**Figure 10:** Histogram of the distribution of pairwise genetic relatedness by study area (Panels). The dashed vertical line represents the average genetic relatedness in the overall population." width="672" />
+<p class="caption">
+<strong>Figure 10:</strong> Histogram of the distribution of pairwise
+genetic relatedness by study area (Panels). The dashed vertical line
+represents the average genetic relatedness in the overall population.
+</p>
+</div>
+<ol start="4" style="list-style-type: decimal">
+<li><code>plot_frac_highly_related</code>: visualizes the fraction of
+highly related haplotypes within and between study areas. It has the
+same arguments than the previous function plus <code>threshold</code>
+(minimum value to consider two samples to be highly related).</li>
+</ol>
+<pre class="r"><code>plot_frac_highly_related_within = plot_frac_highly_related(
+  pairwise_relatedness = pairwise_relatedness,
+  metadata = ampseq@metadata,
+  Population = &#39;Subnational_level2&#39;,
+  fill_color = pop_colors,
+  threshold = 0.99, type_pop_comparison = &#39;within&#39;, pop_levels = pop_levels)
+
+plot_frac_highly_related_within$plot</code></pre>
+<div class="figure">
+<img src="MHapPfalciparum_files/figure-html/highly%20related%20samples%20within%20study%20areas-1.png" alt="**Figure 11:** Proportion of highly related samples (IBD &gt; 0.99) in each study area." width="672" />
+<p class="caption">
+<strong>Figure 11:</strong> Proportion of highly related samples (IBD
+&gt; 0.99) in each study area.
+</p>
+</div>
+<ol start="5" style="list-style-type: decimal">
+<li><code>plot_frac_highly_related_over_time</code>: visualizes the
+fraction of highly related haplotypes within and between study areas,
+and by a temporal variable. It has the same arguments than the previous
+function plus <code>threshold</code> (minimum value to consider two
+samples to be highly related).</li>
+</ol>
+<pre class="r"><code>plot_frac_highly_related_over_quarters_within = plot_frac_highly_related_over_time(pairwise_relatedness = pairwise_relatedness,
+                                       metadata = ampseq@metadata,
+                                       Population = c(&#39;Subnational_level2&#39;, &#39;Quarter_of_Collection&#39;),
+                                       fill_color = pop_colors,
+                                       threshold = 0.99,
+                                       type_pop_comparison = &#39;within&#39;,
+                                       pop_levels = pop_levels, ncol = 5)
+
+plot_frac_highly_related_over_quarters_within$plot_frac_highly_related</code></pre>
+<div class="figure">
+<img src="MHapPfalciparum_files/figure-html/fraction%20of%20highly%20related%20samples%20over%20time%20(3%20months%20intervals)%20within%20study%20areas-1.png" alt="**Figure 12:** Proportion of highly related samples over year quarters in each study area." width="672" />
+<p class="caption">
+<strong>Figure 12:</strong> Proportion of highly related samples over
+year quarters in each study area.
+</p>
+</div>
+<pre class="r"><code>nsamples_vs_highlyR = left_join(plot_frac_highly_related_over_quarters_within$plot_frac_highly_related$data %&gt;% mutate(pop = paste(Pop_comparison, Date_Yi, sep = &#39;_&#39;))%&gt;%
+                                   ungroup()%&gt;%
+                                   select(pop, prop),
+          metadata %&gt;%
+  filter(!is.na(Subnational_level2)) %&gt;%
+  group_by(Subnational_level2, Quarter_of_Collection) %&gt;%
+  summarise(nsamples= n()) %&gt;% mutate(pop = paste(Subnational_level2, Quarter_of_Collection, sep = &#39;_&#39;)), by = &#39;pop&#39;)  %&gt;%
+  filter(prop != 0, Subnational_level2 %in% c(&#39;Municipality 1&#39;, &#39;Municipality 2&#39;, &#39;Municipality 3&#39;))
+
+plot_cor_highlyR_nsamples = ggscatter(nsamples_vs_highlyR, x = &quot;prop&quot;, y = &quot;nsamples&quot;, 
+          add = &quot;reg.line&quot;, conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = &quot;spearman&quot;,
+          title= &#39;D) # Collected samples vs. Proportion of highly related samples&#39;,
+          xlab = &quot;Proportion of highly related samples&quot;, ylab = &quot;Number of samples&quot;,
+          facet.by = &#39;Subnational_level2&#39;)</code></pre>
+<ol start="6" style="list-style-type: decimal">
+<li><code>plot_network</code>: creates a network representation of the
+pairwise relatedness information. The function requires 7 arguments: 1)
+the <code>pairwise_relatedness</code> a long format data.frame with all
+pairwise comparisons, 2) <code>threshold</code> to define the minimum
+prairwise relatedness to plot a branch between the two compared samples,
+3) a <code>metadata</code> table containing the variables the we want to
+include in the plot, 4) <code>sample_id</code> name of the column in
+<code>metadata</code> table where sample ids are located, 5)
+<code>group_by</code> variable from <code>metadata</code> table that we
+are going to use to assign colors to the nodes in the network, 6)
+<code>levels</code> order of the elements of <code>group_by</code>
+variable, and finally 7) <code>colors</code> that are going to be
+assigned to each element from <code>group_by</code>, in this case one
+color per population.</li>
+</ol>
+<pre class="r"><code>Relatedness_network = plot_network(pairwise_relatedness = pairwise_relatedness,
+                               threshold = .99,
+                               metadata = ampseq_filtered@metadata,
+                               sample_id = &#39;Sample_id&#39;,
+                               group_by = &#39;Subnational_level2&#39;,
+                               levels = pop_levels,
+                               colors = pop_colors
+                              )</code></pre>
+<div class="figure">
+<img src="MHapPfalciparum_files/figure-html/network-1.png" alt="**Figure 14:** Network representation of pairwise genetic relatedness between samples. Each node represents a sample, and branches are displayed only for pairwise comparisons with a relatedness greater than 0.99. Colors were assigned based on the sampling location: Municipality 1 (Red), Municipality 2 (Blue), Municipality 3 (Gold), Municipality 4 (Green), and Municipality 5 (Coral)." width="480" />
+<p class="caption">
+<strong>Figure 14:</strong> Network representation of pairwise genetic
+relatedness between samples. Each node represents a sample, and branches
+are displayed only for pairwise comparisons with a relatedness greater
+than 0.99. Colors were assigned based on the sampling location:
+Municipality 1 (Red), Municipality 2 (Blue), Municipality 3 (Gold),
+Municipality 4 (Green), and Municipality 5 (Coral).
+</p>
+</div>
+</div>
+</div>
+<div id="measuring-geographic-connectivity" class="section level2">
+<h2>Measuring geographic connectivity</h2>
+<p>Malaria transmission is heterogeneous throughout the Colombian
+territory, and it is mainly concentrated in transmission foci where
+demographic and environmental factors favor the interaction between the
+two hosts of the parasite, humans and Anopheles mosquitoes.
+Operationally, disease control units are defined based on sub-national
+administrative divisions. The connectivity or dispersal pattern of the
+parasite between these geographic units may limit progress in disease
+control if activities are not properly coordinated. This connectivity is
+mainly influenced by human movement, and can be inferred by estimating
+the proportion of genetically closely related parasites between the
+different areas.</p>
+<p>We can use again the function
+<code>plot_relatedness_distribution</code> to create histograms of the
+diistribution of relatenes between samples from different study sites.
+In this case, we are going to set
+<code>type_pop_comparison = 'between'</code>.</p>
+<pre class="r"><code>plot_relatedness_distribution_between = plot_relatedness_distribution(
+  pairwise_relatedness = pairwise_relatedness,
+  metadata = ampseq_filtered@metadata %&gt;% mutate(Pop = gsub(&#39;unicipality &#39;,&#39;&#39;, Subnational_level2)),
+  Population = &#39;Pop&#39;,
+  fill_color = rep(&#39;gray50&#39;, 10),
+  type_pop_comparison = &#39;between&#39;,
+  ncol = 5,
+  pop_levels = c(&quot;M1-M2&quot;, &quot;M1-M3&quot;, &quot;M1-M4&quot;,
+                  &quot;M1-M5&quot;, &quot;M2-M3&quot;, &quot;M2-M4&quot;, 
+                  &quot;M2-M5&quot;, &quot;M3-M4&quot;, &quot;M3-M5&quot;, 
+                  &quot;M4-M5&quot;)
+)
+
+plot_relatedness_distribution_between$plot</code></pre>
+<div class="figure">
+<img src="MHapPfalciparum_files/figure-html/relatedness%20distribution%20between%20study%20areas-1.png" alt="**Figure 15:** Histogram distribution of pairwise genetic relatedness between sampling locations. Panels in columns correspond to the three study areas. The dotted vertical lines represent the average genetic relatedness in the whole population." width="672" />
+<p class="caption">
+<strong>Figure 15:</strong> Histogram distribution of pairwise genetic
+relatedness between sampling locations. Panels in columns correspond to
+the three study areas. The dotted vertical lines represent the average
+genetic relatedness in the whole population.
+</p>
+</div>
+<p>Again the fraction of highly related haplotypes between sites can be
+explored with the function <code>plot_frac_highly_related</code> and
+setting <code>type_pop_comparison = 'between'</code>.</p>
+<pre class="r"><code>plot_frac_highly_related_between = plot_frac_highly_related(
+  pairwise_relatedness = pairwise_relatedness,
+  metadata = ampseq_filtered@metadata %&gt;% mutate(Pop = gsub(&#39;unicipality &#39;,&#39;&#39;, Subnational_level2)),
+  Population = &#39;Pop&#39;,
+  fill_color = rep(&#39;gray50&#39;, 10),
+  threshold = 0.99, type_pop_comparison = &#39;between&#39;,
+  pop_levels = c(&quot;M1-M2&quot;, &quot;M1-M3&quot;, &quot;M1-M4&quot;,
+                  &quot;M1-M5&quot;, &quot;M2-M3&quot;, &quot;M2-M4&quot;, 
+                  &quot;M2-M5&quot;, &quot;M3-M4&quot;, &quot;M3-M5&quot;, 
+                  &quot;M4-M5&quot;))
+
+plot_frac_highly_related_between$plot</code></pre>
+<div class="figure">
+<img src="MHapPfalciparum_files/figure-html/highly%20related%20samples%20between%20study%20areas-1.png" alt="**Figure 8:** Proportion of highly related samples between sampling locations." width="384" />
+<p class="caption">
+<strong>Figure 8:</strong> Proportion of highly related samples between
+sampling locations.
+</p>
+</div>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+<script>
+$(document).ready(function () {
+  window.initializeCodeFolding("show" === "show");
+});
+</script>
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
