@@ -1,0 +1,11 @@
+name: 'MHap-Analysis'
+navbar:
+  title: 'MHap-Analysis'
+  left:
+    - text: 'Home'
+      href: index.html
+    - text: 'MHap-Pfalciparum'
+      href: MHapPfalciparum.html
+    - text: 'MHap-Pvivax'
+      href: MHapPvivax.html
+output_dir: 'docs'
