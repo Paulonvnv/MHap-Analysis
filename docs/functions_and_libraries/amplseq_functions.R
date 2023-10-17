@@ -51,7 +51,7 @@ read_cigar_tables = function(paths = NULL, files = NULL, sample_id_pattern = '.'
     for(file in files){
       cigar_run = read.table(file, header = T)
       samples = gsub('_S\\d+$','', cigar_run[,1])
-      samples[!grepl(sample_id_pattern,samples)] = paste(samples[!grepl(sample_id_pattern,samples)], file, sep = "_")
+      samples[!grepl(sample_id_pattern,samples)] = paste0(samples[!grepl(sample_id_pattern,samples)], '_file', which(files == file))
       cigar_run = cigar_run[, -1]
       cigar_run = apply(cigar_run, 2, function(x) as.integer(x))
       rownames(cigar_run) = paste(1:length(samples), file, samples, sep = '/')
@@ -380,7 +380,7 @@ locus_amplification_rate = function(ampseq_object, threshold = .65, chr_lengths 
     geom_point(data = data.frame(Position = ampseq_object@markers$pos,
                                  Amplification_rate = 
                                    loci_performance$loci_ampl_rate,
-                                 Chr = as.integer(gsub("(Pf3D7_)|(_v3)", "", ampseq_object@markers$chromosome))),
+                                 Chr = as.integer(gsub("(Pf3D7_|_v3|PvP01_|_v1)", "", ampseq_object@markers$chromosome))),
                aes(x = Position, y = Chr, color = Amplification_rate),
                pch = "|", size = 5)+
     theme_bw()+
@@ -761,8 +761,8 @@ haplotypes_respect_to_reference = function(ampseq_object,
                 dna_alleles = c(dna_alleles, paste(paste0('c.',
                                                           markers_of_interest[markers_of_interest$amplicon == amplicon,'ref_length'] - 
                                                             codons[codons$aa_position == codon,][['cds_position']] + 1,
-                                                          reverseComplement(DNAString(codons[codons$aa_position == codon,][['ref_variant']])), '>',
-                                                          reverseComplement(DNAString(codons[codons$aa_position == codon,][['alleles']]))), collapse = ' '))
+                                                          reverseComplement(DNAStringSet(codons[codons$aa_position == codon,][['ref_variant']])), '>',
+                                                          reverseComplement(DNAStringSet(codons[codons$aa_position == codon,][['alleles']]))), collapse = ' '))
                 aa_alleles = c(aa_alleles, paste0(ref_aa_variant,
                                                   ceiling((markers_of_interest[markers_of_interest$amplicon == amplicon,'ref_length'] - 3*codon + 1)/3),
                                                   mhap_aa_variant))
@@ -2206,7 +2206,7 @@ plot_network = function(pairwise_relatedness,
   
   plot_network = plot.igraph(network_object,
                              vertex.color = node_colors,
-                             vertex.size=3,
+                             vertex.size=4,
                              vertex.label.cex=0,
                              vertex.label.dist=.5, 
                              #vertex.label.degree=-pi/2,
