@@ -2,8 +2,6 @@
 .Rhistory
 .RData
 .Ruserdata
-docs/MHapPfalciparum_files
-docs/MHapPvivax_files
 docs/data/Pvivax/alignments
 docs/data/Pvivax/dada2/preprocess_fq
 docs/data/Pvivax/dada2/preprocess_meta.txt
