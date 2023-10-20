@@ -158,6 +158,7 @@ Our first step will be to call all required packages and functions in the R envi
 source('docs/functions_and_libraries/amplseq_required_libraries.R')
 source('docs/functions_and_libraries/amplseq_functions.R')
 sourceCpp('docs/functions_and_libraries/hmmloglikelihood.cpp')
+sourceCpp('docs/functions_and_libraries/Rcpp_functions.cpp')
 ```
 
 Then we will upload the pseudo-CIGAR table using the function `read_cigar_tables`:
@@ -268,13 +269,13 @@ drug_resistant_haplotypes_plot$haplo_freq_plot
 
 # Population subdivision
 
-
+Label Pseudo-CIGAR alleles with integers
 ```{r 'generating the loci_object'}
 # generating the loci_object----
 loci_object = ampseq2loci(ampseq_filtered)
 ```
 
-
+Estimate pair-wise genetic relatedness
 ```{r 'Estimating relatedness'}
 # measuring relatedness----
 
@@ -287,6 +288,8 @@ if(!file.exists('docs/data/pvivax_pairwise_relatedness.csv')){
 
 ```
 
+Relatedness network 
+
 ```{r 'network', fig.width=5, fig.height=5, fig.cap = '**Figure 4:** Network representation of pairwise genetic relatedness between samples. Each node represents a sample, and branches are displayed only for pairwise comparisons with a relatedness greater than 0.99. Colors were assigned based on the sampling location: Municipality 1 (Red), Municipality 2 (Blue), Municipality 3 (Gold), Municipality 4 (Green), and Municipality 5 (Coral).'}
 
 Relatedness_network = plot_network(pairwise_relatedness = pairwise_relatedness,
@@ -297,4 +300,36 @@ Relatedness_network = plot_network(pairwise_relatedness = pairwise_relatedness,
                                levels = c('Colombia', 'Peru', 'Venezuela'),
                                colors = c('firebrick3', 'dodgerblue3', 'gold3')
                               )
+```
+
+IBS based PCA
+
+```{r}
+evectors = fastGRM(gt = loci_object$loci_table, k = nrow(loci_object$loci_table),
+                   metadata = ampseq_filtered@metadata,
+                   Pop = 'Population', q = 2)
+
+evectors %>% ggplot(aes(x = PC1, y = PC2, color = Population))+
+  geom_point(alpha = .7, size = 2) +
+  stat_ellipse(level = .6)+
+  theme_bw()+
+  labs(color = 'Countries')
+
+```
+
+IBD based PCA
+
+```{r}
+
+evectors_IBD = fastIBD_PCA(ampseq_object = ampseq_filtered, relatedness_table = pairwise_relatedness, k = nrow(ampseq_filtered@metadata), Pop = 'Population', q = 2)
+
+
+evectors_IBD %>% ggplot(aes(x = PC1, y = PC2, color = Population))+
+  geom_point(alpha = .7, size = 2) +
+  stat_ellipse(level = .6)+
+  theme_bw()+
+  labs(color = 'Countries')
+
+
+
 ```

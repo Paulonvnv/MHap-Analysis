@@ -2706,7 +2706,143 @@ gadm_sp_loadCountries <- function (fileNames,
 }
 
 
+# fastGRMcpp----
+#' C++ implementation of a Genomic relationship matrix 'GRM'
+#' 
+#' @param X Matrix of the type 'MatrixXd' for which the GRM will be calculated.
+#' 
+#' @return Genomic relationship matrix (GRM).
+#' 
+#' @importFrom Rdpack reprompt
+#' @references https://doi.org/10.1016/j.ajhg.2010.11.011
+#' 
+#' @examples
+#' require(fastGRM)
+#' Data = matrix(sample(0:1, 9000, TRUE, c(.9,.1)), 90)
+#' X = grm(Data)
+#' 
+#' @export
+#' 
 
+grm = function(X){
+  grmCpp(X)
+}
+
+
+#' C++ implementation of a fast singular value decomposition (SVD)
+#' 
+#' @param X Symmetric matrix of the type 'MatrixXd' for which the SVD will be calculated.
+#' @param k Number of first k eigen vectors to return
+#' @param q Auxiliary exponent
+#' 
+#' @return SVD matrix of size .
+#' 
+#' @importFrom Rdpack reprompt
+#' @references https://doi.org/10.48550/arXiv.0909.4061
+#' 
+#' @examples
+#' require(fastGRM)
+#' Data = matrix(sample(0:1, 9000, TRUE, c(.9,.1)), 90)
+#' X = grm(Data)
+#' V = fastSVD(X, 2)
+#' 
+#' @export
+
+fastSVD = function(X, k, q = 2){
+  
+  
+  
+  fastSVDCpp(X, k, q)
+}
+
+#' C++ implementation of a fast GRM function
+#' 
+#' @param X Matrix of the type 'MatrixXd' for which the fastGRM matrix will be calculated.
+#' @param k Number of first k eigen vectors to return
+#' @param q Auxiliary exponent
+#' 
+#' @return SVD matrix of size .
+#' 
+#' @importFrom Rdpack reprompt
+#' @references https://doi.org/10.1016/j.ajhg.2010.11.011
+#' @references https://doi.org/10.48550/arXiv.0909.4061
+#' 
+#' @examples
+#' require(fastGRM)
+#' Data = matrix(sample(0:1, 9000, TRUE, c(.9,.1)), 90)
+#' X = fastGRM(Data, 2)
+#' 
+#' @export
+#' 
+
+fastGRM = function(gt, k = nrow(gt), metadata, Pop = 'Population', q = 2){
+  
+  X = t(gsub('_.+$','',gt))
+  
+  X = matrix(as.numeric(X), ncol = ncol(X),
+             nrow = nrow(X), 
+             dimnames = list(
+               rownames(X),
+               colnames(X)
+             ))
+  
+  X[is.na(X)] = 0
+  
+  evector = fastGRMCpp(X, k, q)
+  
+  #### Add metadata to the PCA----
+  Pop_col = merge(data.frame(Sample_id = gsub('_C[1,2]$','',colnames(X)),
+                             order = 1:ncol(X)), metadata[,c('Sample_id', Pop)], by = 'Sample_id', all.x = T)
+  
+  Pop_col = Pop_col[order(Pop_col$order),]
+  
+  evector = data.frame(Pop_col, evector)
+  names(evector) = c(colnames(Pop_col), paste0(rep('PC', k), 1:k))
+  
+  return(evector)
+  
+}
+
+
+fastIBD_PCA = function(ampseq_object, relatedness_table, k = NULL, Pop = 'Population', q = 2){
+  
+  metadata = ampseq_object@metadata
+  
+  pairwise_relatedness_matrix = matrix(data = NA,
+                                       ncol = nrow(ampseq_object@metadata),
+                                       nrow = nrow(ampseq_object@metadata),
+                                       dimnames = list(ampseq_object@metadata$Sample_id,
+                                                       ampseq_object@metadata$Sample_id))
+  
+  for(pair in 1:nrow(relatedness_table)){
+    
+    pairwise_relatedness_matrix[relatedness_table[pair,][['Yi']],
+                                relatedness_table[pair,][['Yj']]] = 
+      relatedness_table[pair,][['rhat']]
+    
+    pairwise_relatedness_matrix[relatedness_table[pair,][['Yj']],
+                                relatedness_table[pair,][['Yi']]] = 
+      relatedness_table[pair,][['rhat']]
+  }
+  
+  pairwise_relatedness_matrix[is.na(pairwise_relatedness_matrix)] = 1
+  
+  pairwise_dist_matrix = 1 - pairwise_relatedness_matrix
+  
+  evector = fastGRMCpp(pairwise_relatedness_matrix, k, q)
+  
+  #### Add metadata to the PCA----
+  Pop_col = merge(data.frame(Sample_id = gsub('_C[1,2]$','',colnames(pairwise_relatedness_matrix)),
+                             order = 1:ncol(pairwise_relatedness_matrix)), metadata[,c('Sample_id', Pop)], by = 'Sample_id', all.x = T)
+  
+  Pop_col = Pop_col[order(Pop_col$order),]
+  
+  evector = data.frame(Pop_col, evector)
+  names(evector) = c(colnames(Pop_col), paste0(rep('PC', k), 1:k))
+  
+  return(evector)
+  
+}
 
 
 

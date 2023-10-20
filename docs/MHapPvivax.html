@@ -528,7 +528,8 @@ An ASV matching perfectly to the 3D7 reference is currently indicated by
 the R environment:</p>
 <pre class="r"><code>source(&#39;docs/functions_and_libraries/amplseq_required_libraries.R&#39;)
 source(&#39;docs/functions_and_libraries/amplseq_functions.R&#39;)
-sourceCpp(&#39;docs/functions_and_libraries/hmmloglikelihood.cpp&#39;)</code></pre>
+sourceCpp(&#39;docs/functions_and_libraries/hmmloglikelihood.cpp&#39;)
+sourceCpp(&#39;docs/functions_and_libraries/Rcpp_functions.cpp&#39;)</code></pre>
 <p>Then we will upload the pseudo-CIGAR table using the function
 <code>read_cigar_tables</code>:</p>
 <pre class="r"><code>cigar_object = read_cigar_tables(files = &#39;docs/data/Pvivax/dada2/run_dada2/CIGARVariants_Bfilter.out.tsv&#39;, sample_id_pattern = &#39;SP|CON|HR&#39;)</code></pre>
@@ -661,8 +662,10 @@ drug_resistant_haplotypes_plot$haplo_freq_plot</code></pre>
 </div>
 <div id="population-subdivision" class="section level1">
 <h1>Population subdivision</h1>
+<p>Label Pseudo-CIGAR alleles with integers</p>
 <pre class="r"><code># generating the loci_object----
 loci_object = ampseq2loci(ampseq_filtered)</code></pre>
+<p>Estimate pair-wise genetic relatedness</p>
 <pre class="r"><code># measuring relatedness----
 
 if(!file.exists(&#39;docs/data/pvivax_pairwise_relatedness.csv&#39;)){
@@ -671,6 +674,7 @@ if(!file.exists(&#39;docs/data/pvivax_pairwise_relatedness.csv&#39;)){
 }else{
   pairwise_relatedness = read.csv(&#39;docs/data/pvivax_pairwise_relatedness.csv&#39;)
 }</code></pre>
+<p>Relatedness network</p>
 <pre class="r"><code>Relatedness_network = plot_network(pairwise_relatedness = pairwise_relatedness,
                                threshold = .90,
                                metadata = ampseq_filtered@metadata,
@@ -690,6 +694,27 @@ Municipality 1 (Red), Municipality 2 (Blue), Municipality 3 (Gold),
 Municipality 4 (Green), and Municipality 5 (Coral).
 </p>
 </div>
+<p>IBS based PCA</p>
+<pre class="r"><code>evectors = fastGRM(gt = loci_object$loci_table, k = nrow(loci_object$loci_table),
+                   metadata = ampseq_filtered@metadata,
+                   Pop = &#39;Population&#39;, q = 2)
+
+evectors %&gt;% ggplot(aes(x = PC1, y = PC2, color = Population))+
+  geom_point(alpha = .7, size = 2) +
+  stat_ellipse(level = .6)+
+  theme_bw()+
+  labs(color = &#39;Countries&#39;)</code></pre>
+<p><img src="MHapPvivax_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+<p>IBD based PCA</p>
+<pre class="r"><code>evectors_IBD = fastIBD_PCA(ampseq_object = ampseq_filtered, relatedness_table = pairwise_relatedness, k = nrow(ampseq_filtered@metadata), Pop = &#39;Population&#39;, q = 2)
+
+
+evectors_IBD %&gt;% ggplot(aes(x = PC1, y = PC2, color = Population))+
+  geom_point(alpha = .7, size = 2) +
+  stat_ellipse(level = .6)+
+  theme_bw()+
+  labs(color = &#39;Countries&#39;)</code></pre>
+<p><img src="MHapPvivax_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
 </div>
 
 
