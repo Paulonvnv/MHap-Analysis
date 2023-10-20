@@ -212,15 +212,12 @@ ampseq_filtered = locus_amplification_rate(ampseq, threshold = .65, chr_lengths 
   2093556,
   3153402
 ))
-
-
 ```
 
 Thus in this data set `r ncol(ampseq@gt)` loci had an amplification rate above 0.65, and `r ncol(ampseq_filtered@discarded_loci$gt)` loci were discarded. All discarded loci are stored in the slot discarded_loci within the `ampseq_object`. The discarded loci were: `r paste(colnames(ampseq@discarded_loci$gt), collapse = ', ')`.
 
 ```{r 'Ploting loci performance', fig.width=7, fig.height=7, fig.cap= '**Figure 2:** Proportion of amplified samples per locus. Top figure shows the distribution of the amplification rate (or proportion of amplified samples) of loci, with the number of loci in the y-axis and the amplification rate in the x-axis. Bottom figure shows the the chromosome location of each locus (chromosomes in y-axis and position in the x-axis) and the gradient color represents its amplification rate.'}
 # Plot Amplification rate per loci ----
-
 ggdraw()+
   draw_plot(ampseq_filtered@plots$amplification_rate_per_locus,
             x = 0,
@@ -237,7 +234,6 @@ ggdraw()+
 The next step is to measure the proportion of loci amplified per each sample, also called the amplification rate of the samples. For that purpose we are going to use the function sample_amplification_rate, and we are going to set the threshold equals to  0.6 (samples must amplify at least 60% of the total number of markers).
 
 ```{r 'Filtering samples of low amplification rate', fig.width=5, fig.height=5, fig.cap='**Figure 3:** Proportion of amplified loci per sample. The figure shows the distribution of the amplification rate (or proportion of amplified loci) of the samples, with the number of samples in the y-axis and the amplification rate in the x-axis.'}
-
 ampseq_filtered = sample_amplification_rate(ampseq_filtered, threshold = .6)
 
 ampseq_filtered@plots$samples_amplification_rate+
@@ -247,9 +243,9 @@ ampseq_filtered@plots$samples_amplification_rate+
 ```
 # Molecular surveillance of drug resistance
 
-Our panel of markers includes 10 genes (36 markers in total) that could be associated with antimalarial resistance. In contrast to *P. falciparum* where there is informartion about which polymorphims are associated to resistance, in *P. vivax* that information is missing. However, it is possible to report all observed polymorphism respect to a reference sequence (in this case the strain Pv_P01). Just as an example we are going to identify the aminoacid changes for the genes `mrp1`, `mrp2`, `mdr1` and `mdr2`
+Our panel of markers includes 10 genes (36 markers in total) that could be associated with antimalarial resistance. In contrast to *P. falciparum* where there is informartion about which polymorphims are associated to resistance, in *P. vivax* that information is missing. However, it is possible to report all observed polymorphism respect to a reference sequence (in this case the strain Pv_P01). Just as an example we are going to identify the aminoacid changes for the genes `mdr1`, `mrp1`, and `mrp2`.
 
-```{r 'Molecular surveillance of drug resistance'}
+```{r 'Molecular surveillance of drug resistance', fig.height=12, fig.width=12}
 
 drug_resistant_haplotypes_plot = haplotypes_respect_to_reference(ampseq_object = ampseq_filtered,
                                         gene_names = c('pvmrp1',
@@ -259,10 +255,14 @@ drug_resistant_haplotypes_plot = haplotypes_respect_to_reference(ampseq_object =
                                                      'PVP01_1447300',
                                                      'PVP01_1010900'),
                                         gff_file = "docs/reference/Pviv_P01/genes.gff",
-                                        fasta_file = "docs/reference/Pviv_P01/PvP01.v1.fasta")
+                                        fasta_file = "docs/reference/Pviv_P01/PvP01.v1.fasta",
+                                        plo_haplo_freq = TRUE,
+                                        variables = c('Sample_id', 'Population'),
+                                        filters = NULL,
+                                        na.var.rm = FALSE)
 
 
-drug_resistant_haplotypes_plot$loci_aa_table %>% datatable()
+drug_resistant_haplotypes_plot$haplo_freq_plot
 
 ```
 
@@ -277,7 +277,14 @@ loci_object = ampseq2loci(ampseq_filtered)
 
 ```{r 'Estimating relatedness'}
 # measuring relatedness----
-pairwise_relatedness = pairwise_hmmIBD(loci_object, parallel = T)
+
+if(!file.exists('docs/data/pvivax_pairwise_relatedness.csv')){
+  pairwise_relatedness = pairwise_hmmIBD(loci_object, parallel = T)
+  write.csv(pairwise_relatedness, 'docs/data/pvivax_pairwise_relatedness.csv', quote = F, row.names = F)
+}else{
+  pairwise_relatedness = read.csv('docs/data/pvivax_pairwise_relatedness.csv')
+}
+
 ```
 
 ```{r 'network', fig.width=5, fig.height=5, fig.cap = '**Figure 4:** Network representation of pairwise genetic relatedness between samples. Each node represents a sample, and branches are displayed only for pairwise comparisons with a relatedness greater than 0.99. Colors were assigned based on the sampling location: Municipality 1 (Red), Municipality 2 (Blue), Municipality 3 (Gold), Municipality 4 (Green), and Municipality 5 (Coral).'}
