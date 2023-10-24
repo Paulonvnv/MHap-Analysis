@@ -11,5 +11,5 @@ navbar:
     - text: 'Intro to R'
       href: Intro_to_R.html
     - text: 'Basic bash'
-      href: Basic_bash.html
+      href: basic_bash.html
 output_dir: 'docs'
