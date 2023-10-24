@@ -391,6 +391,16 @@ drug_resistant_haplotypes_plot = drug_resistant_haplotypes(ampseq_filtered,
 
 ```
 
+The haplotype of each sample is stored in the table `aacigar_table` within the object `drug_resistant_haplotypes_plot`.
+```{r}
+drug_resistant_haplotypes_plot$aacigar_table%>%datatable()
+```
+The phenotype of each sample, of each polymorphic position is in the table `phenotype_table` within the object `drug_resistant_haplotypes_plot`. The information of multiples positions within the same marker is concatenated using `";"`.
+
+```{r}
+drug_resistant_haplotypes_plot$phenotype_table%>%datatable()
+```
+
 The colors assigned to the haplotypes in the bar blot are randomly
 chosen, see below:
 
@@ -630,7 +640,9 @@ poly_by_pop_over_time = get_polygenomic(ampseq_object = ampseq_filtered,
                                         na.rm = TRUE,
                                         filters = 'Municipality 1|Municipality 2|Municipality 3')
 
-poly_by_pop_over_time
+poly_by_pop_over_time %>% datatable() %>%
+  formatRound(columns=c('mean_coi', 'prop_poly', 'prop_poly_lower', 'prop_poly_upper'),
+              digits=3)
 
 ```
 
