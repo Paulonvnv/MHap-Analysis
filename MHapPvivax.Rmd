@@ -163,7 +163,7 @@ sourceCpp('docs/functions_and_libraries/Rcpp_functions.cpp')
 
 Then we will upload the pseudo-CIGAR table using the function `read_cigar_tables`:
 ```{r 'Uploading data sets'}
-cigar_object = read_cigar_tables(files = 'docs/data/Pvivax/dada2/run_dada2/CIGARVariants_Bfilter.out.tsv', sample_id_pattern = 'SP|CON|HR')
+cigar_object = read_cigar_tables(files = 'docs/data/Pvivax_sequencing_data/dada2/run_dada2/CIGARVariants_Bfilter.out.tsv', sample_id_pattern = 'SP|CON|HR')
 ```
 
 In this tutorial we are analyzing samples from Colombia (codes start with `SP`), Peru (codes start with `CON`) and Venezuela (codes start with `HR`). We are going to add that information using the function mutate from the package dplyr.
@@ -194,7 +194,7 @@ coverage_by_country$plot_read_depth_heatmap+
   theme(axis.title.y = element_text(size = 16))
 ```
 
-Then we can also use the function loci_amplification_rate to measure the proportion of samples that have been amplified by each amplicon marker.
+Then we can also use the function `loci_amplification_rate` to measure the proportion of samples that have been amplified by each amplicon marker.
 
 ```{r 'Filtering loci of low amplification rate'}
 ampseq_filtered = locus_amplification_rate(ampseq, threshold = .65, chr_lengths = c(
@@ -269,18 +269,12 @@ drug_resistant_haplotypes_plot$haplo_freq_plot
 
 # Population subdivision
 
-Label Pseudo-CIGAR alleles with integers
-```{r 'generating the loci_object'}
-# generating the loci_object----
-loci_object = ampseq2loci(ampseq_filtered)
-```
-
-Estimate pair-wise genetic relatedness
+The first step is to estimate the pairwise genetic relatedness using the function `pairwise_hmmIBD`. As the dataset is small, we won't split the analysis in windows as we did for the **AMPLseq** panel for *P. falciparum*.
 ```{r 'Estimating relatedness'}
 # measuring relatedness----
 
 if(!file.exists('docs/data/pvivax_pairwise_relatedness.csv')){
-  pairwise_relatedness = pairwise_hmmIBD(loci_object, parallel = T)
+  pairwise_relatedness = pairwise_hmmIBD(ampseq_filtered, parallel = T)
   write.csv(pairwise_relatedness, 'docs/data/pvivax_pairwise_relatedness.csv', quote = F, row.names = F)
 }else{
   pairwise_relatedness = read.csv('docs/data/pvivax_pairwise_relatedness.csv')
@@ -288,9 +282,9 @@ if(!file.exists('docs/data/pvivax_pairwise_relatedness.csv')){
 
 ```
 
-Relatedness network 
+Now we can represent the relatedness network using the function `plot_network`: 
 
-```{r 'network', fig.width=5, fig.height=5, fig.cap = '**Figure 4:** Network representation of pairwise genetic relatedness between samples. Each node represents a sample, and branches are displayed only for pairwise comparisons with a relatedness greater than 0.99. Colors were assigned based on the sampling location: Municipality 1 (Red), Municipality 2 (Blue), Municipality 3 (Gold), Municipality 4 (Green), and Municipality 5 (Coral).'}
+```{r 'network', fig.width=5, fig.height=5, fig.cap = '**Figure 4:** Network representation of pairwise genetic relatedness between samples. Each node represents a sample, and branches are displayed only for pairwise comparisons with a relatedness greater than 0.99. Colors were assigned based on the sampling location: Colombia (Red), Peru (Blue), and Venezuela (Gold).'}
 
 Relatedness_network = plot_network(pairwise_relatedness = pairwise_relatedness,
                                threshold = .90,
@@ -302,31 +296,17 @@ Relatedness_network = plot_network(pairwise_relatedness = pairwise_relatedness,
                               )
 ```
 
-IBS based PCA
+Or, we can also observe the present of population structure using a PCA based on identity-by-descent (IBD).
 
-```{r}
-evectors = fastGRM(gt = loci_object$loci_table, k = nrow(loci_object$loci_table),
-                   metadata = ampseq_filtered@metadata,
-                   Pop = 'Population', q = 2)
+```{r, fig.width=5, fig.height=5, fig.cap = '**Figure 5:** PCA of pairwise genetic relatedness between samples. Each node represents a sample, and colors were assigned based on the sampling location: Colombia (Red), Peru (Blue), and Venezuela (Gold).'}
 
-evectors %>% ggplot(aes(x = PC1, y = PC2, color = Population))+
-  geom_point(alpha = .7, size = 2) +
-  stat_ellipse(level = .6)+
-  theme_bw()+
-  labs(color = 'Countries')
-
-```
-
-IBD based PCA
-
-```{r}
-
-evectors_IBD = fastIBD_PCA(ampseq_object = ampseq_filtered, relatedness_table = pairwise_relatedness, k = nrow(ampseq_filtered@metadata), Pop = 'Population', q = 2)
+evectors_IBD = IBD_evectors(ampseq_object = ampseq_filtered, relatedness_table = pairwise_relatedness, k = nrow(ampseq_filtered@metadata), Pop = 'Population', q = 2)
 
 
 evectors_IBD %>% ggplot(aes(x = PC1, y = PC2, color = Population))+
   geom_point(alpha = .7, size = 2) +
   stat_ellipse(level = .6)+
+  scale_color_manual(values = c('firebrick3', 'dodgerblue3', 'gold3'))+
   theme_bw()+
   labs(color = 'Countries')
 

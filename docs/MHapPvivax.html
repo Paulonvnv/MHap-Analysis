@@ -335,6 +335,12 @@ div.tocify {
 <li>
   <a href="MHapPvivax.html">MHap-Pvivax</a>
 </li>
+<li>
+  <a href="Intro_to_R.html">Intro to R</a>
+</li>
+<li>
+  <a href="Basic_bash.html">Basic bash</a>
+</li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
         
@@ -532,7 +538,7 @@ sourceCpp(&#39;docs/functions_and_libraries/hmmloglikelihood.cpp&#39;)
 sourceCpp(&#39;docs/functions_and_libraries/Rcpp_functions.cpp&#39;)</code></pre>
 <p>Then we will upload the pseudo-CIGAR table using the function
 <code>read_cigar_tables</code>:</p>
-<pre class="r"><code>cigar_object = read_cigar_tables(files = &#39;docs/data/Pvivax/dada2/run_dada2/CIGARVariants_Bfilter.out.tsv&#39;, sample_id_pattern = &#39;SP|CON|HR&#39;)</code></pre>
+<pre class="r"><code>cigar_object = read_cigar_tables(files = &#39;docs/data/Pvivax_sequencing_data/dada2/run_dada2/CIGARVariants_Bfilter.out.tsv&#39;, sample_id_pattern = &#39;SP|CON|HR&#39;)</code></pre>
 <p>In this tutorial we are analyzing samples from Colombia (codes start
 with <code>SP</code>), Peru (codes start with <code>CON</code>) and
 Venezuela (codes start with <code>HR</code>). We are going to add that
@@ -563,9 +569,9 @@ coverage_by_country$plot_read_depth_heatmap+
 amplicon.
 </p>
 </div>
-<p>Then we can also use the function loci_amplification_rate to measure
-the proportion of samples that have been amplified by each amplicon
-marker.</p>
+<p>Then we can also use the function
+<code>loci_amplification_rate</code> to measure the proportion of
+samples that have been amplified by each amplicon marker.</p>
 <pre class="r"><code>ampseq_filtered = locus_amplification_rate(ampseq, threshold = .65, chr_lengths = c(
   1021664,
   956327,
@@ -662,19 +668,20 @@ drug_resistant_haplotypes_plot$haplo_freq_plot</code></pre>
 </div>
 <div id="population-subdivision" class="section level1">
 <h1>Population subdivision</h1>
-<p>Label Pseudo-CIGAR alleles with integers</p>
-<pre class="r"><code># generating the loci_object----
-loci_object = ampseq2loci(ampseq_filtered)</code></pre>
-<p>Estimate pair-wise genetic relatedness</p>
+<p>The first step is to estimate the pairwise genetic relatedness using
+the function <code>pairwise_hmmIBD</code>. As the dataset is small, we
+won’t split the analysis in windows as we did for the
+<strong>AMPLseq</strong> panel for <em>P. falciparum</em>.</p>
 <pre class="r"><code># measuring relatedness----
 
 if(!file.exists(&#39;docs/data/pvivax_pairwise_relatedness.csv&#39;)){
-  pairwise_relatedness = pairwise_hmmIBD(loci_object, parallel = T)
+  pairwise_relatedness = pairwise_hmmIBD(ampseq_filtered, parallel = T)
   write.csv(pairwise_relatedness, &#39;docs/data/pvivax_pairwise_relatedness.csv&#39;, quote = F, row.names = F)
 }else{
   pairwise_relatedness = read.csv(&#39;docs/data/pvivax_pairwise_relatedness.csv&#39;)
 }</code></pre>
-<p>Relatedness network</p>
+<p>Now we can represent the relatedness network using the function
+<code>plot_network</code>:</p>
 <pre class="r"><code>Relatedness_network = plot_network(pairwise_relatedness = pairwise_relatedness,
                                threshold = .90,
                                metadata = ampseq_filtered@metadata,
@@ -684,37 +691,35 @@ if(!file.exists(&#39;docs/data/pvivax_pairwise_relatedness.csv&#39;)){
                                colors = c(&#39;firebrick3&#39;, &#39;dodgerblue3&#39;, &#39;gold3&#39;)
                               )</code></pre>
 <div class="figure">
-<img src="MHapPvivax_files/figure-html/network-1.png" alt="**Figure 4:** Network representation of pairwise genetic relatedness between samples. Each node represents a sample, and branches are displayed only for pairwise comparisons with a relatedness greater than 0.99. Colors were assigned based on the sampling location: Municipality 1 (Red), Municipality 2 (Blue), Municipality 3 (Gold), Municipality 4 (Green), and Municipality 5 (Coral)." width="480" />
+<img src="MHapPvivax_files/figure-html/network-1.png" alt="**Figure 4:** Network representation of pairwise genetic relatedness between samples. Each node represents a sample, and branches are displayed only for pairwise comparisons with a relatedness greater than 0.99. Colors were assigned based on the sampling location: Colombia (Red), Peru (Blue), and Venezuela (Gold)." width="480" />
 <p class="caption">
 <strong>Figure 4:</strong> Network representation of pairwise genetic
 relatedness between samples. Each node represents a sample, and branches
 are displayed only for pairwise comparisons with a relatedness greater
-than 0.99. Colors were assigned based on the sampling location:
-Municipality 1 (Red), Municipality 2 (Blue), Municipality 3 (Gold),
-Municipality 4 (Green), and Municipality 5 (Coral).
+than 0.99. Colors were assigned based on the sampling location: Colombia
+(Red), Peru (Blue), and Venezuela (Gold).
 </p>
 </div>
-<p>IBS based PCA</p>
-<pre class="r"><code>evectors = fastGRM(gt = loci_object$loci_table, k = nrow(loci_object$loci_table),
-                   metadata = ampseq_filtered@metadata,
-                   Pop = &#39;Population&#39;, q = 2)
-
-evectors %&gt;% ggplot(aes(x = PC1, y = PC2, color = Population))+
-  geom_point(alpha = .7, size = 2) +
-  stat_ellipse(level = .6)+
-  theme_bw()+
-  labs(color = &#39;Countries&#39;)</code></pre>
-<p><img src="MHapPvivax_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
-<p>IBD based PCA</p>
-<pre class="r"><code>evectors_IBD = fastIBD_PCA(ampseq_object = ampseq_filtered, relatedness_table = pairwise_relatedness, k = nrow(ampseq_filtered@metadata), Pop = &#39;Population&#39;, q = 2)
+<p>Or, we can also observe the present of population structure using a
+PCA based on identity-by-descent (IBD).</p>
+<pre class="r"><code>evectors_IBD = IBD_evectors(ampseq_object = ampseq_filtered, relatedness_table = pairwise_relatedness, k = nrow(ampseq_filtered@metadata), Pop = &#39;Population&#39;, q = 2)
 
 
 evectors_IBD %&gt;% ggplot(aes(x = PC1, y = PC2, color = Population))+
   geom_point(alpha = .7, size = 2) +
   stat_ellipse(level = .6)+
+  scale_color_manual(values = c(&#39;firebrick3&#39;, &#39;dodgerblue3&#39;, &#39;gold3&#39;))+
   theme_bw()+
   labs(color = &#39;Countries&#39;)</code></pre>
-<p><img src="MHapPvivax_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<div class="figure">
+<img src="MHapPvivax_files/figure-html/unnamed-chunk-7-1.png" alt="**Figure 5:** PCA of pairwise genetic relatedness between samples. Each node represents a sample, and colors were assigned based on the sampling location: Colombia (Red), Peru (Blue), and Venezuela (Gold)." width="480" />
+<p class="caption">
+<strong>Figure 5:</strong> PCA of pairwise genetic relatedness between
+samples. Each node represents a sample, and colors were assigned based
+on the sampling location: Colombia (Red), Peru (Blue), and Venezuela
+(Gold).
+</p>
+</div>
 </div>
 
 

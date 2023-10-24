@@ -8,4 +8,8 @@ navbar:
       href: MHapPfalciparum.html
     - text: 'MHap-Pvivax'
       href: MHapPvivax.html
+    - text: 'Intro to R'
+      href: Intro_to_R.html
+    - text: 'Basic bash'
+      href: Basic_bash.html
 output_dir: 'docs'

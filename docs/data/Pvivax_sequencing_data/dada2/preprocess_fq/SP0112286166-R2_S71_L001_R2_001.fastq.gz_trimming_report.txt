@@ -1,0 +1,145 @@
+
+SUMMARISING RUN PARAMETERS
+==========================
+Input filename: Fastq/SP0112286166-R2_S71_L001_R2_001.fastq.gz
+Trimming mode: paired-end
+Trim Galore version: 0.6.6
+Cutadapt version: 3.4
+Number of cores used for trimming: 1
+Quality Phred score cutoff: 5
+Quality encoding type selected: ASCII+33
+Using Nextera adapter for trimming (count: 2253). Second best hit was Illumina (count: 0)
+Adapter sequence: 'CTGTCTCTTATA' (Nextera Transposase sequence; auto-detected)
+Maximum trimming error rate: 0.1 (default)
+Minimum required adapter overlap (stringency): 1 bp
+Minimum required sequence length for both reads before a sequence pair gets removed: 20 bp
+Output file will be GZIP compressed
+
+
+This is cutadapt 3.4 with Python 3.7.10
+Command line parameters: -j 1 -e 0.1 -q 5 -O 1 -a CTGTCTCTTATA Fastq/SP0112286166-R2_S71_L001_R2_001.fastq.gz
+Processing reads on 1 core in single-end mode ...
+Finished in 0.27 s (43 µs/read; 1.40 M reads/minute).
+
+=== Summary ===
+
+Total reads processed:                   6,302
+Reads with adapters:                     3,867 (61.4%)
+Reads written (passing filters):         6,302 (100.0%)
+
+Total basepairs processed:       951,602 bp
+Quality-trimmed:                       0 bp (0.0%)
+Total written (filtered):        770,723 bp (81.0%)
+
+=== Adapter 1 ===
+
+Sequence: CTGTCTCTTATA; Type: regular 3'; Length: 12; Trimmed: 3867 times
+
+No. of allowed errors:
+1-9 bp: 0; 10-12 bp: 1
+
+Bases preceding removed adapters:
+  A: 31.0%
+  C: 17.5%
+  G: 34.2%
+  T: 17.3%
+  none/other: 0.0%
+
+Overview of removed sequences
+length	count	expect	max.err	error counts
+1	977	1575.5	0	977
+2	433	393.9	0	433
+3	24	98.5	0	24
+4	57	24.6	0	57
+5	2	6.2	0	2
+6	2	1.5	0	2
+7	1	0.4	0	1
+8	11	0.1	0	11
+9	11	0.0	0	11
+10	2	0.0	1	1 1
+11	35	0.0	1	31 4
+12	61	0.0	1	10 51
+13	76	0.0	1	70 6
+14	15	0.0	1	13 2
+15	5	0.0	1	5
+16	10	0.0	1	8 2
+17	95	0.0	1	88 7
+18	3	0.0	1	3
+19	3	0.0	1	3
+20	21	0.0	1	21
+21	5	0.0	1	5
+22	2	0.0	1	2
+23	6	0.0	1	5 1
+25	72	0.0	1	68 4
+26	13	0.0	1	11 2
+27	16	0.0	1	16
+28	7	0.0	1	7
+29	96	0.0	1	89 7
+30	16	0.0	1	15 1
+32	8	0.0	1	8
+33	2	0.0	1	2
+35	18	0.0	1	17 1
+36	6	0.0	1	6
+37	21	0.0	1	21
+39	6	0.0	1	5 1
+40	34	0.0	1	33 1
+41	2	0.0	1	2
+42	2	0.0	1	1 1
+43	36	0.0	1	33 3
+44	13	0.0	1	13
+45	1	0.0	1	0 1
+47	1	0.0	1	1
+48	3	0.0	1	3
+49	8	0.0	1	8
+50	31	0.0	1	31
+51	126	0.0	1	120 6
+52	204	0.0	1	201 3
+53	21	0.0	1	20 1
+54	2	0.0	1	1 1
+58	1	0.0	1	1
+60	1	0.0	1	1
+62	1	0.0	1	1
+64	1	0.0	1	1
+68	6	0.0	1	6
+69	2	0.0	1	2
+73	2	0.0	1	2
+75	1	0.0	1	1
+81	2	0.0	1	2
+82	1	0.0	1	1
+86	1	0.0	1	1
+89	11	0.0	1	11
+90	1	0.0	1	1
+92	90	0.0	1	89 1
+93	4	0.0	1	4
+94	1	0.0	1	1
+105	158	0.0	1	154 4
+107	1	0.0	1	0 1
+110	1	0.0	1	1
+111	10	0.0	1	10
+112	1	0.0	1	0 1
+113	96	0.0	1	95 1
+114	19	0.0	1	19
+115	13	0.0	1	13
+116	238	0.0	1	233 5
+117	83	0.0	1	81 2
+118	4	0.0	1	4
+119	7	0.0	1	6 1
+120	449	0.0	1	438 11
+121	7	0.0	1	7
+122	3	0.0	1	3
+123	4	0.0	1	4
+124	1	0.0	1	1
+125	2	0.0	1	2
+128	2	0.0	1	2
+129	2	0.0	1	2
+135	15	0.0	1	13 2
+137	2	0.0	1	2
+139	1	0.0	1	1
+
+RUN STATISTICS FOR INPUT FILE: Fastq/SP0112286166-R2_S71_L001_R2_001.fastq.gz
+=============================================
+6302 sequences processed in total
+
+Total number of sequences analysed for the sequence pair length validation: 6302
+
+Number of sequence pairs removed because at least one read was shorter than the length cutoff (20 bp): 18 (0.29%)

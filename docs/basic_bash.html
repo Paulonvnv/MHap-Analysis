@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Neafsey Lab" />
+
+
+<title>Basic Bash</title>
+
+<script src="site_libs/header-attrs-2.14/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<script src="site_libs/navigation-1.1/codefolding.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.tab('show');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+<style type="text/css">
+.code-folding-btn { margin-bottom: 4px; }
+</style>
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">MHap-Analysis</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li>
+  <a href="MHapPfalciparum.html">MHap-Pfalciparum</a>
+</li>
+<li>
+  <a href="MHapPvivax.html">MHap-Pvivax</a>
+</li>
+<li>
+  <a href="Intro_to_R.html">Intro to R</a>
+</li>
+<li>
+  <a href="Basic_bash.html">Basic bash</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+<div class="btn-group pull-right float-right">
+<button type="button" class="btn btn-default btn-xs btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+<ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
+<li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
+<li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+</ul>
+</div>
+
+
+
+<h1 class="title toc-ignore">Basic Bash</h1>
+<h4 class="author">Neafsey Lab</h4>
+
+</div>
+
+
+<div id="background" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> Background</h1>
+<p>This tutorial provides an introduction to Bash and the Linux Command
+Line. It will focus on skills to navigate and manage files (the R
+workshops will cover more complex topics like scripting). Our objective
+is (1) to furnish you with reference material in case one day you have
+to interact with the Linux system and (2) to provide you the essential
+skills for using bash in case you want to dwell further into it.</p>
+<p>The methodology of this workshop section consists mainly in walking
+you through some of the essential terminal commands. We will also solve
+some basic exercises that combine and put these skills into context.</p>
+<p>If you are working in a windows system please download and install
+<code>git bash</code>. You can download it from: <a
+href="https://git-scm.com/downloads"
+class="uri">https://git-scm.com/downloads</a>. Install with the default
+configuration.</p>
+<p>The directories names presented in these examples are names from my
+computer. You can adapt these commands with the directories names in
+your computer.</p>
+</div>
+<div id="declaring-variables-and-printing-text-to-the-screen"
+class="section level1" number="2">
+<h1><span class="header-section-number">2</span> Declaring variables and
+printing text to the screen</h1>
+<p>Printing text to the screen (the <em>standard output</em>, often
+shortened as <code>stdout</code>, is the exact technical term) and
+creating variables are two most basic operation in bash.</p>
+<p>The <code>echo</code> command prints text to the screen.</p>
+<p>Variable declaration is done using the = sign. The variable name is
+placed to the left of =, while the assigned value goes to the right. In
+bash, variables names must be unique (using the same variable name twice
+will override it) and cannot start with a number or contain spaces.
+Variables can store numeric, strings, or booleans (true/false) values.
+For the moment, we will focus numbers and strings.</p>
+<ol style="list-style-type: decimal">
+<li>Print text to the screen</li>
+</ol>
+<pre class="bash"><code>echo &#39;Hello World&#39;</code></pre>
+<ol start="2" style="list-style-type: decimal">
+<li>Declare a numeric variable and print it to the screen</li>
+</ol>
+<pre class="bash"><code>var1=1
+echo $var1</code></pre>
+<ol start="3" style="list-style-type: decimal">
+<li>Declare a string variable and print it to the screen</li>
+</ol>
+<pre class="bash"><code>var2=&#39;Hello world&#39;
+echo $var2</code></pre>
+<ol start="4" style="list-style-type: decimal">
+<li>Variables and strings can be combined using the <code>${var}</code>.
+This is called <strong>“disambiguation”</strong>. It tells bash that
+whatever is contained inside the <code>{}</code> is a variable and
+should be read a such.</li>
+</ol>
+<pre class="bash"><code>name=&#39;Jorge&#39;
+echo &quot;${var2} my name is ${name}&quot;</code></pre>
+<ol start="5" style="list-style-type: decimal">
+<li>Attempt the previous piece of code with <code>'</code> instead of
+<code>"</code>. What happens?</li>
+</ol>
+<pre class="bash"><code>% echo &#39;${var2} my name is ${name}&#39;</code></pre>
+<p>Double quotes ” are neccesary to “disambuguate” the variable.</p>
+</div>
+<div id="navigating-between-directories---1" class="section level1"
+number="3">
+<h1><span class="header-section-number">3</span> Navigating between
+directories - 1</h1>
+<p>Navigating between directories is the activity you will be doing most
+of the time when in Bash. For this reason, it is essential to learn how
+to orientate yourself and move efficiently between directories.
+<code>pwd</code>:, which stands for
+<code>Print Working Directory</code>, will show you your current
+location. Moving and investigating the content of directories is done
+with <code>cd</code> and <code>ls</code>, respectively.</p>
+<ol start="6" style="list-style-type: decimal">
+<li>Orientate yourself</li>
+</ol>
+<pre class="bash"><code>pwd</code></pre>
+<ol start="7" style="list-style-type: decimal">
+<li>Move between directories</li>
+</ol>
+<pre class="bash"><code>cd &#39;PATH_TO&#39;/Colombia_INS_workshop/Intro_bash
+pwd</code></pre>
+<ol start="8" style="list-style-type: decimal">
+<li>List the content of a directory</li>
+</ol>
+<pre class="bash"><code>ls</code></pre>
+<div id="trick-for-navigation" class="section level2" number="3.1">
+<h2><span class="header-section-number">3.1</span> Trick for
+navigation:</h2>
+<p>You can use the tab key to <em>autocomplete</em> the name of
+directories or files. Knowing this trick will make your typing more
+efficient and less tiresome. If two files or directories in the working
+directory have the same prefix, tab will suggest them as options. You
+can complete the remaining characters to solve the ambiguity and hit tab
+again.</p>
+</div>
+<div id="detour-getting-help-for-commands" class="section level2"
+number="3.2">
+<h2><span class="header-section-number">3.2</span> Detour: Getting help
+for commands</h2>
+<p>Additional information can be obtained from bash command by providing
+“flags”. For example, use the <code>-l</code> flag after
+<code>ls</code>.</p>
+<ol start="9" style="list-style-type: decimal">
+<li>list the files in “Long Format”</li>
+</ol>
+<pre class="bash"><code>ls -l</code></pre>
+<ol start="10" style="list-style-type: decimal">
+<li>Attempt the following commmand <code>man ls</code>. What happens?
+<code>man</code> will print the “Manual” of the command with information
+about the command syntax and a list of all the available flags</li>
+</ol>
+<pre class="bash"><code>man ls</code></pre>
+<ol start="11" style="list-style-type: decimal">
+<li>Now attempt man -help. What happens? Some commands also have a -help
+flag, which, as the name suggests it, prints the command’s help
+page.</li>
+</ol>
+<pre class="bash"><code>man -help</code></pre>
+</div>
+</div>
+<div id="navigating-between-directories---2" class="section level1"
+number="4">
+<h1><span class="header-section-number">4</span> Navigating between
+directories - 2</h1>
+<p>Several directories names separated by <code>/</code> can be stringed
+together after cd to move down more than one level at a time.</p>
+<ol start="12" style="list-style-type: decimal">
+<li>Move down two levels from Home into a directory called
+Colombia_INS_workshop/denoising_amplicon_pipeline/malaria-amplicon-pipeline/</li>
+</ol>
+<pre class="bash"><code>cd &#39;PATH_TO&#39;/Colombia_INS_workshop/denoising_amplicon_pipeline/malaria-amplicon-pipeline/</code></pre>
+<p>If you go down several levels between directories, you’ll have to go
+back up again at some point. <code>..</code> will move back one level.
+<code>../..</code> will take you two levels up. And so on…</p>
+<ol start="13" style="list-style-type: decimal">
+<li>Now go back to Colombia_INS_workshop</li>
+</ol>
+<pre class="bash"><code>cd ../..
+pwd</code></pre>
+<p>You can also add a directory name after <code>..</code>.</p>
+<p>If you want to go back to your home directory, you can do it with the
+tilde symblo</p>
+<ol start="14" style="list-style-type: decimal">
+<li>Now go back to Home</li>
+</ol>
+<pre class="bash"><code>cd ~
+pwd</code></pre>
+<ol start="15" style="list-style-type: decimal">
+<li>Move back to malaria-amplicon-pipeline/</li>
+</ol>
+<pre class="bash"><code>cd &#39;PATH_TO&#39;/malaria-amplicon-pipeline/</code></pre>
+<ol start="16" style="list-style-type: decimal">
+<li>From malaria-amplicon-pipeline/ move to Intro_bash</li>
+</ol>
+<pre class="bash"><code>cd ../../Intro_bash
+pwd</code></pre>
+</div>
+<div id="creating-directories-and-files" class="section level1"
+number="5">
+<h1><span class="header-section-number">5</span> Creating directories
+and files</h1>
+<p>The command <code>mkdir</code> can be used to create new directories.
+Directories are essential for keeping data organized.</p>
+<ol start="17" style="list-style-type: decimal">
+<li>Create a new directory called <code>TestDirectory</code>, and use
+<code>cd</code> to move into it as explained before.</li>
+</ol>
+<pre class="bash"><code>mkdir TestDirectory
+cd TestDirectory
+pwd</code></pre>
+<p>Information can be printed into a file using <code>&gt;</code>, while
+<code>cat</code> is used to observe the contents of a file. After moving
+into <code>TestDirectory</code>, put some simple information into a file
+using &gt;, then retrive that information to the stdout with cat.</p>
+<ol start="18" style="list-style-type: decimal">
+<li><code>echo</code> some information into a file called
+<code>simple.txt</code>, then use <code>cat</code> to observe the
+contents of the file.</li>
+</ol>
+<pre class="bash"><code>echo &quot;This is a text file&quot; &gt; simple.txt
+cat simple.txt</code></pre>
+<ol start="19" style="list-style-type: decimal">
+<li>Exercise Attempt the using <code>echo</code> on
+<code>simple.txt</code>. What happens?</li>
+</ol>
+<pre class="bash"><code>echo simple.txt</code></pre>
+<p>Sometimes the file is too large to be visualized with
+<code>cat</code>, instead you can use less or zless if the file is
+zipped.</p>
+<ol start="20" style="list-style-type: decimal">
+<li>explore the file <code>Dd2_pos1_S85_L001_R1_001.fastq.gz</code></li>
+</ol>
+<pre class="bash"><code>cd ../
+zless Dd2_pos1_S85_L001_R1_001.fastq.gz</code></pre>
+</div>
+<div id="copying-and-moving-files" class="section level1" number="6">
+<h1><span class="header-section-number">6</span> Copying and Moving
+files</h1>
+<p>We are going to create a <code>BackupDirectory</code> for
+<code>TestDirectory</code>.</p>
+<ol start="19" style="list-style-type: decimal">
+<li>Move back one level with <code>cd</code> and use <code>mkdir</code>
+to create <code>BackupDirectory</code></li>
+</ol>
+<pre class="bash"><code>mkdir BackupDirectory
+pwd
+ls</code></pre>
+<ol start="20" style="list-style-type: decimal">
+<li>Use <code>mv</code> to move the <code>simple.txt</code> file into
+<code>BackupDirectory</code></li>
+</ol>
+<pre class="bash"><code>mv TestDirectory/simple.txt BackupDierctory/
+ls BackupDirectory/</code></pre>
+<ol start="21" style="list-style-type: decimal">
+<li>Use <code>cp</code> to copy the <code>simple.txt</code> file into
+<code>TestDirectory</code></li>
+</ol>
+<div id="deleting-files-and-directories" class="section level2"
+number="6.1">
+<h2><span class="header-section-number">6.1</span> Deleting files and
+directories</h2>
+<p>The command <code>rm</code> can be used to delete files. It is
+recommend to always append the <code>-i</code> flag when deleting files.
+<code>-i</code> will prompt you to confirm whether or not you want to
+delete the file (in bash there is no going back once a file is
+deleted!). <code>rm</code> also deletes directories. To delete
+directories, append the <code>-r</code> flag, which stands for
+recursively.</p>
+<p>22 Remove the simple.txt file</p>
+<pre class="bash"><code>cd TestDirectory
+rm simple.txt
+ls</code></pre>
+<ol start="23" style="list-style-type: decimal">
+<li>Move one level up and remove <code>TestDirectory</code></li>
+</ol>
+<pre class="bash"><code>cd ..
+rm -r TestDirectory</code></pre>
+</div>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+<script>
+$(document).ready(function () {
+  window.initializeCodeFolding("show" === "show");
+});
+</script>
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

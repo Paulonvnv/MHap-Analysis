@@ -1,0 +1,838 @@
+---
+title: "Intro to R"
+author: "Neafsey Lab"
+output:
+  html_document:
+    toc: yes
+    number_sections: yes
+    toc_float: yes
+    code_folding: show
+  word_document:
+    toc: yes
+editor_options:
+  markdown:
+    wrap: 72
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval = FALSE)
+```
+
+To start this tutorial first you need to download and install **R** (https://cran.r-project.org/bin/windows/base/) and **RStudio** (https://posit.co/downloads/).
+
+# Why to learn R?
+
+-   <https://www.bestprogramminglanguagefor.me/why-learn-r>
+-   <https://data-flair.training/blogs/why-learn-r/>
+-   <https://www.simplilearn.com/21-reasons-to-learn-r-python-and-hadoop-article>
+
+1.  Beginner friendliness
+2.  Scalability?
+3.  Community and popularity
+4.  Career Opportunities, used in almost every company
+5.  Future
+6.  Free and open source
+7.  Latest cutting edge technology
+8.  Has a ROBUST visualization library
+9.  Stats and Data Science
+10. Comprehensive library
+11. Interactive web apps
+12. Cross-platform compatibility?
+13. Publishers Love R
+
+# How or where to learn R
+
+1.  Online free/payed courses:
+
+-   <https://www.udemy.com/course/machinelearning/>
+-   <https://www.codecademy.com/learn/learn-r>
+-   <https://www.kdnuggets.com/2016/03/datacamp-r-learning-path-7-steps.html>
+-   <https://www.coursera.org/learn/r-programming>
+-   <https://www.datacamp.com/courses/free-introduction-to-r>
+
+2.  Books, Tutorials or blogs for specific topics:
+
+-   <https://grunwaldlab.github.io/Population_Genetics_in_R/>
+-   <https://rmarkdown.rstudio.com/flexdashboard/>
+-   <https://bookdown.org/rdpeng/rprogdatascience/>
+-   <https://bookdown.org/yihui/rmarkdown/>
+-   <https://github.com/hbs-rcs/datafest/tree/master/DataFest-2020/R_Shiny_Web_Apps>
+-   <http://www.r-tutor.com/r-introduction>
+-   <https://www.tutorialspoint.com/r/index.htm>
+-   <https://cran.r-project.org/doc/contrib/rdebuts_es.pdf>
+-   <https://www.statmethods.net/r-tutorial/index.html>
+-   <https://www.r-bloggers.com/>
+-   <https://jtr13.github.io/cc21fall2/index.html>
+
+3.  **BEST OPTION: Being involve in to your own project!**.
+
+# Steps to learn R
+
+-   Step 0: Why you should learn R
+-   Step 1: The Set-Up
+-   Step 2: Understanding the R Syntax
+-   Step 3: The core of R -\> packages
+-   Step 4: Help?!
+-   Step 5: The Data Analysis Workflow
+    -   5.1 Importing Data
+    -   5.2 Data Manipulation
+    -   5.3 Data Visualization
+    -   5.4 The stats part
+    -   5.5 Reporting your results
+-   Step 6: Automate your programming, Loops, apply, and functions
+-   Step 7: Become an R wizard and discovering exciting new stuff
+
+# Requirements to learn R
+
+-   Knowledge of statistics theory in mathematics
+
+-   You should have solid understanding of statistics in mathematics
+
+-   Understanding of various type of graphs for data representation
+
+-   Prior knowledge of any programming
+
+-   **TOLERANCE TO FAILURE!**
+
+# RStudio:
+
+```{r}
+# Notice: everything that is after a the numeral or hash symbol (#) is a comment in R
+# and Sections can be created as follow:
+
+# Title of the section ----
+```
+
+# Understanding the R Syntax:
+
+## Elements, objects, operators and functions
+
+```{r}
+# 3 * 2 # Elements
+```
+
+What is an object in R?
+
+```{r}
+x = 1 # Creating object x
+y <- 2
+z = 3
+w = NA
+```
+
+Functions in r have the following syntax:
+
+`function_name(argument1, argument2, argument3, ...)`
+
+What is a function? and what is an argument?
+
+```{r}
+# play with the function mean
+a = mean(c(x, y, z, w), na.rm = T)
+
+x + y # Sum  x plus y
+x * y
+y
+
+help(mean)
+```
+
+Generating strings of elements (**Vectors**)
+
+```{r}
+b = c(1:5,NA)
+mean(b, na.rm = TRUE)
+```
+
+Try other functions
+
+`sum()` `median()` `summary()` `read.csv()`
+
+## Type of data (elements) & class of objects
+
+(Numeric, Integer, Complex, Logical, Character)
+
+### Numeric
+
+```{r}
+x = 10.5 # Asign a double value
+
+x # print the value of x in the console
+```
+
+How do I know the type of element stored in the `x` object?
+
+```{r}
+class(x) # print the class of the variable or object x
+typeof(x) # print the type of element of the variable or object x
+```
+
+#### Integers
+
+```{r}
+y = 5
+y = as.integer(5)
+y = round(5.7)
+```
+
+Ask R, what class of object is `y` and what type of element stored
+inside of it?
+
+```{r}
+class(y)
+typeof(y)
+```
+
+Other ways to generate integers
+
+```{r}
+y = 4L
+is.integer(y)
+```
+
+Check the following case:
+
+```{r}
+y = "5"
+is.integer(y) # Is "y" an integer?
+```
+
+Force the object `y` to be an integer
+
+```{r}
+y = as.integer(y) # assign "y" as an integer
+is.integer(y)
+```
+
+#### Doubles
+
+```{r}
+w = 17.5
+w = "17.5"
+
+is.character(w)
+class(w)
+
+v = as.double("5.27") # Force a numeric string to b a double
+
+as.integer("Malaria")
+
+y = 5.12L
+
+```
+
+### Logical
+
+Logic operators `!, !=, <, >, <=, >=, ==, |, &, ||, &&` Mathematical
+operators `+, -, *, /, ^ or **`
+
+```{r}
+x = 1; y = 2
+
+x==y
+x!=y
+!TRUE
+
+TRUE & TRUE
+
+class(z)
+!z
+
+as.integer(TRUE)    # the numeric value of TRUE
+as.integer(FALSE)   # the numeric value of FALSE
+```
+
+### Characters
+
+```{r}
+x = as.character(3.14)
+
+class(x)
+
+fname = "Joe"; lname ="Smith"
+```
+
+Other types of elements are: formulas, complex numbers, functions,
+methods, ...
+
+#### Fun and useful functions for characters
+
+paste & paste0
+
+```{r}
+hname = paste(fname, lname, sep=" ") # Concatenate two strings
+```
+
+substr, sub & strsplit
+
+```{r}
+substr("Mary has a little lamb", start=6, stop=8)
+
+sub("has", "hasn`t", "Mary has a little lamb")
+
+strsplit("Mary has a little lamb", "")
+```
+
+clean you enviroment
+
+```{r}
+rm(list = ls())
+```
+
+## Data structures
+
+Scalars, vectors, lists(\*), data.frames, data.tables, tibble, arrays,
+Class S3 & S4 lists
+
+### Scalar
+
+### Vectors: Sequence of elements of the same data type
+
+Create your first vector
+
+```{r}
+a = c(1,2,3,4,5)
+```
+
+What function is c()?
+
+What class of object is `a` and what type of elements are stored in a?
+
+```{r}
+class(a)
+typeof(a)
+```
+
+Other ways to create sequence of elements:
+
+```{r}
+b = (1:20)
+d = seq(from=3, to=21, by=3)
+d = as.integer(seq(from=3, to=21, by=3))
+e = as.double(rep(1:5, times=4))
+f = rep(1:5, each=4)
+g = rep(c("a","b","c","d","e"), each=4)
+```
+
+Create a sequence of random numbers
+
+```{r}
+h = rnorm(20, mean = 20, sd=5)
+mean(h)
+```
+
+#### Arithmetic calculations with vectors
+
+Only between vectors of the same length, or whose length of the longest
+vector is a multiple of that of the shortest vector. Also, the vectors
+must contain elements of the same type and class (there are exceptions).
+
+What is the size of the vectors `a`, `b`, and `d`
+
+```{r}
+length(a)
+length(b)
+length(d)
+```
+
+Perform mathematical operations with these three vectors (`a`, `b` and
+`d`), and see what happens
+
+```{r}
+a + b
+a * b
+b / d
+```
+
+What is about characters? Inspect the function `paste`
+
+```{r}
+j = c("a","b","c","d")
+k = c("c","d")
+paste(j, k, sep = "")
+```
+
+#### Combine vectors
+
+```{r}
+q = c(a, b)
+i = c(a, g)
+
+class(q)
+class(i)
+```
+
+#### The values inside each vector are indexed
+
+Use brackets to access positions within a vector
+
+```{r}
+d
+d[5]
+h[5]
+```
+
+We can omit one or more elements
+
+```{r}
+d[-5]
+d[c(-1,-3)]
+```
+
+What happens if an index is out of the scope of the vector?
+
+```{r}
+length(h)
+h[21]
+```
+
+We can use a logical vector to access positions in another vector
+
+Create a logical vector indicating which elements in the vector `h` are
+greater than 20.
+
+```{r}
+high = h > 20
+high
+```
+
+Access the values in the vector `h` that are greater than 20 using
+brackets `[]`
+
+```{r}
+h[high]
+h[h > 20]
+```
+
+Access values lower or equals than 20
+
+```{r}
+low = h <= 20
+low
+h[low]
+h[h <= 20]
+```
+
+#### Name the elements of a vector
+
+```{r}
+puppy = c("Chimu", "Correa", "Frenchie", "3y")
+names(puppy) = c("PetName", "OwnerLastName", "Breed", "Age")
+```
+
+What is the breed of the pet?
+
+```{r}
+puppy["Breed"]
+```
+
+What is the name of the Pet?
+
+```{r}
+puppy["PetName"]
+```
+
+### Arrays: Matrices
+
+All the elements must be of the same type
+
+Build a matrix called `em` of 5 rows and 4 columns with the elements of
+the vector `e`
+
+```{r}
+em = matrix(e, nrow=5,ncol=4)
+```
+
+The matrix is filled from the columns
+
+```{r}
+em
+```
+
+Build a matrix called `fm` of 4 rows and f columns with the elements of
+the vector `f`
+
+```{r}
+fm = matrix(f, nrow=4, ncol=5)
+```
+
+Mathematical operations with matrices
+
+```{r}
+em + fm
+```
+
+Transpose the matrix fm by swapping the columns and rows
+
+```{r}
+t(fm)
+```
+
+Try the sum again
+
+```{r}
+em + t(fm)
+```
+
+#### Biding matrices
+
+By columns
+
+```{r}
+cbind(em,t(fm)) # combines the columns of two matrices or vectors of the same dimension (equal number of rows)
+```
+
+By rows
+
+```{r}
+rbind(em,t(fm)) # Combine the rows of two matrices or vectors of the same dimension (equal number of columns)
+```
+
+What class of object is generated after binding two vectors?
+
+```{r}
+A = cbind(g,h)
+
+typeof(A)
+class(A)
+```
+
+Deconstruct a matrix to a vector
+
+```{r}
+c(em)
+```
+
+#### Acceding elements in the Matrix
+
+Write the following code and discuss what happen
+
+```{r}
+m = matrix(1:20, nrow = 5, ncol = 4)
+m[9]
+```
+
+now try this:
+
+```{r}
+m[1,]
+```
+
+then this:
+
+```{r}
+m[,2]
+```
+
+Select the element of the second row and third column
+
+```{r}
+m[2,3]
+```
+
+### Data Frames
+
+Commonly used to store tables, they are list of vectors of equal length
+stored in columns. All the elements of one specific column must be of
+the same type, but different columns can contain different type of
+elements
+
+Create the data.frame `df`
+
+```{r}
+df = data.frame(Sex = c(rep('F', 20), rep('M', 20)),
+                Height = c(rnorm(20, 160, 10), rnorm(20, 170, 15)))
+```
+
+View the data frame in a different window
+
+```{r}
+View(df)
+```
+
+Try to access to the data in the data.frame `df`
+
+```{r}
+df[2]
+df[2][2]
+df[[2]]
+df[[2]][3]
+df[3,]
+df[3,"Height"]
+df[["Height"]]
+df$Height
+```
+
+#### Filtering a data.frame
+
+Get all rows for Females or for Males
+
+```{r}
+df[df[['Sex']] == 'F',]
+df[df[['Sex']] == 'M',]
+```
+
+Get the mean height of females and males
+
+```{r}
+mean(df[df[['Sex']] == 'F',][['Height']])
+mean(df[df[['Sex']] == 'M',][['Height']])
+```
+
+#### Data Frame Managment with tydiverse, dplyr, tidyr, and magrittr packages
+
+```{r}
+if(!require(tidyverse)){
+  install.packages('tidyverse')
+  library(tidyverse)
+}
+
+if(!require(tidyr)){
+  install.packages('tidyr')
+  library(tidyr)
+}
+
+if(!require(dplyr)){
+  install.packages('dplyr')
+  library(dplyr)
+}
+
+if(!require(magrittr)){
+  install.packages('magrittr')
+  library(magrittr)
+}
+
+```
+
+Check the following functions:
+
+`%>%` `%<>%` `filter()` `select()` `mutate()` `group_by` `summarize()`
+
+Filter Females
+
+```{r}
+df %>% filter(Sex == 'F')
+```
+
+Calculate the mean and standard deviation of the height of Males and
+Females simultaneously
+
+```{r}
+df %>% group_by(Sex) %>% summarize(average = mean(Height),
+                                  sd = sd(Height))
+```
+
+# ggplot2
+
+Check this website:
+<http://www.sthda.com/english/wiki/ggplot2-essentials>
+
+```{r}
+if(!require(ggplot2)){
+  install.packages('ggplot2')
+  library(ggplot2)
+}
+```
+
+Let's create a histogram of the Height of Males and Females
+
+```{r}
+df %>% ggplot(aes(x = Height, fill = Sex))+
+  geom_histogram(position = 'identity', binwidth = 5, alpha = .5)+
+  theme_bw()
+
+df %>% ggplot(aes(x = Height, fill = Sex))+
+  geom_histogram(position = 'stack', binwidth = 5, alpha = .5)+
+  theme_bw()
+```
+
+Let's create a boxplot of the Height of Males and Females
+
+```{r}
+df %>% ggplot(aes(x = Sex, y = Height, fill = Sex))+
+  geom_boxplot()+
+  theme_bw()
+```
+
+Let's create a jitter plot with a violin plot as background of the
+Height of Males and Females
+
+```{r}
+df %>% ggplot(aes(x = Sex, y = Height, color = Sex))+
+  geom_violin()+
+  geom_jitter(width = .2)+
+  theme_bw()
+```
+
+Change the labels of the x axis and remove the legend
+
+```{r}
+df %>% ggplot(aes(x = Sex, y = Height, color = Sex))+
+  geom_violin()+
+  geom_jitter(width = .2)+
+  scale_x_discrete(breaks = c('F', 'M'), labels = c('Females', 'Males'))+
+  theme_bw()+
+  theme(legend.position = 'none')
+```
+
+# Lists
+
+Generic object that contains different structures (vectors, matrices or
+data.frames)
+
+```{r}
+B = list(g,h,d, df)
+```
+
+# Regular expressions
+
+Sequence of characters (or even one character) that describes a certain
+pattern found in a text.
+
+Check this website:
+<https://www.datacamp.com/tutorial/regex-r-regular-expressions-guide>
+
+-   `grep()`, `grepl()` return the indices of strings containing a match
+    (`grep()`) or a logical vector showing which strings contain a match
+    (`grepl()`).
+
+-   `gsub()` replace a detected match in each string with a specified
+    string.
+
+# For tomorrow install the following packages
+
+```{r}
+
+if(!require(adegenet)){
+  install.packages("adegenet")
+  library(adegenet)
+}else{
+  library(adegenet)
+}
+
+if(!require(ade4)){
+  install.packages("ade4")
+  library(ade4)
+}else{
+  library(ade4)
+}
+
+if(!require(poppr)){
+  install.packages("poppr")
+  library(poppr)
+}else{
+  library(poppr)
+}
+
+if(!require(dplyr)){
+  install.packages("dplyr")
+  library(dplyr)
+}else{
+  library(dplyr)
+}
+
+if(!require(magrittr)){
+  install.packages("magrittr")
+  library(magrittr)
+}else{
+  library(magrittr)
+}
+
+if(!require(tidyr)){
+  install.packages("tidyr")
+  library(tidyr)
+}else{
+  library(tidyr)
+}
+
+if(!require(ggplot2)){
+  install.packages("ggplot2")
+  library(ggplot2)
+}else{
+  library(ggplot2)
+}
+
+if(!require(cowplot)){
+  install.packages("cowplot")
+  library(cowplot)
+}else{
+  library(cowplot)
+}
+
+
+if(!require(vegan)){
+  install.packages("vegan")
+  library(vegan)
+}else{
+  library(vegan)
+}
+
+if(!require(parallel)){
+  install.packages("parallel")
+  library(parallel)
+}else{
+  library(parallel)
+}
+
+if(!require(ape)){
+  install.packages("ape")
+  library(ape)
+}else{
+  library(ape)
+}
+
+if(!require(pegas)){
+  install.packages("pegasn")
+  library(pegas)
+}else{
+  library(pegas)
+}
+
+if(!require(RColorBrewer)){
+  install.packages("RColorBrewer")
+  library(RColorBrewer)
+}else{
+  library(RColorBrewer)
+}
+
+if(!require(Hmisc)){
+  install.packages('Hmisc')
+  library(Hmisc)
+}else{
+  library(Hmisc)
+}
+
+if(!require(ggpubr)){
+  install.packages('ggpubr')
+  library(ggpubr)
+}else{
+  library(ggpubr)
+}
+
+if(!require(doMC)){
+  install.packages('doMC')
+  library(doMC)
+}else{
+  library(doMC)
+}
+
+if(!require(svMisc)){
+  install.packages('svMisc')
+  library(svMisc)
+}else{
+  library(svMisc)
+}
+
+if(!require(Biostrings)){
+  if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+  
+  BiocManager::install("Biostrings")
+}else{
+  library(Biostrings)
+}
+
+```
+
+

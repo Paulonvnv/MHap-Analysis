@@ -1,0 +1,222 @@
+---
+title: "Basic Bash"
+author: "Neafsey Lab"
+output:
+  html_document:
+    toc: yes
+    number_sections: yes
+    toc_float: yes
+    code_folding: show
+  word_document:
+    toc: yes
+  pdf_document:
+    toc: yes
+editor_options:
+  markdown:
+    wrap: 72
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval = FALSE)
+```
+
+# Background
+
+This tutorial provides an introduction to Bash and the Linux Command Line. It will focus on skills to navigate and manage files (the R workshops will cover more complex topics like scripting). Our objective is (1) to furnish you with reference material in case one day you have to interact with the Linux system and (2) to provide you the essential skills for using bash in case you want to dwell further into it.
+
+The methodology of this workshop section consists mainly in walking you through some of the essential terminal commands. We will also solve some basic exercises that combine and put these skills into context.
+
+If you are working in a windows system please download and install `git bash`. You can download it from: https://git-scm.com/downloads. Install with the default configuration.
+
+The directories names presented in these examples are names from my computer. You can adapt these commands with the directories names in your computer.
+
+# Declaring variables and printing text to the screen
+
+Printing text to the screen (the *standard output*, often shortened as `stdout`, is the exact technical term) and creating variables are two most basic operation in bash.
+
+The `echo` command prints text to the screen.
+
+Variable declaration is done using the = sign. The variable name is placed to the left of =, while the assigned value goes to the right. In bash, variables names must be unique (using the same variable name twice will override it) and cannot start with a number or contain spaces. Variables can store numeric, strings, or booleans (true/false) values. For the moment, we will focus numbers and strings.
+
+1. Print text to the screen
+```{bash 'Print to the screen'}
+echo 'Hello World'
+```
+
+2. Declare a numeric variable and print it to the screen
+```{bash 'numeric variable'}
+var1=1
+echo $var1
+```
+
+3. Declare a string variable and print it to the screen
+```{bash 'string variable'}
+var2='Hello world'
+echo $var2
+```
+
+4. Variables and strings can be combined using the `${var}`. This is called **“disambiguation”**. It tells bash that whatever is contained inside the `{}` is a variable and should be read a such.
+
+```{bash}
+name='Jorge'
+echo "${var2} my name is ${name}"
+```
+
+5. Attempt the previous piece of code with `'` instead of `"`. What happens?
+```{bash}
+% echo '${var2} my name is ${name}'
+```
+Double quotes " are neccesary to "disambuguate" the variable.
+
+# Navigating between directories - 1
+
+Navigating between directories is the activity you will be doing most of the time when in Bash. For this reason, it is essential to learn how to orientate yourself and move efficiently between directories. `pwd`:, which stands for `Print Working Directory`, will show you your current location. Moving and investigating the content of directories is done with `cd` and `ls`, respectively.
+
+6. Orientate yourself
+```{bash}
+pwd
+```
+
+7. Move between directories
+```{bash}
+cd 'PATH_TO'/Colombia_INS_workshop/Intro_bash
+pwd
+```
+
+8. List the content of a directory
+```{bash}
+ls
+```
+
+## Trick for navigation:
+
+You can use the tab key to *autocomplete* the name of directories or files. Knowing this trick will make your typing more efficient and less tiresome. If two files or directories in the working directory have the same prefix, tab will suggest them as options. You can complete the remaining characters to solve the ambiguity and hit tab again.
+
+## Detour: Getting help for commands
+
+Additional information can be obtained from bash command by providing “flags”. For example, use the `-l` flag after `ls`.
+
+9. list the files in "Long Format"
+```{bash}
+ls -l
+```
+
+10. Attempt the following commmand `man ls`. What happens? `man` will print the "Manual" of the command with information about the command syntax and a list of all the available flags
+```{bash}
+man ls
+```
+
+11. Now attempt man -help. What happens? Some commands also have a -help flag, which, as the name suggests it, prints the command's help page.
+```{bash}
+man -help
+```
+
+# Navigating between directories - 2
+
+Several directories names separated by `/` can be stringed together after cd to move down more than one level at a time.
+
+12. Move down two levels from Home into a directory called Colombia_INS_workshop/denoising_amplicon_pipeline/malaria-amplicon-pipeline/
+```{bash}
+cd 'PATH_TO'/Colombia_INS_workshop/denoising_amplicon_pipeline/malaria-amplicon-pipeline/
+```
+
+If you go down several levels between directories, you’ll have to go back up again at some point. `..` will move back one level. `../..` will take you two levels up. And so on…
+
+13. Now go back to Colombia_INS_workshop
+
+```{bash}
+cd ../..
+pwd
+```
+
+You can also add a directory name after `..`.
+
+If you want to go back to your home directory, you can do it with the tilde symblo
+
+14. Now go back to Home
+```{bash}
+cd ~
+pwd
+```
+
+15. Move back to malaria-amplicon-pipeline/
+```{bash}
+cd 'PATH_TO'/malaria-amplicon-pipeline/
+```
+
+16. From malaria-amplicon-pipeline/ move to Intro_bash
+```{bash}
+cd ../../Intro_bash
+pwd
+```
+
+# Creating directories and files
+
+The command `mkdir` can be used to create new directories. Directories are essential for keeping data organized. 
+
+17. Create a new directory called `TestDirectory`, and use `cd` to move into it as explained before.
+```{bash}
+mkdir TestDirectory
+cd TestDirectory
+pwd
+```
+
+Information can be printed into a file using `>`, while `cat` is used to observe the contents of a file. After moving into `TestDirectory`, put some simple information into a file using >, then retrive that information to the stdout with cat.
+
+18. `echo` some information into a file called `simple.txt`, then use `cat` to observe the contents of the file.
+```{bash}
+echo "This is a text file" > simple.txt
+cat simple.txt
+```
+
+19. Exercise Attempt the using `echo` on `simple.txt`. What happens?
+```{bash}
+echo simple.txt
+```
+
+Sometimes the file is too large to be visualized with `cat`, instead you can use less or zless if the file is zipped.
+
+20. explore the file `Dd2_pos1_S85_L001_R1_001.fastq.gz`
+```{bash}
+cd ../
+zless Dd2_pos1_S85_L001_R1_001.fastq.gz
+```
+# Copying and Moving files
+
+We are going to create a `BackupDirectory` for `TestDirectory`.
+
+19. Move back one level with `cd` and use `mkdir` to create `BackupDirectory`
+```{bash}
+mkdir BackupDirectory
+pwd
+ls
+```
+
+20. Use `mv` to move the `simple.txt` file into `BackupDirectory`
+
+```{bash}
+mv TestDirectory/simple.txt BackupDierctory/
+ls BackupDirectory/
+```
+
+21. Use `cp` to copy the `simple.txt` file into `TestDirectory`
+
+## Deleting files and directories
+
+The command `rm` can be used to delete files. It is recommend to always append the `-i` flag when deleting files. `-i` will prompt you to confirm whether or not you want to delete the file (in bash there is no going back once a file is deleted!). `rm` also deletes directories. To delete directories, append the `-r` flag, which stands for recursively.
+
+22 Remove the simple.txt file
+```{bash}
+cd TestDirectory
+rm simple.txt
+ls
+```
+
+23. Move one level up and remove `TestDirectory`
+```{bash}
+cd ..
+rm -r TestDirectory
+```
+
+

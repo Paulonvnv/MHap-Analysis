@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Neafsey Lab" />
+
+
+<title>Intro to R</title>
+
+<script src="site_libs/header-attrs-2.14/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<script src="site_libs/navigation-1.1/codefolding.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.tab('show');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+<style type="text/css">
+.code-folding-btn { margin-bottom: 4px; }
+</style>
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">MHap-Analysis</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li>
+  <a href="MHapPfalciparum.html">MHap-Pfalciparum</a>
+</li>
+<li>
+  <a href="MHapPvivax.html">MHap-Pvivax</a>
+</li>
+<li>
+  <a href="Intro_to_R.html">Intro to R</a>
+</li>
+<li>
+  <a href="Basic_bash.html">Basic bash</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+<div class="btn-group pull-right float-right">
+<button type="button" class="btn btn-default btn-xs btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+<ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
+<li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
+<li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+</ul>
+</div>
+
+
+
+<h1 class="title toc-ignore">Intro to R</h1>
+<h4 class="author">Neafsey Lab</h4>
+
+</div>
+
+
+<p>To start this tutorial first you need to download and install
+<strong>R</strong> (<a
+href="https://cran.r-project.org/bin/windows/base/"
+class="uri">https://cran.r-project.org/bin/windows/base/</a>) and
+<strong>RStudio</strong> (<a href="https://posit.co/downloads/"
+class="uri">https://posit.co/downloads/</a>).</p>
+<div id="why-to-learn-r" class="section level1" number="1">
+<h1><span class="header-section-number">1</span> Why to learn R?</h1>
+<ul>
+<li><a href="https://www.bestprogramminglanguagefor.me/why-learn-r"
+class="uri">https://www.bestprogramminglanguagefor.me/why-learn-r</a></li>
+<li><a href="https://data-flair.training/blogs/why-learn-r/"
+class="uri">https://data-flair.training/blogs/why-learn-r/</a></li>
+<li><a
+href="https://www.simplilearn.com/21-reasons-to-learn-r-python-and-hadoop-article"
+class="uri">https://www.simplilearn.com/21-reasons-to-learn-r-python-and-hadoop-article</a></li>
+</ul>
+<ol style="list-style-type: decimal">
+<li>Beginner friendliness</li>
+<li>Scalability?</li>
+<li>Community and popularity</li>
+<li>Career Opportunities, used in almost every company</li>
+<li>Future</li>
+<li>Free and open source</li>
+<li>Latest cutting edge technology</li>
+<li>Has a ROBUST visualization library</li>
+<li>Stats and Data Science</li>
+<li>Comprehensive library</li>
+<li>Interactive web apps</li>
+<li>Cross-platform compatibility?</li>
+<li>Publishers Love R</li>
+</ol>
+</div>
+<div id="how-or-where-to-learn-r" class="section level1" number="2">
+<h1><span class="header-section-number">2</span> How or where to learn
+R</h1>
+<ol style="list-style-type: decimal">
+<li>Online free/payed courses:</li>
+</ol>
+<ul>
+<li><a href="https://www.udemy.com/course/machinelearning/"
+class="uri">https://www.udemy.com/course/machinelearning/</a></li>
+<li><a href="https://www.codecademy.com/learn/learn-r"
+class="uri">https://www.codecademy.com/learn/learn-r</a></li>
+<li><a
+href="https://www.kdnuggets.com/2016/03/datacamp-r-learning-path-7-steps.html"
+class="uri">https://www.kdnuggets.com/2016/03/datacamp-r-learning-path-7-steps.html</a></li>
+<li><a href="https://www.coursera.org/learn/r-programming"
+class="uri">https://www.coursera.org/learn/r-programming</a></li>
+<li><a href="https://www.datacamp.com/courses/free-introduction-to-r"
+class="uri">https://www.datacamp.com/courses/free-introduction-to-r</a></li>
+</ul>
+<ol start="2" style="list-style-type: decimal">
+<li>Books, Tutorials or blogs for specific topics:</li>
+</ol>
+<ul>
+<li><a href="https://grunwaldlab.github.io/Population_Genetics_in_R/"
+class="uri">https://grunwaldlab.github.io/Population_Genetics_in_R/</a></li>
+<li><a href="https://rmarkdown.rstudio.com/flexdashboard/"
+class="uri">https://rmarkdown.rstudio.com/flexdashboard/</a></li>
+<li><a href="https://bookdown.org/rdpeng/rprogdatascience/"
+class="uri">https://bookdown.org/rdpeng/rprogdatascience/</a></li>
+<li><a href="https://bookdown.org/yihui/rmarkdown/"
+class="uri">https://bookdown.org/yihui/rmarkdown/</a></li>
+<li><a
+href="https://github.com/hbs-rcs/datafest/tree/master/DataFest-2020/R_Shiny_Web_Apps"
+class="uri">https://github.com/hbs-rcs/datafest/tree/master/DataFest-2020/R_Shiny_Web_Apps</a></li>
+<li><a href="http://www.r-tutor.com/r-introduction"
+class="uri">http://www.r-tutor.com/r-introduction</a></li>
+<li><a href="https://www.tutorialspoint.com/r/index.htm"
+class="uri">https://www.tutorialspoint.com/r/index.htm</a></li>
+<li><a href="https://cran.r-project.org/doc/contrib/rdebuts_es.pdf"
+class="uri">https://cran.r-project.org/doc/contrib/rdebuts_es.pdf</a></li>
+<li><a href="https://www.statmethods.net/r-tutorial/index.html"
+class="uri">https://www.statmethods.net/r-tutorial/index.html</a></li>
+<li><a href="https://www.r-bloggers.com/"
+class="uri">https://www.r-bloggers.com/</a></li>
+<li><a href="https://jtr13.github.io/cc21fall2/index.html"
+class="uri">https://jtr13.github.io/cc21fall2/index.html</a></li>
+</ul>
+<ol start="3" style="list-style-type: decimal">
+<li><strong>BEST OPTION: Being involve in to your own
+project!</strong>.</li>
+</ol>
+</div>
+<div id="steps-to-learn-r" class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Steps to learn R</h1>
+<ul>
+<li>Step 0: Why you should learn R</li>
+<li>Step 1: The Set-Up</li>
+<li>Step 2: Understanding the R Syntax</li>
+<li>Step 3: The core of R -&gt; packages</li>
+<li>Step 4: Help?!</li>
+<li>Step 5: The Data Analysis Workflow
+<ul>
+<li>5.1 Importing Data</li>
+<li>5.2 Data Manipulation</li>
+<li>5.3 Data Visualization</li>
+<li>5.4 The stats part</li>
+<li>5.5 Reporting your results</li>
+</ul></li>
+<li>Step 6: Automate your programming, Loops, apply, and functions</li>
+<li>Step 7: Become an R wizard and discovering exciting new stuff</li>
+</ul>
+</div>
+<div id="requirements-to-learn-r" class="section level1" number="4">
+<h1><span class="header-section-number">4</span> Requirements to learn
+R</h1>
+<ul>
+<li><p>Knowledge of statistics theory in mathematics</p></li>
+<li><p>You should have solid understanding of statistics in
+mathematics</p></li>
+<li><p>Understanding of various type of graphs for data
+representation</p></li>
+<li><p>Prior knowledge of any programming</p></li>
+<li><p><strong>TOLERANCE TO FAILURE!</strong></p></li>
+</ul>
+</div>
+<div id="rstudio" class="section level1" number="5">
+<h1><span class="header-section-number">5</span> RStudio:</h1>
+<pre class="r"><code># Notice: everything that is after a the numeral or hash symbol (#) is a comment in R
+# and Sections can be created as follow:
+
+# Title of the section ----</code></pre>
+</div>
+<div id="understanding-the-r-syntax" class="section level1" number="6">
+<h1><span class="header-section-number">6</span> Understanding the R
+Syntax:</h1>
+<div id="elements-objects-operators-and-functions"
+class="section level2" number="6.1">
+<h2><span class="header-section-number">6.1</span> Elements, objects,
+operators and functions</h2>
+<pre class="r"><code># 3 * 2 # Elements</code></pre>
+<p>What is an object in R?</p>
+<pre class="r"><code>x = 1 # Creating object x
+y &lt;- 2
+z = 3
+w = NA</code></pre>
+<p>Functions in r have the following syntax:</p>
+<p><code>function_name(argument1, argument2, argument3, ...)</code></p>
+<p>What is a function? and what is an argument?</p>
+<pre class="r"><code># play with the function mean
+a = mean(c(x, y, z, w), na.rm = T)
+
+x + y # Sum  x plus y
+x * y
+y
+
+help(mean)</code></pre>
+<p>Generating strings of elements (<strong>Vectors</strong>)</p>
+<pre class="r"><code>b = c(1:5,NA)
+mean(b, na.rm = TRUE)</code></pre>
+<p>Try other functions</p>
+<p><code>sum()</code> <code>median()</code> <code>summary()</code>
+<code>read.csv()</code></p>
+</div>
+<div id="type-of-data-elements-class-of-objects" class="section level2"
+number="6.2">
+<h2><span class="header-section-number">6.2</span> Type of data
+(elements) &amp; class of objects</h2>
+<p>(Numeric, Integer, Complex, Logical, Character)</p>
+<div id="numeric" class="section level3" number="6.2.1">
+<h3><span class="header-section-number">6.2.1</span> Numeric</h3>
+<pre class="r"><code>x = 10.5 # Asign a double value
+
+x # print the value of x in the console</code></pre>
+<p>How do I know the type of element stored in the <code>x</code>
+object?</p>
+<pre class="r"><code>class(x) # print the class of the variable or object x
+typeof(x) # print the type of element of the variable or object x</code></pre>
+<div id="integers" class="section level4" number="6.2.1.1">
+<h4><span class="header-section-number">6.2.1.1</span> Integers</h4>
+<pre class="r"><code>y = 5
+y = as.integer(5)
+y = round(5.7)</code></pre>
+<p>Ask R, what class of object is <code>y</code> and what type of
+element stored inside of it?</p>
+<pre class="r"><code>class(y)
+typeof(y)</code></pre>
+<p>Other ways to generate integers</p>
+<pre class="r"><code>y = 4L
+is.integer(y)</code></pre>
+<p>Check the following case:</p>
+<pre class="r"><code>y = &quot;5&quot;
+is.integer(y) # Is &quot;y&quot; an integer?</code></pre>
+<p>Force the object <code>y</code> to be an integer</p>
+<pre class="r"><code>y = as.integer(y) # assign &quot;y&quot; as an integer
+is.integer(y)</code></pre>
+</div>
+<div id="doubles" class="section level4" number="6.2.1.2">
+<h4><span class="header-section-number">6.2.1.2</span> Doubles</h4>
+<pre class="r"><code>w = 17.5
+w = &quot;17.5&quot;
+
+is.character(w)
+class(w)
+
+v = as.double(&quot;5.27&quot;) # Force a numeric string to b a double
+
+as.integer(&quot;Malaria&quot;)
+
+y = 5.12L</code></pre>
+</div>
+</div>
+<div id="logical" class="section level3" number="6.2.2">
+<h3><span class="header-section-number">6.2.2</span> Logical</h3>
+<p>Logic operators
+<code>!, !=, &lt;, &gt;, &lt;=, &gt;=, ==, |, &amp;, ||, &amp;&amp;</code>
+Mathematical operators <code>+, -, *, /, ^ or **</code></p>
+<pre class="r"><code>x = 1; y = 2
+
+x==y
+x!=y
+!TRUE
+
+TRUE &amp; TRUE
+
+class(z)
+!z
+
+as.integer(TRUE)    # the numeric value of TRUE
+as.integer(FALSE)   # the numeric value of FALSE</code></pre>
+</div>
+<div id="characters" class="section level3" number="6.2.3">
+<h3><span class="header-section-number">6.2.3</span> Characters</h3>
+<pre class="r"><code>x = as.character(3.14)
+
+class(x)
+
+fname = &quot;Joe&quot;; lname =&quot;Smith&quot;</code></pre>
+<p>Other types of elements are: formulas, complex numbers, functions,
+methods, …</p>
+<div id="fun-and-useful-functions-for-characters" class="section level4"
+number="6.2.3.1">
+<h4><span class="header-section-number">6.2.3.1</span> Fun and useful
+functions for characters</h4>
+<p>paste &amp; paste0</p>
+<pre class="r"><code>hname = paste(fname, lname, sep=&quot; &quot;) # Concatenate two strings</code></pre>
+<p>substr, sub &amp; strsplit</p>
+<pre class="r"><code>substr(&quot;Mary has a little lamb&quot;, start=6, stop=8)
+
+sub(&quot;has&quot;, &quot;hasn`t&quot;, &quot;Mary has a little lamb&quot;)
+
+strsplit(&quot;Mary has a little lamb&quot;, &quot;&quot;)</code></pre>
+<p>clean you enviroment</p>
+<pre class="r"><code>rm(list = ls())</code></pre>
+</div>
+</div>
+</div>
+<div id="data-structures" class="section level2" number="6.3">
+<h2><span class="header-section-number">6.3</span> Data structures</h2>
+<p>Scalars, vectors, lists(*), data.frames, data.tables, tibble, arrays,
+Class S3 &amp; S4 lists</p>
+<div id="scalar" class="section level3" number="6.3.1">
+<h3><span class="header-section-number">6.3.1</span> Scalar</h3>
+</div>
+<div id="vectors-sequence-of-elements-of-the-same-data-type"
+class="section level3" number="6.3.2">
+<h3><span class="header-section-number">6.3.2</span> Vectors: Sequence
+of elements of the same data type</h3>
+<p>Create your first vector</p>
+<pre class="r"><code>a = c(1,2,3,4,5)</code></pre>
+<p>What function is c()?</p>
+<p>What class of object is <code>a</code> and what type of elements are
+stored in a?</p>
+<pre class="r"><code>class(a)
+typeof(a)</code></pre>
+<p>Other ways to create sequence of elements:</p>
+<pre class="r"><code>b = (1:20)
+d = seq(from=3, to=21, by=3)
+d = as.integer(seq(from=3, to=21, by=3))
+e = as.double(rep(1:5, times=4))
+f = rep(1:5, each=4)
+g = rep(c(&quot;a&quot;,&quot;b&quot;,&quot;c&quot;,&quot;d&quot;,&quot;e&quot;), each=4)</code></pre>
+<p>Create a sequence of random numbers</p>
+<pre class="r"><code>h = rnorm(20, mean = 20, sd=5)
+mean(h)</code></pre>
+<div id="arithmetic-calculations-with-vectors" class="section level4"
+number="6.3.2.1">
+<h4><span class="header-section-number">6.3.2.1</span> Arithmetic
+calculations with vectors</h4>
+<p>Only between vectors of the same length, or whose length of the
+longest vector is a multiple of that of the shortest vector. Also, the
+vectors must contain elements of the same type and class (there are
+exceptions).</p>
+<p>What is the size of the vectors <code>a</code>, <code>b</code>, and
+<code>d</code></p>
+<pre class="r"><code>length(a)
+length(b)
+length(d)</code></pre>
+<p>Perform mathematical operations with these three vectors
+(<code>a</code>, <code>b</code> and <code>d</code>), and see what
+happens</p>
+<pre class="r"><code>a + b
+a * b
+b / d</code></pre>
+<p>What is about characters? Inspect the function <code>paste</code></p>
+<pre class="r"><code>j = c(&quot;a&quot;,&quot;b&quot;,&quot;c&quot;,&quot;d&quot;)
+k = c(&quot;c&quot;,&quot;d&quot;)
+paste(j, k, sep = &quot;&quot;)</code></pre>
+</div>
+<div id="combine-vectors" class="section level4" number="6.3.2.2">
+<h4><span class="header-section-number">6.3.2.2</span> Combine
+vectors</h4>
+<pre class="r"><code>q = c(a, b)
+i = c(a, g)
+
+class(q)
+class(i)</code></pre>
+</div>
+<div id="the-values-inside-each-vector-are-indexed"
+class="section level4" number="6.3.2.3">
+<h4><span class="header-section-number">6.3.2.3</span> The values inside
+each vector are indexed</h4>
+<p>Use brackets to access positions within a vector</p>
+<pre class="r"><code>d
+d[5]
+h[5]</code></pre>
+<p>We can omit one or more elements</p>
+<pre class="r"><code>d[-5]
+d[c(-1,-3)]</code></pre>
+<p>What happens if an index is out of the scope of the vector?</p>
+<pre class="r"><code>length(h)
+h[21]</code></pre>
+<p>We can use a logical vector to access positions in another vector</p>
+<p>Create a logical vector indicating which elements in the vector
+<code>h</code> are greater than 20.</p>
+<pre class="r"><code>high = h &gt; 20
+high</code></pre>
+<p>Access the values in the vector <code>h</code> that are greater than
+20 using brackets <code>[]</code></p>
+<pre class="r"><code>h[high]
+h[h &gt; 20]</code></pre>
+<p>Access values lower or equals than 20</p>
+<pre class="r"><code>low = h &lt;= 20
+low
+h[low]
+h[h &lt;= 20]</code></pre>
+</div>
+<div id="name-the-elements-of-a-vector" class="section level4"
+number="6.3.2.4">
+<h4><span class="header-section-number">6.3.2.4</span> Name the elements
+of a vector</h4>
+<pre class="r"><code>puppy = c(&quot;Chimu&quot;, &quot;Correa&quot;, &quot;Frenchie&quot;, &quot;3y&quot;)
+names(puppy) = c(&quot;PetName&quot;, &quot;OwnerLastName&quot;, &quot;Breed&quot;, &quot;Age&quot;)</code></pre>
+<p>What is the breed of the pet?</p>
+<pre class="r"><code>puppy[&quot;Breed&quot;]</code></pre>
+<p>What is the name of the Pet?</p>
+<pre class="r"><code>puppy[&quot;PetName&quot;]</code></pre>
+</div>
+</div>
+<div id="arrays-matrices" class="section level3" number="6.3.3">
+<h3><span class="header-section-number">6.3.3</span> Arrays:
+Matrices</h3>
+<p>All the elements must be of the same type</p>
+<p>Build a matrix called <code>em</code> of 5 rows and 4 columns with
+the elements of the vector <code>e</code></p>
+<pre class="r"><code>em = matrix(e, nrow=5,ncol=4)</code></pre>
+<p>The matrix is filled from the columns</p>
+<pre class="r"><code>em</code></pre>
+<p>Build a matrix called <code>fm</code> of 4 rows and f columns with
+the elements of the vector <code>f</code></p>
+<pre class="r"><code>fm = matrix(f, nrow=4, ncol=5)</code></pre>
+<p>Mathematical operations with matrices</p>
+<pre class="r"><code>em + fm</code></pre>
+<p>Transpose the matrix fm by swapping the columns and rows</p>
+<pre class="r"><code>t(fm)</code></pre>
+<p>Try the sum again</p>
+<pre class="r"><code>em + t(fm)</code></pre>
+<div id="biding-matrices" class="section level4" number="6.3.3.1">
+<h4><span class="header-section-number">6.3.3.1</span> Biding
+matrices</h4>
+<p>By columns</p>
+<pre class="r"><code>cbind(em,t(fm)) # combines the columns of two matrices or vectors of the same dimension (equal number of rows)</code></pre>
+<p>By rows</p>
+<pre class="r"><code>rbind(em,t(fm)) # Combine the rows of two matrices or vectors of the same dimension (equal number of columns)</code></pre>
+<p>What class of object is generated after binding two vectors?</p>
+<pre class="r"><code>A = cbind(g,h)
+
+typeof(A)
+class(A)</code></pre>
+<p>Deconstruct a matrix to a vector</p>
+<pre class="r"><code>c(em)</code></pre>
+</div>
+<div id="acceding-elements-in-the-matrix" class="section level4"
+number="6.3.3.2">
+<h4><span class="header-section-number">6.3.3.2</span> Acceding elements
+in the Matrix</h4>
+<p>Write the following code and discuss what happen</p>
+<pre class="r"><code>m = matrix(1:20, nrow = 5, ncol = 4)
+m[9]</code></pre>
+<p>now try this:</p>
+<pre class="r"><code>m[1,]</code></pre>
+<p>then this:</p>
+<pre class="r"><code>m[,2]</code></pre>
+<p>Select the element of the second row and third column</p>
+<pre class="r"><code>m[2,3]</code></pre>
+</div>
+</div>
+<div id="data-frames" class="section level3" number="6.3.4">
+<h3><span class="header-section-number">6.3.4</span> Data Frames</h3>
+<p>Commonly used to store tables, they are list of vectors of equal
+length stored in columns. All the elements of one specific column must
+be of the same type, but different columns can contain different type of
+elements</p>
+<p>Create the data.frame <code>df</code></p>
+<pre class="r"><code>df = data.frame(Sex = c(rep(&#39;F&#39;, 20), rep(&#39;M&#39;, 20)),
+                Height = c(rnorm(20, 160, 10), rnorm(20, 170, 15)))</code></pre>
+<p>View the data frame in a different window</p>
+<pre class="r"><code>View(df)</code></pre>
+<p>Try to access to the data in the data.frame <code>df</code></p>
+<pre class="r"><code>df[2]
+df[2][2]
+df[[2]]
+df[[2]][3]
+df[3,]
+df[3,&quot;Height&quot;]
+df[[&quot;Height&quot;]]
+df$Height</code></pre>
+<div id="filtering-a-data.frame" class="section level4"
+number="6.3.4.1">
+<h4><span class="header-section-number">6.3.4.1</span> Filtering a
+data.frame</h4>
+<p>Get all rows for Females or for Males</p>
+<pre class="r"><code>df[df[[&#39;Sex&#39;]] == &#39;F&#39;,]
+df[df[[&#39;Sex&#39;]] == &#39;M&#39;,]</code></pre>
+<p>Get the mean height of females and males</p>
+<pre class="r"><code>mean(df[df[[&#39;Sex&#39;]] == &#39;F&#39;,][[&#39;Height&#39;]])
+mean(df[df[[&#39;Sex&#39;]] == &#39;M&#39;,][[&#39;Height&#39;]])</code></pre>
+</div>
+<div
+id="data-frame-managment-with-tydiverse-dplyr-tidyr-and-magrittr-packages"
+class="section level4" number="6.3.4.2">
+<h4><span class="header-section-number">6.3.4.2</span> Data Frame
+Managment with tydiverse, dplyr, tidyr, and magrittr packages</h4>
+<pre class="r"><code>if(!require(tidyverse)){
+  install.packages(&#39;tidyverse&#39;)
+  library(tidyverse)
+}
+
+if(!require(tidyr)){
+  install.packages(&#39;tidyr&#39;)
+  library(tidyr)
+}
+
+if(!require(dplyr)){
+  install.packages(&#39;dplyr&#39;)
+  library(dplyr)
+}
+
+if(!require(magrittr)){
+  install.packages(&#39;magrittr&#39;)
+  library(magrittr)
+}</code></pre>
+<p>Check the following functions:</p>
+<p><code>%&gt;%</code> <code>%&lt;&gt;%</code> <code>filter()</code>
+<code>select()</code> <code>mutate()</code> <code>group_by</code>
+<code>summarize()</code></p>
+<p>Filter Females</p>
+<pre class="r"><code>df %&gt;% filter(Sex == &#39;F&#39;)</code></pre>
+<p>Calculate the mean and standard deviation of the height of Males and
+Females simultaneously</p>
+<pre class="r"><code>df %&gt;% group_by(Sex) %&gt;% summarize(average = mean(Height),
+                                  sd = sd(Height))</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div id="ggplot2" class="section level1" number="7">
+<h1><span class="header-section-number">7</span> ggplot2</h1>
+<p>Check this website: <a
+href="http://www.sthda.com/english/wiki/ggplot2-essentials"
+class="uri">http://www.sthda.com/english/wiki/ggplot2-essentials</a></p>
+<pre class="r"><code>if(!require(ggplot2)){
+  install.packages(&#39;ggplot2&#39;)
+  library(ggplot2)
+}</code></pre>
+<p>Let’s create a histogram of the Height of Males and Females</p>
+<pre class="r"><code>df %&gt;% ggplot(aes(x = Height, fill = Sex))+
+  geom_histogram(position = &#39;identity&#39;, binwidth = 5, alpha = .5)+
+  theme_bw()
+
+df %&gt;% ggplot(aes(x = Height, fill = Sex))+
+  geom_histogram(position = &#39;stack&#39;, binwidth = 5, alpha = .5)+
+  theme_bw()</code></pre>
+<p>Let’s create a boxplot of the Height of Males and Females</p>
+<pre class="r"><code>df %&gt;% ggplot(aes(x = Sex, y = Height, fill = Sex))+
+  geom_boxplot()+
+  theme_bw()</code></pre>
+<p>Let’s create a jitter plot with a violin plot as background of the
+Height of Males and Females</p>
+<pre class="r"><code>df %&gt;% ggplot(aes(x = Sex, y = Height, color = Sex))+
+  geom_violin()+
+  geom_jitter(width = .2)+
+  theme_bw()</code></pre>
+<p>Change the labels of the x axis and remove the legend</p>
+<pre class="r"><code>df %&gt;% ggplot(aes(x = Sex, y = Height, color = Sex))+
+  geom_violin()+
+  geom_jitter(width = .2)+
+  scale_x_discrete(breaks = c(&#39;F&#39;, &#39;M&#39;), labels = c(&#39;Females&#39;, &#39;Males&#39;))+
+  theme_bw()+
+  theme(legend.position = &#39;none&#39;)</code></pre>
+</div>
+<div id="lists" class="section level1" number="8">
+<h1><span class="header-section-number">8</span> Lists</h1>
+<p>Generic object that contains different structures (vectors, matrices
+or data.frames)</p>
+<pre class="r"><code>B = list(g,h,d, df)</code></pre>
+</div>
+<div id="regular-expressions" class="section level1" number="9">
+<h1><span class="header-section-number">9</span> Regular
+expressions</h1>
+<p>Sequence of characters (or even one character) that describes a
+certain pattern found in a text.</p>
+<p>Check this website: <a
+href="https://www.datacamp.com/tutorial/regex-r-regular-expressions-guide"
+class="uri">https://www.datacamp.com/tutorial/regex-r-regular-expressions-guide</a></p>
+<ul>
+<li><p><code>grep()</code>, <code>grepl()</code> return the indices of
+strings containing a match (<code>grep()</code>) or a logical vector
+showing which strings contain a match (<code>grepl()</code>).</p></li>
+<li><p><code>gsub()</code> replace a detected match in each string with
+a specified string.</p></li>
+</ul>
+</div>
+<div id="for-tomorrow-install-the-following-packages"
+class="section level1" number="10">
+<h1><span class="header-section-number">10</span> For tomorrow install
+the following packages</h1>
+<pre class="r"><code>if(!require(adegenet)){
+  install.packages(&quot;adegenet&quot;)
+  library(adegenet)
+}else{
+  library(adegenet)
+}
+
+if(!require(ade4)){
+  install.packages(&quot;ade4&quot;)
+  library(ade4)
+}else{
+  library(ade4)
+}
+
+if(!require(poppr)){
+  install.packages(&quot;poppr&quot;)
+  library(poppr)
+}else{
+  library(poppr)
+}
+
+if(!require(dplyr)){
+  install.packages(&quot;dplyr&quot;)
+  library(dplyr)
+}else{
+  library(dplyr)
+}
+
+if(!require(magrittr)){
+  install.packages(&quot;magrittr&quot;)
+  library(magrittr)
+}else{
+  library(magrittr)
+}
+
+if(!require(tidyr)){
+  install.packages(&quot;tidyr&quot;)
+  library(tidyr)
+}else{
+  library(tidyr)
+}
+
+if(!require(ggplot2)){
+  install.packages(&quot;ggplot2&quot;)
+  library(ggplot2)
+}else{
+  library(ggplot2)
+}
+
+if(!require(cowplot)){
+  install.packages(&quot;cowplot&quot;)
+  library(cowplot)
+}else{
+  library(cowplot)
+}
+
+
+if(!require(vegan)){
+  install.packages(&quot;vegan&quot;)
+  library(vegan)
+}else{
+  library(vegan)
+}
+
+if(!require(parallel)){
+  install.packages(&quot;parallel&quot;)
+  library(parallel)
+}else{
+  library(parallel)
+}
+
+if(!require(ape)){
+  install.packages(&quot;ape&quot;)
+  library(ape)
+}else{
+  library(ape)
+}
+
+if(!require(pegas)){
+  install.packages(&quot;pegasn&quot;)
+  library(pegas)
+}else{
+  library(pegas)
+}
+
+if(!require(RColorBrewer)){
+  install.packages(&quot;RColorBrewer&quot;)
+  library(RColorBrewer)
+}else{
+  library(RColorBrewer)
+}
+
+if(!require(Hmisc)){
+  install.packages(&#39;Hmisc&#39;)
+  library(Hmisc)
+}else{
+  library(Hmisc)
+}
+
+if(!require(ggpubr)){
+  install.packages(&#39;ggpubr&#39;)
+  library(ggpubr)
+}else{
+  library(ggpubr)
+}
+
+if(!require(doMC)){
+  install.packages(&#39;doMC&#39;)
+  library(doMC)
+}else{
+  library(doMC)
+}
+
+if(!require(svMisc)){
+  install.packages(&#39;svMisc&#39;)
+  library(svMisc)
+}else{
+  library(svMisc)
+}
+
+if(!require(Biostrings)){
+  if (!require(&quot;BiocManager&quot;, quietly = TRUE))
+    install.packages(&quot;BiocManager&quot;)
+  
+  BiocManager::install(&quot;Biostrings&quot;)
+}else{
+  library(Biostrings)
+}</code></pre>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+<script>
+$(document).ready(function () {
+  window.initializeCodeFolding("show" === "show");
+});
+</script>
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

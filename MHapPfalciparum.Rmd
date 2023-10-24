@@ -1,5 +1,5 @@
 ---
-title: "*PfAmplSeq*: Targeted amplicon sequencing for *Plasmodium falciparum*"
+title: "*AMPLseq*: Targeted amplicon sequencing panel for *Plasmodium falciparum*"
 author: "Neafsey Lab"
 output:
   html_document:
@@ -13,10 +13,8 @@ editor_options:
   chunk_output_type: inline
 ---
 
-The purpose of this tutorial is to introduce researchers at the
-Laboratory of Genomic Epidemiology of Malaria at Harvard university in
-the analysis of genotyping information generated through amplicon
-sequencing (also called Microhaplotype genotyping). This tutorial will
+The purpose of this tutorial is to introduce researchers at Neafsey Lab in
+the analysis of genotypic information of *Plasmodium falciparum* generated through the targeted amplicon sequencing panel AMPLseq. This tutorial will
 cover:
 
 1.  Importing and handling tables in CIGAR format in R environment.
@@ -51,6 +49,7 @@ the R environment:
 source('docs/functions_and_libraries/amplseq_required_libraries.R')
 source('docs/functions_and_libraries/amplseq_functions.R')
 sourceCpp('docs/functions_and_libraries/hmmloglikelihood.cpp')
+sourceCpp('docs/functions_and_libraries/Rcpp_functions.cpp')
 ```
 
 This tutorial start with .tsv table in CIGAR format that has been
@@ -60,13 +59,12 @@ of our lab. The output of this pipeline has the following structure:
 
 $\begin{array}{c|c:c:c:c:c:c} \text{sampleID}&Gene_1,Allele_1&Gene_1,Allele_2&...&Gene_1,Allele_k&... & Gene_m, Allele_{k_m}\\ \hline ID_1 & \text{Read counts} &&& \\ \hdashline ... &&&&\\ \hdashline ID_n &&&& \end{array}$
 
-Where the $Allele$ is coded in CIGAR format, typing "." for the
+Where the $Allele$ is coded in Pseudo-CIGAR format, typing "." for the
 reference allele, $[0-9]*[A,T,C,G]$ for each point mutation observed,
-and $[0-9]*[D,I]=[A,T,C,G]*$ for indels (Insertion and Deletions). The
-numbers denotes the position in the amplicon where the polymorphism is
-located
+and $[0-9]*[D,I]=[A,T,C,G]*$ for indels (Insertions and Deletions). The
+numbers before the letters denotes the position in the amplicon where the polymorphism is located
 
-These CIGAR tables are stored in the server of the lab using the
+These Pseudo-CIGAR tables are stored in the server of the lab using the
 following path structure:
 
 `"STUDYNAME/RUNNAME/dada2/run_dada2/CIGARVariants.out.tsv"`
@@ -75,26 +73,25 @@ As this structure is maintained across all studies in the lab, we have
 created a function called `read_cigar_tables` that only requires two
 arguments: `paths` (name of the folder of the study or the `STUDYNAME`),
 and `sample_id_pattern` (a pattern string in the IDs of the samples that
-differentiate them from controls). For this particular example, the path
-will be `"data/sequencing_data/"` , while the pattern will be `"ID"`. In
+differentiate them from controls). In case you don't want to differentiate samples from controls, set this argument equals to `"."`. For this particular example, the path will be `"data/sequencing_data/"` , while the pattern will be `"ID"`. In
 case all `".tvs"` files are stored in one folder, you can use the
 argument `files = list_of_files` instead of the argument `paths`, where
 `list_of_files` is a vector with the names of all files we want to read.
 
 ```{r 'Uploading data sets'}
-cigar_object = read_cigar_tables(paths = "docs/data/sequencing_data/", sample_id_pattern = "ID")
+cigar_object = read_cigar_tables(paths = "docs/data/Pfal_sequencing_data/", sample_id_pattern = "ID")
 ```
 
 This function generates a S4 cigar object containing two data.frames, 1)
 a `cigar_table`, where genotyping information is stored in cigar format;
-and 2) a `metadata` table with 3 variables (columns), `Sample_id` which
-contains samples Id's, `run` which contains the run number (useful for
-comparing performance across batches of samples), and `typeofSamp` which
+and 2) a `metadata` table with 4 variables (columns), **a)** `Sample_id` which
+contains samples Id's; **b)** `run` which contains the run number (or the name of the folter where the fastq's for that run wehere stored), information that is useful for
+comparing performance across batches of samples; **c)** `order_in_plate`, useful to identify rare amplifications patterns in the plate; and **d)** `typeofSamp` which
 differentiates between controls and samples of interest. In order to
 view these tables use `View(cigar_table$cigar_table)` or
-`View(cigar_table$metadata)` in the console. If there are duplicated
-samples, only the replicated with the highest read depth across all loci
-will be keept.
+`View(cigar_table$metadata)` in the console.
+
+**NOTE:** If there are duplicated samples, only the replicated with the highest read depth across all loci will be kept.
 
 ## Adding Metadata
 
@@ -113,7 +110,7 @@ file called `metadata.csv` into our R environment.
 
 ```{r 'Adding Population'}
 # Upload metadata from an external source
-metadata = read.csv('docs/data/metadata.csv')
+metadata = read.csv('docs/data/Pfal_metadata.csv')
 
 # Merge the external metadata with our cigar_object
 cigar_object@metadata = left_join(cigar_object@metadata,
@@ -121,14 +118,14 @@ cigar_object@metadata = left_join(cigar_object@metadata,
                               by = 'Sample_id')
 ```
 
-Moreover, there are some artifacts that `dada2` pipeline doesn't resolve
+Moreover, there are some artifacts that the `dada2` pipeline doesn't resolve
 well like the generation of chimeras (artificial fusion of two different
 haplotypes during the PCR amplification) in polyclonal samples. That is
 the case of the alleles `PF3D7_1302900,1G` and `PF3D7_0612900,215A` that
 are observed in polyclonal infections only. So we are going to proceed
 to remove both alleles from our `cigar_table`. Additionally, `PvDHFR`
 locus was amplified in order to detect mixed infections with *Plasmodium
-vivax*, so we are going to remove this locus too.
+vivax*, so we are going to remove this locus too as this locus is not of our interest in this tutorial.
 
 ```{r 'Removing artifacts and Pvivax control locus'}
 
@@ -185,8 +182,7 @@ performance of the genotyping process in terms of the proportion of
 samples amplified by each locus (amplification rate by locus) and the
 proportion of loci amplified per each sample (amplification rate per
 sample). In order to perform that task, we are going to convert our
-cigar table to a more manageable format called ampseq format, where
-amplicons or genes are going to be in columns, samples in rows, and the
+cigar table to a more manageable (easy to read for the user) format called ampseq format, where amplicons or genes are going to be in columns, samples in rows, and the
 allele in cigar format is going to be in each cell of the matrix
 together with the read count of that allele in the sample.
 
@@ -198,7 +194,7 @@ cigar_table and the metadata). Then `markers`, which is a table with the
 set of markers and their names (in a column named `amplicon`). This
 argument is optional, and in case is `NULL`, the name of the amplicons
 will be extracted from the columns in the `cigar_object`, but
-information regarding chormosome location and length of the amplicon
+information regarding chormosome location (information required to stimaed reladness under the hmmIBD algorithm) and length of the amplicon
 will be missing. The next arguments are `min_abd` and `min_ratio`, which
 are the minimum abundance (minimum read count) required to call an
 allele and the minimum ratio between the minor and major alleles in a
@@ -207,7 +203,7 @@ respectively. The last argument is `remove_controls`, by default is
 `FALSE`, but if change ti `TRUE` the information of the controls will be
 stored in a separated slot. Thus, this function automatically
 differentiate between controls and samples of interest, and its output
-is a `ampseq_object` S4 list with 6 slots: `gt` where the genotype
+is a `ampseq_object` S4 list with 6 slots: `gt` where the genotypic
 information of the samples of interest is stored in a `ampseq` format;
 the `metadata` of the samples of interest; `controls` with all the
 information of the controls; `markers` containing the information of the
@@ -223,7 +219,7 @@ ampseq = cigar2ampseq(cigar_object, markers = markers, min_abd = 10, min_ratio =
 ### Read depth coverage
 
 Once the data has been converted to the ampseq format, we can explore
-the read depth coverage by samples and by marker, and make comparisons
+the read depth coverage by sample and by marker, and make comparisons
 between treatments, geographic regions or sequencing runs. For that we
 can use the function `plot_coverage()` which requires two arguments, the
 `ampseq` object and the `variable` from metadata that we want to use to
@@ -534,7 +530,7 @@ ampseq_filtered@loci_performance %>%
     to be considered polyclonal. In future updates we will incorporate
     the Within host divergence ($F_{ws}$) index.
 
-This table is added to the metadata table in our ampseq_object if we set
+    This table is added to the metadata table in our ampseq_object if we set
 `update_popsummary = T`.
 
 ```{r}
@@ -554,28 +550,24 @@ ampseq_filtered@pop_summary%>%
               digits=3)
 ```
 
-We can visually inspect all this information by using histograms. Here
-is an example with the number of heterozygous loci per sample by
-sampling location. We will use the function log_scale_histogram because
-the number of samples with only one heterozygous loci is high with
-respect to the number of samples with more than 10 heterozygous loci.
+  We can visually inspect all this information by using histograms. Here is an example with the number of heterozygous loci per sample by sampling location. We will use the function log_scale_histogram because the number of samples with only one heterozygous loci is high with respect to the number of samples with more than 10 heterozygous loci.
 
 ```{r 'Distribution of the number of heterozygous loci per sample by sampling location', fig.width=7, fig.height=4, fig.cap = '**Figure 5:** Distribution of the number of heterozygous loci per samples per population.'}
 
 plot_log_NPolyLoci_by_pop = log_scale_histogram(data = ampseq_filtered@metadata[ampseq_filtered@metadata$NPolyLoci != 0,],
                                                 var = "NPolyLoci", binwidth = 1, group_by = "Subnational_level2",
-                                                levels = pop_levels, x_label = "Number of heterozygous loci per sample",
+                                                levels = pop_levels, x_label = "Number of heterozygous loci per polyclonal sample",
                                                 fill_color = pop_colors,
                                                 y_breaks = c(1, 5,10, 30), ncol = 4)+
   labs(title = 'Distribution of # heterozygous loci per sample', 
        y = "# Samples",
-       x = "# heterozygous loci per sample")
+       x = "# heterozygous loci per polyclonal sample")
 
 plot_log_NPolyLoci_by_pop
 
 ```
 
-We can do the same with the COI by sample.
+  We can do the same with the COI by sample.
 
 ```{r 'Distribution of COI by sampling location', fig.width=7, fig.height=4, fig.cap = '**Figure 6:** Distribution of the complexity of infection (COI) by study area. y-axis is in logarithm scale.'}
 
@@ -593,7 +585,7 @@ plot_log_coi_by_pop = log_scale_histogram(data = ampseq_filtered@metadata,
 plot_log_coi_by_pop
 ```
 
-In the case of the proportion of polyclonal infections by study area, we
+  In the case of the proportion of polyclonal infections by study area, we
 can use a a barplot.
 
 ```{r 'Proportion of polyclonal infections by sampling location', fig.width=7, fig.height=4, fig.cap = '**Figure 7:** Proportion of polyclonal infections per study area.'}
@@ -642,7 +634,7 @@ poly_by_pop_over_time
 
 ```
 
-Now we can generate a bar plot using ggplot
+Now we can generate a bar plot using ggplot.
 
 ```{r 'Temporal change of complexity of infection', fig.width=7, fig.height=4, fig.cap = '**Figure 8:** Proportion of polyclonal infections per study area over year quarters.'}
 
@@ -724,17 +716,8 @@ calculate the proportion of pairwise comparisons that have a relatedness
 $\ge 0.99$ within and between operational units. For that we are going
 to use the following functions:
 
-1)  `ampseq2loci`: converts the `ampseq_object` into a `loci_object`
-    that only contains the allele information (read abundance is
-    removed). This function only requires the `ampseq_object` as an
-    input argument.
 
-```{r 'generating the loci_object'}
-# generating the loci_object----
-loci_object = ampseq2loci(ampseq_filtered)
-```
-
-2)  `pairwise_hmmIBD`: computes pairwise genetic relatedness using the
+1)  `pairwise_hmmIBD`: computes pairwise genetic relatedness using the
     HMMIBD algorithm implemented in [panlejugde R package](https://github.com/aimeertaylor/paneljudge). As an input it
     requires a `loci_object` and automatically all pairwise comparisons
     will be computed. Its output is a long format data.frame of all
@@ -747,26 +730,26 @@ loci_object = ampseq2loci(ampseq_filtered)
 ```{r 'Estimating relatedness'}
 # measuring relatedness----
 
-if(file.exists('docs/data/pairwise_relatedness.csv')){
-  pairwise_relatedness = read.csv('docs/data/pairwise_relatedness.csv')
+if(file.exists('docs/data/Pfal_pairwise_relatedness.csv')){
+  pairwise_relatedness = read.csv('docs/data/Pfal_pairwise_relatedness.csv')
 }else{
   pairwise_relatedness = NULL
   
   for(w in 1:500){
     start = Sys.time()
     pairwise_relatedness = rbind(pairwise_relatedness,
-                                 pairwise_hmmIBD(loci_object, parallel = T, w = w, n = 500))
+                                 pairwise_hmmIBD(ampseq_filtered, parallel = T, w = w, n = 500))
     time_diff = Sys.time() - start
     
     print(paste0('step ', w, ' done in ', time_diff, ' secs'))
     
   }
   
-  write.csv(pairwise_relatedness, 'docs/data/pairwise_relatedness.csv', row.names = F, quote = F)
+  write.csv(pairwise_relatedness, 'docs/data/Pfal_pairwise_relatedness.csv', row.names = F, quote = F)
 }
 ```
 
-3)  `plot_relatedness_distribution`: visualizes the distribution of the
+2)  `plot_relatedness_distribution`: visualizes the distribution of the
     pairwise relatedness within and between the different study areas.
     Its arguments are `relatedness_matrix`, `metadata`, `Population`,
     and `fill_color`.
@@ -786,7 +769,7 @@ plot_relatedness_distribution_within = plot_relatedness_distribution(
 plot_relatedness_distribution_within$plot
 ```
 
-4)  `plot_frac_highly_related`: visualizes the fraction of highly
+3)  `plot_frac_highly_related`: visualizes the fraction of highly
     related haplotypes within and between study areas. It has the same
     arguments than the previous function plus `threshold` (minimum value
     to consider two samples to be highly related).
@@ -802,32 +785,32 @@ plot_frac_highly_related_within = plot_frac_highly_related(
 plot_frac_highly_related_within$plot
 ```
 
-5)  `plot_frac_highly_related_over_time`: visualizes the fraction of
+4)  `plot_frac_highly_related_over_time`: visualizes the fraction of
     highly related haplotypes within and between study areas, and by a
     temporal variable. It has the same arguments than the previous
     function plus `threshold` (minimum value to consider two samples to
     be highly related).
 
-```{r 'fraction of highly related samples over time (3 months intervals) within study areas', fig.width = 7, fig.height=4, fig.cap = '**Figure 12:** Proportion of highly related samples over year quarters in each study area.'}
-plot_frac_highly_related_over_quarters_within = plot_frac_highly_related_over_time(pairwise_relatedness = pairwise_relatedness,
+```{r 'fraction of highly related samples over time (3 months intervals) within study areas', fig.width = 7, fig.height=10, fig.cap = '**Figure 12:** Proportion of highly related samples over year quarters in each study area.'}
+plot_frac_highly_related_over_months_within = plot_frac_highly_related_over_time(pairwise_relatedness = pairwise_relatedness,
                                        metadata = ampseq@metadata,
-                                       Population = c('Subnational_level2', 'Quarter_of_Collection'),
+                                       Population = c('Subnational_level2', 'Month_of_Collection'),
                                        fill_color = pop_colors,
                                        threshold = 0.99,
                                        type_pop_comparison = 'within',
-                                       pop_levels = pop_levels, ncol = 5)
+                                       pop_levels = pop_levels, ncol = 1)
 
-plot_frac_highly_related_over_quarters_within$plot_frac_highly_related
+plot_frac_highly_related_over_months_within$plot_frac_highly_related
 ```
 
 ```{r 'Correlation between the proportion of highly related samples and number of samples collected', fig.width = 7, fig.height = 4, fig.cap = '**Figure 13:** Spearman correlation of the proportion of highly related samples per year quarter in each estudy area and the number of collected samples by passive case detection.'}
-nsamples_vs_highlyR = left_join(plot_frac_highly_related_over_quarters_within$plot_frac_highly_related$data %>% mutate(pop = paste(Pop_comparison, Date_Yi, sep = '_'))%>%
+nsamples_vs_highlyR = left_join(plot_frac_highly_related_over_months_within$plot_frac_highly_related$data %>% mutate(pop = paste(Pop_comparison, Date_Yi, sep = '_'))%>%
                                    ungroup()%>%
                                    select(pop, prop),
           metadata %>%
   filter(!is.na(Subnational_level2)) %>%
-  group_by(Subnational_level2, Quarter_of_Collection) %>%
-  summarise(nsamples= n()) %>% mutate(pop = paste(Subnational_level2, Quarter_of_Collection, sep = '_')), by = 'pop')  %>%
+  group_by(Subnational_level2, Month_of_Collection) %>%
+  summarise(nsamples= n()) %>% mutate(pop = paste(Subnational_level2, Month_of_Collection, sep = '_')), by = 'pop')  %>%
   filter(prop != 0, Subnational_level2 %in% c('Municipality 1', 'Municipality 2', 'Municipality 3'))
 
 plot_cor_highlyR_nsamples = ggscatter(nsamples_vs_highlyR, x = "prop", y = "nsamples", 
@@ -837,9 +820,11 @@ plot_cor_highlyR_nsamples = ggscatter(nsamples_vs_highlyR, x = "prop", y = "nsam
           xlab = "Proportion of highly related samples", ylab = "Number of samples",
           facet.by = 'Subnational_level2')
 
+plot_cor_highlyR_nsamples
+
 ```
 
-6)  `plot_network`: creates a network representation of the pairwise
+5)  `plot_network`: creates a network representation of the pairwise
     relatedness information. The function requires 7 arguments: 1) the
     `pairwise_relatedness` a long format data.frame with all pairwise
     comparisons, 2) `threshold` to define the minimum prairwise
@@ -865,6 +850,23 @@ Relatedness_network = plot_network(pairwise_relatedness = pairwise_relatedness,
 
 ```
 
+6)  `IBD_evectors`: calculates `k` eigenvectors using the pairwise
+    relatedness information to identify the presence of population structure. The function requires 5 arguments: 1) the `ampseq` object from the metadata will be extracted, 2) the `pairwise_relatedness` a long format data.frame with all pairwise
+    comparisons, 3) `k` the number of eigenvectors to calculate, 4) `Pop` a character indicating variable used to assign colors, and 5) the auxiliary exponent `q`.
+
+```{r, fig.width=5, fig.height=5, fig.cap = '**Figure 15:** Princial Component Analysis of pairwise genetic relatedness between samples. Each dot represents a sample, and colors were assigned based on the sampling location: Municipality 1 (Red), Municipality 2 (Blue), Municipality 3 (Gold), Municipality 4 (Green), and Municipality 5 (Coral).'}
+
+evectors_IBD = IBD_evectors(ampseq_object = ampseq_filtered, relatedness_table = pairwise_relatedness, k = nrow(ampseq_filtered@metadata), Pop = 'Subnational_level2', q = 2)
+
+
+evectors_IBD %>% ggplot(aes(x = PC1, y = PC2, color = Subnational_level2))+
+  geom_point(alpha = .7, size = 2) +
+  stat_ellipse(level = .6)+
+  theme_bw()+
+  scale_color_manual(values = pop_colors)+
+  labs(color = 'Municipalities')
+```
+
 ## Measuring geographic connectivity
 
 Malaria transmission is heterogeneous throughout the Colombian
@@ -880,11 +882,11 @@ the proportion of genetically closely related parasites between the
 different areas.
 
 We can use again the function `plot_relatedness_distribution` to create
-histograms of the diistribution of relatenes between samples from
+histograms of the distribution of relatedness between samples from
 different study sites. In this case, we are going to set
 `type_pop_comparison = 'between'`.
 
-```{r 'relatedness distribution between study areas', fig.width=7, fig.height=4, fig.cap = '**Figure 15:** Histogram distribution of pairwise genetic relatedness between sampling locations. Panels in columns correspond to the three study areas. The dotted vertical lines represent the average genetic relatedness in the whole population.'}
+```{r 'relatedness distribution between study areas', fig.width=7, fig.height=4, fig.cap = '**Figure 16:** Histogram distribution of pairwise genetic relatedness between sampling locations. Panels in columns correspond to the three study areas. The dotted vertical lines represent the average genetic relatedness in the whole population.'}
 
 plot_relatedness_distribution_between = plot_relatedness_distribution(
   pairwise_relatedness = pairwise_relatedness,
@@ -906,7 +908,7 @@ Again the fraction of highly related haplotypes between sites can be
 explored with the function `plot_frac_highly_related` and setting
 `type_pop_comparison = 'between'`.
 
-```{r 'highly related samples between study areas', fig.width=4, fig.height=4, fig.cap = '**Figure 8:** Proportion of highly related samples between sampling locations.'}
+```{r 'highly related samples between study areas', fig.width=4, fig.height=4, fig.cap = '**Figure 17:** Proportion of highly related samples between sampling locations.'}
 
 plot_frac_highly_related_between = plot_frac_highly_related(
   pairwise_relatedness = pairwise_relatedness,

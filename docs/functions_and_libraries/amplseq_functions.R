@@ -1913,10 +1913,12 @@ estimate_r_and_k <- function(fs, ds, Ys, epsilon = 0.001, rho = 7.4 * 10 ^ (-7),
 
 # pairwise_hmmIBD----
 
-pairwise_hmmIBD = function(loci_object, parallel = TRUE, w = 1, n = 1){
+pairwise_hmmIBD = function(ampseq_object, parallel = TRUE, w = 1, n = 1){
   library(parallel)
   library(doMC)
   library(svMisc)
+  
+  loci_object = ampseq2loci(ampseq_object)
   
   loci_table = loci_object[["loci_table"]]
   freq_table = loci_object[["freq_table"]]
@@ -2775,7 +2777,7 @@ fastSVD = function(X, k, q = 2){
 #' @export
 #' 
 
-fastGRM = function(gt, k = nrow(gt), metadata, Pop = 'Population', q = 2){
+GRM_evectors = function(gt, k = nrow(gt), metadata, Pop = 'Population', q = 2){
   
   X = t(gsub('_.+$','',gt))
   
@@ -2804,7 +2806,7 @@ fastGRM = function(gt, k = nrow(gt), metadata, Pop = 'Population', q = 2){
 }
 
 
-fastIBD_PCA = function(ampseq_object, relatedness_table, k = NULL, Pop = 'Population', q = 2){
+IBD_evectors = function(ampseq_object, relatedness_table, k = NULL, Pop = 'Population', q = 2){
   
   metadata = ampseq_object@metadata
   
