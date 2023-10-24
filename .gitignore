@@ -2,9 +2,9 @@
 .Rhistory
 .RData
 .Ruserdata
-docs/data/Pvivax/alignments
-docs/data/Pvivax/dada2/preprocess_fq
-docs/data/Pvivax/dada2/preprocess_meta.txt
-docs/data/Pvivax/dada2/prim_fq
-docs/data/Pvivax/dada2/prim_meta.txt
-docs/data/Pvivax/dada2/run_dada2/filtered
+docs/data/Pvivax_sequencing_data/alignments
+docs/data/Pvivax_sequencing_data/dada2/preprocess_fq
+docs/data/Pvivax_sequencing_data/dada2/preprocess_meta.txt
+docs/data/Pvivax_sequencing_data/dada2/prim_fq
+docs/data/Pvivax_sequencing_data/dada2/prim_meta.txt
+docs/data/Pvivax_sequencing_data/dada2/run_dada2/filtered
