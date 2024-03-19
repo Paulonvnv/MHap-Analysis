@@ -13,9 +13,10 @@ editor_options:
   chunk_output_type: inline
 ---
 
-The purpose of this tutorial is to introduce researchers at Neafsey Lab in
-the analysis of genotypic information of *Plasmodium falciparum* generated through the targeted amplicon sequencing panel AMPLseq. This tutorial will
-cover:
+The purpose of this tutorial is to introduce researchers at Neafsey Lab
+in the analysis of genotypic information of *Plasmodium falciparum*
+generated through the targeted amplicon sequencing panel AMPLseq. This
+tutorial will cover:
 
 1.  Importing and handling tables in CIGAR format in R environment.
 
@@ -62,7 +63,8 @@ $\begin{array}{c|c:c:c:c:c:c} \text{sampleID}&Gene_1,Allele_1&Gene_1,Allele_2&..
 Where the $Allele$ is coded in Pseudo-CIGAR format, typing "." for the
 reference allele, $[0-9]*[A,T,C,G]$ for each point mutation observed,
 and $[0-9]*[D,I]=[A,T,C,G]*$ for indels (Insertions and Deletions). The
-numbers before the letters denotes the position in the amplicon where the polymorphism is located
+numbers before the letters denotes the position in the amplicon where
+the polymorphism is located
 
 These Pseudo-CIGAR tables are stored in the server of the lab using the
 following path structure:
@@ -73,10 +75,13 @@ As this structure is maintained across all studies in the lab, we have
 created a function called `read_cigar_tables` that only requires two
 arguments: `paths` (name of the folder of the study or the `STUDYNAME`),
 and `sample_id_pattern` (a pattern string in the IDs of the samples that
-differentiate them from controls). In case you don't want to differentiate samples from controls, set this argument equals to `"."`. For this particular example, the path will be `"data/sequencing_data/"` , while the pattern will be `"ID"`. In
-case all `".tvs"` files are stored in one folder, you can use the
-argument `files = list_of_files` instead of the argument `paths`, where
-`list_of_files` is a vector with the names of all files we want to read.
+differentiate them from controls). In case you don't want to
+differentiate samples from controls, set this argument equals to `"."`.
+For this particular example, the path will be `"data/sequencing_data/"`
+, while the pattern will be `"ID"`. In case all `".tvs"` files are
+stored in one folder, you can use the argument `files = list_of_files`
+instead of the argument `paths`, where `list_of_files` is a vector with
+the names of all files we want to read.
 
 ```{r 'Uploading data sets'}
 cigar_object = read_cigar_tables(paths = "docs/data/Pfal_sequencing_data/", sample_id_pattern = "ID")
@@ -84,14 +89,18 @@ cigar_object = read_cigar_tables(paths = "docs/data/Pfal_sequencing_data/", samp
 
 This function generates a S4 cigar object containing two data.frames, 1)
 a `cigar_table`, where genotyping information is stored in cigar format;
-and 2) a `metadata` table with 4 variables (columns), **a)** `Sample_id` which
-contains samples Id's; **b)** `run` which contains the run number (or the name of the folter where the fastq's for that run wehere stored), information that is useful for
-comparing performance across batches of samples; **c)** `order_in_plate`, useful to identify rare amplifications patterns in the plate; and **d)** `typeofSamp` which
+and 2) a `metadata` table with 4 variables (columns), **a)** `Sample_id`
+which contains samples Id's; **b)** `run` which contains the run number
+(or the name of the folter where the fastq's for that run wehere
+stored), information that is useful for comparing performance across
+batches of samples; **c)** `order_in_plate`, useful to identify rare
+amplifications patterns in the plate; and **d)** `typeofSamp` which
 differentiates between controls and samples of interest. In order to
 view these tables use `View(cigar_table$cigar_table)` or
 `View(cigar_table$metadata)` in the console.
 
-**NOTE:** If there are duplicated samples, only the replicated with the highest read depth across all loci will be kept.
+**NOTE:** If there are duplicated samples, only the replicated with the
+highest read depth across all loci will be kept.
 
 ## Adding Metadata
 
@@ -118,14 +127,15 @@ cigar_object@metadata = left_join(cigar_object@metadata,
                               by = 'Sample_id')
 ```
 
-Moreover, there are some artifacts that the `dada2` pipeline doesn't resolve
-well like the generation of chimeras (artificial fusion of two different
-haplotypes during the PCR amplification) in polyclonal samples. That is
-the case of the alleles `PF3D7_1302900,1G` and `PF3D7_0612900,215A` that
-are observed in polyclonal infections only. So we are going to proceed
-to remove both alleles from our `cigar_table`. Additionally, `PvDHFR`
-locus was amplified in order to detect mixed infections with *Plasmodium
-vivax*, so we are going to remove this locus too as this locus is not of our interest in this tutorial.
+Moreover, there are some artifacts that the `dada2` pipeline doesn't
+resolve well like the generation of chimeras (artificial fusion of two
+different haplotypes during the PCR amplification) in polyclonal
+samples. That is the case of the alleles `PF3D7_1302900,1G` and
+`PF3D7_0612900,215A` that are observed in polyclonal infections only. So
+we are going to proceed to remove both alleles from our `cigar_table`.
+Additionally, `PvDHFR` locus was amplified in order to detect mixed
+infections with *Plasmodium vivax*, so we are going to remove this locus
+too as this locus is not of our interest in this tutorial.
 
 ```{r 'Removing artifacts and Pvivax control locus'}
 
@@ -182,9 +192,11 @@ performance of the genotyping process in terms of the proportion of
 samples amplified by each locus (amplification rate by locus) and the
 proportion of loci amplified per each sample (amplification rate per
 sample). In order to perform that task, we are going to convert our
-cigar table to a more manageable (easy to read for the user) format called ampseq format, where amplicons or genes are going to be in columns, samples in rows, and the
-allele in cigar format is going to be in each cell of the matrix
-together with the read count of that allele in the sample.
+cigar table to a more manageable (easy to read for the user) format
+called ampseq format, where amplicons or genes are going to be in
+columns, samples in rows, and the allele in cigar format is going to be
+in each cell of the matrix together with the read count of that allele
+in the sample.
 
 $\begin{array}{c|c:c:c:c} \text{sampleID}&Gene_1&Gene_2&...& Gene_m\\ \hline ID_1 & Allele_{i_{i \in Alleles_{Gene_1}}}\text{:Read count} &&& \\ \hdashline ... &&&&\\ \hdashline ID_n &&&& \end{array}$
 
@@ -194,7 +206,8 @@ cigar_table and the metadata). Then `markers`, which is a table with the
 set of markers and their names (in a column named `amplicon`). This
 argument is optional, and in case is `NULL`, the name of the amplicons
 will be extracted from the columns in the `cigar_object`, but
-information regarding chormosome location (information required to stimaed reladness under the hmmIBD algorithm) and length of the amplicon
+information regarding chormosome location (information required to
+stimaed reladness under the hmmIBD algorithm) and length of the amplicon
 will be missing. The next arguments are `min_abd` and `min_ratio`, which
 are the minimum abundance (minimum read count) required to call an
 allele and the minimum ratio between the minor and major alleles in a
@@ -224,6 +237,26 @@ between treatments, geographic regions or sequencing runs. For that we
 can use the function `plot_coverage()` which requires two arguments, the
 `ampseq` object and the `variable` from metadata that we want to use to
 split the information.
+
+```{r, fig.height= 15}
+ampseq@metadata$TotalReadDepth = sample_TotalReadDepth(ampseq)
+
+pcr_plate = data.frame(order_in_plate = 1:192,
+                       pcr_col = rep(rep(1:12, each = 8), 2),
+                       pcr_row = rep(rep(LETTERS[1:8], 12), 2))
+
+ampseq@metadata = left_join(ampseq@metadata, pcr_plate, by = 'order_in_plate')
+
+ampseq@metadata %>%
+  ggplot(aes(x = as.factor(pcr_col), y = factor(pcr_row, levels = LETTERS[8:1]), fill = TotalReadDepth))+
+  geom_tile(color = 'black')+
+  facet_wrap(.~run, ncol = 1, scales = 'free_x')+
+  theme_bw()+
+  labs(x = 'Columns',
+       y = 'Rows')+
+  scale_fill_gradient(low = "white", high = "firebrick")
+
+```
 
 ```{r 'Describing the read depth coverage by run and study site'}
 coverage_by_municipality = plot_coverage(ampseq, variable = "Subnational_level2")
@@ -391,11 +424,17 @@ drug_resistant_haplotypes_plot = drug_resistant_haplotypes(ampseq_filtered,
 
 ```
 
-The haplotype of each sample is stored in the table `aacigar_table` within the object `drug_resistant_haplotypes_plot`.
+The haplotype of each sample is stored in the table `aacigar_table`
+within the object `drug_resistant_haplotypes_plot`.
+
 ```{r}
 drug_resistant_haplotypes_plot$aacigar_table%>%datatable()
 ```
-The phenotype of each sample, of each polymorphic position is in the table `phenotype_table` within the object `drug_resistant_haplotypes_plot`. The information of multiples positions within the same marker is concatenated using `";"`.
+
+The phenotype of each sample, of each polymorphic position is in the
+table `phenotype_table` within the object
+`drug_resistant_haplotypes_plot`. The information of multiples positions
+within the same marker is concatenated using `";"`.
 
 ```{r}
 drug_resistant_haplotypes_plot$phenotype_table%>%datatable()
@@ -409,7 +448,7 @@ drug_resistant_haplotypes_plot$haplo_freq_plot
 ```
 
 However, we can manually assign colors based on the resistance profile
-of the haplotye:
+of the haplotype:
 
 ```{r 'Plot drug resistance', fig.width=12, fig.height=7, fig.cap='**Figure 4:** Frequency of haplotypes of genes associated with drug resistance. y-axis shows the frequency in the sub-population, x-axis shows the quarter of the year where the sample was collected, rows panels corresponds to the five study areas, and column panels represents each genotyped gene. Colors were assigned based on the possible phenotype, dark blue indicates sensitive, while dark red indicates resistance. Light colors where assigned for partial haplotype information, and gray for complete missging data'}
 
@@ -524,13 +563,17 @@ ampseq_filtered@loci_performance %>%
 
 -   The number of heterozygous loci (NPolyLoci) or heterozygous
     amplicons in the sample.
+
 -   The name of the heterozygous loci (Polyloci).
+
 -   The observed alleles in each heterozygous loci (alleles_at_loci)
     where alleles within the same loci are separated by "\_", while
     alleles from different loci are separated by"/".
+
 -   The number of alleles observed in each heterozygous loci
     (nalleles_per_loci) where values from different loci are separated
     by "/".
+
 -   And finally the complexity of the infection (coi) defined as the
     maximum number of alleles observed in any of the heterozygous loci
     in the sample. As this definition is permissible as samples the only
@@ -540,8 +583,8 @@ ampseq_filtered@loci_performance %>%
     to be considered polyclonal. In future updates we will incorporate
     the Within host divergence ($F_{ws}$) index.
 
-    This table is added to the metadata table in our ampseq_object if we set
-`update_popsummary = T`.
+    This table is added to the metadata table in our ampseq_object if we
+    set `update_popsummary = T`.
 
 ```{r}
 ampseq_filtered@metadata %>%
@@ -560,7 +603,11 @@ ampseq_filtered@pop_summary%>%
               digits=3)
 ```
 
-  We can visually inspect all this information by using histograms. Here is an example with the number of heterozygous loci per sample by sampling location. We will use the function log_scale_histogram because the number of samples with only one heterozygous loci is high with respect to the number of samples with more than 10 heterozygous loci.
+We can visually inspect all this information by using histograms. Here
+is an example with the number of heterozygous loci per sample by
+sampling location. We will use the function log_scale_histogram because
+the number of samples with only one heterozygous loci is high with
+respect to the number of samples with more than 10 heterozygous loci.
 
 ```{r 'Distribution of the number of heterozygous loci per sample by sampling location', fig.width=7, fig.height=4, fig.cap = '**Figure 5:** Distribution of the number of heterozygous loci per samples per population.'}
 
@@ -577,7 +624,7 @@ plot_log_NPolyLoci_by_pop
 
 ```
 
-  We can do the same with the COI by sample.
+We can do the same with the COI by sample.
 
 ```{r 'Distribution of COI by sampling location', fig.width=7, fig.height=4, fig.cap = '**Figure 6:** Distribution of the complexity of infection (COI) by study area. y-axis is in logarithm scale.'}
 
@@ -595,7 +642,7 @@ plot_log_coi_by_pop = log_scale_histogram(data = ampseq_filtered@metadata,
 plot_log_coi_by_pop
 ```
 
-  In the case of the proportion of polyclonal infections by study area, we
+In the case of the proportion of polyclonal infections by study area, we
 can use a a barplot.
 
 ```{r 'Proportion of polyclonal infections by sampling location', fig.width=7, fig.height=4, fig.cap = '**Figure 7:** Proportion of polyclonal infections per study area.'}
@@ -728,16 +775,16 @@ calculate the proportion of pairwise comparisons that have a relatedness
 $\ge 0.99$ within and between operational units. For that we are going
 to use the following functions:
 
-
 1)  `pairwise_hmmIBD`: computes pairwise genetic relatedness using the
-    HMMIBD algorithm implemented in [panlejugde R package](https://github.com/aimeertaylor/paneljudge). As an input it
-    requires a `loci_object` and automatically all pairwise comparisons
-    will be computed. Its output is a long format data.frame of all
-    pairwise comparisons. This function is computationally exhaustive,
-    so it has parallel argument to speed up the calculation. In the
-    current example, the matrix is been generated separately in the
-    cluster at Broadinstitute, and the `.csv` file is loaded by using
-    the function `read.csv`.
+    HMMIBD algorithm implemented in [panlejugde R
+    package](https://github.com/aimeertaylor/paneljudge). As an input it
+    requires a `ampseq_object` and automatically all pairwise
+    comparisons will be computed. Its output is a long format data.frame
+    of all pairwise comparisons. This function is computationally
+    exhaustive, so it has parallel argument to speed up the calculation.
+    In the current example, the matrix is been generated separately in
+    the cluster at Broadinstitute, and the `.csv` file is loaded by
+    using the function `read.csv`.
 
 ```{r 'Estimating relatedness'}
 # measuring relatedness----
@@ -863,8 +910,12 @@ Relatedness_network = plot_network(pairwise_relatedness = pairwise_relatedness,
 ```
 
 6)  `IBD_evectors`: calculates `k` eigenvectors using the pairwise
-    relatedness information to identify the presence of population structure. The function requires 5 arguments: 1) the `ampseq` object from the metadata will be extracted, 2) the `pairwise_relatedness` a long format data.frame with all pairwise
-    comparisons, 3) `k` the number of eigenvectors to calculate, 4) `Pop` a character indicating variable used to assign colors, and 5) the auxiliary exponent `q`.
+    relatedness information to identify the presence of population
+    structure. The function requires 5 arguments: 1) the `ampseq` object
+    from the metadata will be extracted, 2) the `pairwise_relatedness` a
+    long format data.frame with all pairwise comparisons, 3) `k` the
+    number of eigenvectors to calculate, 4) `Pop` a character indicating
+    variable used to assign colors, and 5) the auxiliary exponent `q`.
 
 ```{r, fig.width=5, fig.height=5, fig.cap = '**Figure 15:** Princial Component Analysis of pairwise genetic relatedness between samples. Each dot represents a sample, and colors were assigned based on the sampling location: Municipality 1 (Red), Municipality 2 (Blue), Municipality 3 (Gold), Municipality 4 (Green), and Municipality 5 (Coral).'}
 

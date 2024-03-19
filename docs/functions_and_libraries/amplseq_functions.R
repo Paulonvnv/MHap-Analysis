@@ -38,7 +38,8 @@ read_cigar_tables = function(paths = NULL, files = NULL, sample_id_pattern = '.'
       }else{
         print(paste0('Cigar file ', file.path(paths, run, "dada2/run_dada2/CIGARVariants_Bfilter.out.tsv"), ' not found'))
       }
-      samples = gsub('_S\\d+$','', cigar_run[,1])
+      #samples = gsub('_S\\d+$','', cigar_run[,1])
+      samples = cigar_run[,1]
       samples[!grepl(sample_id_pattern,samples)] = paste(samples[!grepl(sample_id_pattern,samples)], run, sep = "_")
       cigar_run = cigar_run[, -1]
       cigar_run = apply(cigar_run, 2, function(x) as.integer(x))
@@ -50,7 +51,8 @@ read_cigar_tables = function(paths = NULL, files = NULL, sample_id_pattern = '.'
   }else if(is.null(paths)&!is.null(files)){
     for(file in files){
       cigar_run = read.table(file, header = T)
-      samples = gsub('_S\\d+$','', cigar_run[,1])
+      #samples = gsub('_S\\d+$','', cigar_run[,1])
+      samples = cigar_run[,1]
       samples[!grepl(sample_id_pattern,samples)] = paste0(samples[!grepl(sample_id_pattern,samples)], '_file', which(files == file))
       cigar_run = cigar_run[, -1]
       cigar_run = apply(cigar_run, 2, function(x) as.integer(x))
@@ -74,7 +76,7 @@ read_cigar_tables = function(paths = NULL, files = NULL, sample_id_pattern = '.'
   }
   
   cigar_table %<>% pivot_wider(names_from = "alleles", values_from = "counts")
-  sample_names = gsub("^.+/","",cigar_table[['Sample_id']])
+  sample_names = gsub("^.+/|_S\\d+$","",cigar_table[['Sample_id']])
   
   duplicated_samples = sample_names[duplicated(sample_names)]
   
@@ -95,9 +97,9 @@ read_cigar_tables = function(paths = NULL, files = NULL, sample_id_pattern = '.'
     
   }
   
-  metadata = data.frame(Sample_id = gsub("^.+/","",cigar_table[['Sample_id']]),
+  metadata = data.frame(Sample_id = gsub("^.+/|_S\\d+$","",cigar_table[['Sample_id']]),
                         run = gsub('/.+$', '',gsub("^\\d+/","",cigar_table[['Sample_id']])),
-                        order_in_plate = gsub("/.+$","",cigar_table[['Sample_id']]), typeofSamp = NA)
+                        order_in_plate = as.integer(gsub("^S|_$","",str_extract(cigar_table[['Sample_id']], "(S\\d+$|S\\d+_)"))), typeofSamp = NA)
   
   
   if(sample_id_pattern != '.'){
@@ -184,7 +186,7 @@ cigar2ampseq = function(cigar_object, min_abd = 1, min_ratio = .1, markers = NUL
   
   for(sample in rownames(ampseq_loci_abd_table)){
     for(locus in colnames(ampseq_loci_abd_table)){
-      alleles = cigar_table[sample, grepl(paste("^",locus, sep = ""), colnames(cigar_table))]
+      alleles = cigar_table[sample, grepl(paste0("^",locus,'\\.'), colnames(cigar_table))]
       
       if(length(alleles) == 1){
         names(alleles) <- paste(locus, ",.", sep = "")
@@ -248,6 +250,116 @@ cigar2ampseq = function(cigar_object, min_abd = 1, min_ratio = .1, markers = NUL
     return(ampseq_object)
     
   }
+  
+}
+
+
+# write_ampseq----
+
+write_ampseq = function(ampseq_object, format = 'excel', name = 'wb.xlsx'){
+  
+  if(format == 'excel'){
+    
+    excel_wb = loadWorkbook(name, create = T)
+    
+    for(temp_slot in c('gt', 'metadata', 'markers', 'loci_performance')){
+      
+      if(temp_slot == 'gt'){
+        
+        temp_sheet = data.frame(Sample_id = rownames(slot(ampseq_object, temp_slot)),
+                                as.data.frame(slot(ampseq_object, temp_slot)))
+        
+      }else{
+        
+        temp_sheet = as.data.frame(slot(ampseq_object, temp_slot))
+        
+      }
+      
+      createSheet(excel_wb, name = temp_slot)
+      
+      writeWorksheet(excel_wb,
+                     temp_sheet,
+                     sheet = temp_slot,
+                     header = T)
+      
+    }
+    
+    saveWorkbook(excel_wb)
+    
+  }else if(format == 'json'){
+    # In development
+  }
+  
+}
+
+# read_ampseq----
+
+read_ampseq = function(file = NULL, format = 'excel'){
+  
+  ampseq_object = create_ampseq()
+  
+  if(format == 'excel'){
+    
+    temp_wb = loadWorkbook(file)
+    
+    for(sheet in getSheets(temp_wb)){
+      if(sheet == 'gt'){
+        
+        temp_sheet = readWorksheet(temp_wb, sheet = sheet)
+        temp_sheet_rownames = temp_sheet[,1]
+        temp_sheet = as.matrix(temp_sheet[,-1])
+        rownames(temp_sheet) = temp_sheet_rownames
+        
+        slot(ampseq_object, sheet, check = TRUE) <- temp_sheet
+        
+      }else if(sheet %in% c('metadata', 'loci_performance')){
+        
+        temp_sheet = readWorksheet(temp_wb, sheet = sheet)
+        temp_sheet_rownames = temp_sheet[,1]
+        rownames(temp_sheet) = temp_sheet_rownames
+        
+        slot(ampseq_object, sheet, check = TRUE) = temp_sheet
+        
+      }else{
+        
+        temp_sheet = readWorksheet(temp_wb, sheet = sheet)
+        
+        slot(ampseq_object, sheet, check = TRUE) = temp_sheet
+        
+      }
+    }
+    
+  }else if(format == 'json'){
+    # In development
+  }
+  
+  return(ampseq_object)
+  
+}
+
+
+
+
+# sample_TotalReadDepth----
+
+sample_TotalReadDepth = function(ampseq){
+  
+  coverage = sapply(1:ncol(ampseq@gt), function(mhap){
+    
+    temp_mhap = strsplit(ampseq@gt[,mhap], '_')
+    
+    sapply(1:length(temp_mhap), function(sample){
+      
+      sum(as.numeric(gsub('[^*]+:','', temp_mhap[[sample]])))
+      
+    })
+  })
+  
+  colnames(coverage) = colnames(ampseq@gt)
+  rownames(coverage) = rownames(ampseq@gt)
+  
+  
+  return(rowSums(coverage, na.rm = T))
   
 }
 
@@ -492,7 +604,7 @@ haplotypes_respect_to_reference = function(ampseq_object,
                                                         'PF3D7_1447900'),
                                            gff_file = "reference/3D7/PlasmoDB-59_Pfalciparum3D7.gff",
                                            fasta_file = "reference/3D7/PlasmoDB-59_Pfalciparum3D7_Genome.fasta",
-                                           plo_haplo_freq = FALSE,
+                                           plot_haplo_freq = FALSE,
                                            variables = c('Sample_id', 'Population'),
                                            filters = NULL,
                                            na.var.rm = FALSE){
@@ -500,7 +612,7 @@ haplotypes_respect_to_reference = function(ampseq_object,
   library(Biostrings)
   
   # Call 3D7 genome and gff---
-  # Call 3D7 reference genome and its corresponding anotation in the gff file
+  # Call 3D7 reference genome and its corresponding annotation in the gff file
   reference_gff = read.gff(gff_file)
   reference_genome = readDNAStringSet(fasta_file)
   
@@ -630,7 +742,16 @@ haplotypes_respect_to_reference = function(ampseq_object,
   # Convert cigar format to standard mutation nomenclature PMC1867422---
   
   ## Filter drugR markers---
-  moi_loci_abd_table = ampseq_object@gt[,grep(paste(gene_names, collapse = "|"), colnames(ampseq_object@gt))]
+  
+  if(length(gene_ids) > 1){
+    moi_loci_abd_table = ampseq_object@gt[,grep(paste(gene_names, collapse = "|"), colnames(ampseq_object@gt))]  
+  }else{
+    moi_loci_abd_table = matrix(ampseq_object@gt[,grep(paste(gene_names, collapse = "|"), colnames(ampseq_object@gt))],
+                                ncol = 1,
+                                dimnames = list(rownames(ampseq_object@gt),
+                                                gene_names))
+  }
+  
   
   ## Remove read abundace---
   moi_loci_abd_table = gsub(":[0-9]+", "", moi_loci_abd_table)
@@ -793,7 +914,7 @@ haplotypes_respect_to_reference = function(ampseq_object,
   }
   
   
-  if(plo_haplo_freq){
+  if(plot_haplo_freq){
     
     
     # Empty table to fill cigar outputs
@@ -805,7 +926,15 @@ haplotypes_respect_to_reference = function(ampseq_object,
     
     
     for(gene in 1:length(gene_names)){
-      gene_aa = moi_loci_aa_table[,grepl(gene_names[gene], colnames(moi_loci_aa_table))]
+      
+      if(length(gene_names) > 1){
+        gene_aa = moi_loci_aa_table[,grepl(gene_names[gene], colnames(moi_loci_aa_table))]  
+      }else{
+        gene_aa = matrix(moi_loci_aa_table[,grepl(gene_names[gene], colnames(moi_loci_aa_table))],
+                         ncol = 1,
+                         dimnames = list(rownames(moi_loci_aa_table),
+                                         gene_names))
+      }
       
       # filter amplicons for the gene of interest
       gene_of_interest_info = markers_of_interest[markers_of_interest[['gene_ids']] == gene_ids[gene],]
@@ -954,9 +1083,27 @@ haplotypes_respect_to_reference = function(ampseq_object,
       }
     }
     
-    mon_aacigar_table = aacigar_table[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) == 0),]
+    if(length(gene_names) > 1){
+      mon_aacigar_table = aacigar_table[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) == 0),]
+      poly_aacigar_table = aacigar_table[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) != 0),]  
+    }else{
+      mon_aacigar_table = aacigar_table[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) == 0),]
+      mon_aacigar_table = matrix(mon_aacigar_table, ncol = 1,
+                                 dimnames = list(
+                                   names(mon_aacigar_table),
+                                   gene_names
+                                 ))
+      poly_aacigar_table = aacigar_table[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) != 0),]
+      
+      if(!isEmpty(poly_aacigar_table)){
+        poly_aacigar_table = matrix(poly_aacigar_table, ncol = 1,
+                                    dimnames = list(
+                                      names(mon_aacigar_table),
+                                      gene_names
+                                    ))
+      }
+    }
     
-    poly_aacigar_table = aacigar_table[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) != 0),]
     
     if(isEmpty(poly_aacigar_table)){
       poly1 = gsub('\\|([a-z])', '', poly_aacigar_table, ignore.case = T)
@@ -1155,8 +1302,6 @@ haplotypes_respect_to_reference = function(ampseq_object,
   }
   
   
-  
-  
   return(haplotypes_respect_to_reference)
   
 }
@@ -1175,22 +1320,38 @@ drug_resistant_haplotypes = function(ampseq_object,
                                                   'PF3D7_0810800',
                                                   'PF3D7_1343700',
                                                   'PF3D7_1447900'),
+                                     drugs = c('Artemisinine', 'Chloroquine', 'Pyrimethamine', 'Sulfadoxine', 'Lumefantrine', 'Mefloquine'),
                                      gff_file = "reference/3D7/PlasmoDB-59_Pfalciparum3D7.gff",
                                      fasta_file = "reference/3D7/PlasmoDB-59_Pfalciparum3D7_Genome.fasta",
                                      variables = c('samples', 'Population', 'quarter_of_collection'),
+                                     Longitude = 'Longitude',
+                                     Latitude = 'Latitude',
                                      filters = c('Population;Buenaventura,Quibdo,Guapi',
                                                  'quarter_of_collection;2020-Q4,2021-Q1,2021-Q2,2021-Q3,2021-Q4'),
-                                     na.var.rm = FALSE){
+                                     na.var.rm = FALSE,
+                                     na.hap.rm = TRUE){
+  
   
   # Call reference alleles
+  print("Uploading Resistant and Sensitive Alleles")
   drugR_reference_alleles = read.csv(reference_alleles)
   
   drugR_reference_alleles['reference'] = gsub('[0-9]+[A-Z]$', '', drugR_reference_alleles$Mutation)
   drugR_reference_alleles['mutant'] = gsub('^[A-Z][0-9]+', '', drugR_reference_alleles$Mutation)
   drugR_reference_alleles['position'] = gsub('^[A-Z]', '', gsub('[A-Z]$', '', drugR_reference_alleles$Mutation))
   
-  # Define haplotypes respect to a reference genome
+  print("Removing undesired categories based on var_filter")
+  if(!is.null(filters)){
+    filters = strsplit(filters,';')
+    for(temp_filter in 1:length(filters)){
+      
+      ampseq_object = filter_samples(ampseq_object,
+                     ampseq_object@metadata[[filters[[temp_filter]][1]]] %in% strsplit(filters[[temp_filter]][2],',')[[1]])
+    }
+  }
   
+  # Define haplotypes respect to a reference genome
+  print("Defining haplotypes respect to a reference genome")
   haps_respect_to_ref = haplotypes_respect_to_reference(ampseq_object,
                                                         gene_names,
                                                         gene_ids,
@@ -1216,12 +1377,14 @@ drug_resistant_haplotypes = function(ampseq_object,
                            dimnames = list(rownames(loci_aa_table),
                                            unique(drugR_reference_alleles$Gene_Id)))
   
+  print("Defining aa haplotypes and phenotipe respect to the presence of resistant alleles")
   for(gene in unique(drugR_reference_alleles$Gene_Id)){ # For each gene
     
     for(amplicon in drug_markers[drug_markers$gene_ids == gene, 'amplicon']){ # for each amplicon in the gene
       
-      if(amplicon %in% colnames(loci_aa_table)){
+      if(amplicon %in% colnames(loci_aa_table)){ # Apply only for amplicons present in loci table (some amplicons might be removed in previous steps)
         
+        # Get all polymorphic positions in the population
         found_positions = loci_aa_table[,amplicon]
         
         found_positions = as.character(unlist(strsplit(as.character(unlist(strsplit(found_positions, " / "))), ' ')))
@@ -1237,8 +1400,9 @@ drug_resistant_haplotypes = function(ampseq_object,
         found_positions = found_positions[!is.na(found_positions)]
         
         # logic vector of amplified amplicon
-        tested_amplicon = drug_markers$amplicon %in% amplicon
+        #tested_amplicon = drug_markers$amplicon %in% amplicon
         
+        # For each sample compare their amino acid genotype respect to the table of reference
         for(sample in rownames(loci_aa_table)){ # For each sample
           # Identify all polymorphic positions in reference table
           
@@ -1278,8 +1442,8 @@ drug_resistant_haplotypes = function(ampseq_object,
           sample_clones = loci_aa_table[sample,
                                         amplicon]
           
-          
-          if(!is.na(sample_clones)){
+          # if Genotype is not missing, Get aminoacid allele for each clone and each tested position in the sample 
+          if(!is.na(sample_clones)){ 
             
             clones = unlist(strsplit(sample_clones, ' / '))
             
@@ -1383,7 +1547,7 @@ drug_resistant_haplotypes = function(ampseq_object,
             }
             
             
-          }else{
+          }else{ # else amino acid alleles are ?
             
             sample_positions = NULL
             sample_alleles = NULL
@@ -1398,10 +1562,12 @@ drug_resistant_haplotypes = function(ampseq_object,
             
           }
           
+          # Get amino acid allele for each tested position in the reference table
           reference_alleles = NULL
           
           for(position in sample_positions){
             
+            # If position is in reference table
             if(nrow(drugR_reference_alleles[drugR_reference_alleles[['Gene_Id']] == gene &
                                             drugR_reference_alleles[['position']] == position,]) != 0){
               
@@ -1439,6 +1605,8 @@ drug_resistant_haplotypes = function(ampseq_object,
             
           }
           
+          
+          # Write the haplotype for the amplicon (with one or more polymorphic sites)
           aacigar_haplotype = data.frame(position = as.integer(sample_positions),
                                          aacigar_haplotype = paste(reference_alleles, sample_positions, sample_alleles, sep = ""))
           
@@ -1446,72 +1614,161 @@ drug_resistant_haplotypes = function(ampseq_object,
                                                             aacigar_haplotype[['aacigar_haplotype']],
                                                             tolower(aacigar_haplotype[['aacigar_haplotype']]))
           
+          # Get the phenotype for each position in the amplicon
           sample_phenotype = NULL
           
           for(position in sort(aacigar_haplotype[['position']])){
             
-            if(nrow(drugR_reference_alleles[drugR_reference_alleles[['Gene_Id']] == gene &
-                                            drugR_reference_alleles[['position']] == position,]) != 0){
+            sample_clones = gsub('[A-z][0-9]+', '', aacigar_haplotype[aacigar_haplotype[['position']] == position, 'aacigar_haplotype'])
+            
+            sample_clones = strsplit(sample_clones, '\\|')[[1]]
+            
+            if(length(sample_clones) > 1){# If sample is heterozygous for the position
               
-              sample_allele = gsub('[A-Z][0-9]+', '', aacigar_haplotype[aacigar_haplotype[['position']] == position, 'aacigar_haplotype'])
+              clone_phenotype = NULL
               
-              reference_sensitive_alleles = drugR_reference_alleles[drugR_reference_alleles[['Gene_Id']] == gene &
-                                                                      drugR_reference_alleles[['position']] == position,'reference']
-              
-              if(sample_allele %in% reference_sensitive_alleles){
+              for(sample_allele in sample_clones){ # For each allele in each clone in the position
                 
-                sample_phenotype = c(sample_phenotype, 'Sensitive phenotype')  
                 
-              }else{
-                
-                reference_resistant_alleles = drugR_reference_alleles[drugR_reference_alleles[['Gene_Id']] == gene &
-                                                                        drugR_reference_alleles[['position']] == position,'mutant']
-                
-                if(sum(strsplit(sample_allele, "\\|")[[1]] %in% reference_resistant_alleles) >= 1){
+                # if position in reference table
+                if(nrow(drugR_reference_alleles[drugR_reference_alleles[['Gene_Id']] == gene &
+                                                drugR_reference_alleles[['position']] == position,]) != 0){
                   
-                  if(grepl('|', sample_allele)){
+                  
+                  # Get reference sensitive alleles
+                  reference_sensitive_alleles = drugR_reference_alleles[drugR_reference_alleles[['Gene_Id']] == gene &
+                                                                          drugR_reference_alleles[['position']] == position,'reference']
+                  
+                  # Get reference resistant alleles
+                  reference_resistant_alleles = drugR_reference_alleles[drugR_reference_alleles[['Gene_Id']] == gene &
+                                                                          drugR_reference_alleles[['position']] == position,'mutant']
+                  
+                  # If observed allele in reference sensitive alleles, the phenotype is sensitive
+                  if(sample_allele %in% reference_sensitive_alleles){
                     
-                    sample_allele = strsplit(sample_allele, "\\|")[[1]]
+                    temp_clone_phenotype = 'Sensitive phenotype' 
                     
-                    sample_allele = sample_allele[sample_allele %in% reference_resistant_alleles]
+                  }else if(sample_allele %in% reference_resistant_alleles){
+                    # If observed allele in reference resistant alleles, the phenotype is resistant
+                    
+                    phenotype = drugR_reference_alleles[drugR_reference_alleles[['Gene_Id']] == gene &
+                                                          drugR_reference_alleles[['position']] == position  &
+                                                          drugR_reference_alleles[['mutant']] == sample_allele,'Anotation']
+                    
+                    temp_clone_phenotype = phenotype
+                    
+                  }else if(sample_allele != '?'){
+                    
+                    temp_clone_phenotype = paste0(sample_allele, ' variant unreported for position ', position, ' in gene', gene)
                     
                   }
+                      
+                }else{# if position is not in reference table
                   
-                  phenotype = drugR_reference_alleles[drugR_reference_alleles[['Gene_Id']] == gene &
-                                                        drugR_reference_alleles[['position']] == position  &
-                                                        drugR_reference_alleles[['mutant']] == sample_allele,'Anotation']
+                  reference_allele = gsub('[0-9]+([A-z]|\\?|[A-z]\\|[A-z])', '', aacigar_haplotype[aacigar_haplotype[['position']] == position,'aacigar_haplotype'], ignore.case = T)
                   
-                  sample_phenotype = c(sample_phenotype, phenotype)
-                  
-                }else{
-                  
-                  if(sample_allele != '?'){
+                  if(reference_allele == sample_allele){
                     
-                    sample_phenotype = c(sample_phenotype, paste0(sample_allele, ' variant unreported for position ', position))
+                    temp_clone_phenotype = 'Sensitive phenotype'
                     
-                  }else{
+                  }else if(reference_allele != sample_allele){
                     
-                    sample_phenotype = c(sample_phenotype, paste0(amplicon, ' amplicon did not amplify'))
+                    temp_clone_phenotype = paste0(reference_allele, position, sample_allele,
+                                                  ' polymorphism in gene ',
+                                                  gene,
+                                                  ' respect to Reference Strain')
                     
                   }
                   
                 }
                 
+                if(is.null(clone_phenotype)){
+                  
+                  clone_phenotype = temp_clone_phenotype
+                  
+                }else{
+                  clone_phenotype = paste(clone_phenotype, temp_clone_phenotype, sep = "|")
+                }
+              
               }
               
-            }else{
+              sample_phenotype = c(sample_phenotype, clone_phenotype)
               
-              reference_allele = gsub('[0-9]+[A-Z]', '', aacigar_haplotype[aacigar_haplotype[['position']] == position,'aacigar_haplotype'], ignore.case = T)
+            }else{# If sample is homozygous for the position
               
-              alternative_allele = gsub('[A-Z][0-9]+', '', aacigar_haplotype[aacigar_haplotype[['position']] == position,'aacigar_haplotype'], ignore.case = T)
+              sample_allele = sample_clones
               
-              if(reference_allele != alternative_allele){
+              
+              # if position in reference table
+              if(nrow(drugR_reference_alleles[drugR_reference_alleles[['Gene_Id']] == gene &
+                                              drugR_reference_alleles[['position']] == position,]) != 0){
                 
-                sample_phenotype = c(sample_phenotype, paste0(aacigar_haplotype[aacigar_haplotype[['position']] == position,'aacigar_haplotype'], ' unreported polymorphims respect to 3D7'))  
+                
+                reference_sensitive_alleles = drugR_reference_alleles[drugR_reference_alleles[['Gene_Id']] == gene &
+                                                                        drugR_reference_alleles[['position']] == position,'reference']
+                
+                if(sample_allele %in% reference_sensitive_alleles){
+                  
+                  sample_phenotype = c(sample_phenotype, 'Sensitive phenotype')  
+                  
+                }else{
+                  
+                  reference_resistant_alleles = drugR_reference_alleles[drugR_reference_alleles[['Gene_Id']] == gene &
+                                                                          drugR_reference_alleles[['position']] == position,'mutant']
+                  
+                  if(sum(strsplit(sample_allele, "\\|")[[1]] %in% reference_resistant_alleles) >= 1){
+                    
+                    if(grepl('|', sample_allele)){
+                      
+                      sample_allele = strsplit(sample_allele, "\\|")[[1]]
+                      
+                      sample_allele = sample_allele[sample_allele %in% reference_resistant_alleles]
+                      
+                    }
+                    
+                    phenotype = drugR_reference_alleles[drugR_reference_alleles[['Gene_Id']] == gene &
+                                                          drugR_reference_alleles[['position']] == position  &
+                                                          drugR_reference_alleles[['mutant']] == sample_allele,'Anotation']
+                    
+                    sample_phenotype = c(sample_phenotype, phenotype)
+                    
+                  }else{
+                    
+                    if(sample_allele != '?'){
+                      
+                      sample_phenotype = c(sample_phenotype, paste0(sample_allele, ' variant unreported for position ', position, ' in gene', gene))
+                      
+                    }else{
+                      
+                      sample_phenotype = c(sample_phenotype, paste0(amplicon, ' amplicon did not amplify'))
+                      
+                    }
+                    
+                  }
+                  
+                }
+                
+              }else{# if position is not in reference table
+                
+                reference_allele = gsub('[0-9]+([A-z]|\\?)', '', aacigar_haplotype[aacigar_haplotype[['position']] == position,'aacigar_haplotype'], ignore.case = T)
+                
+                if(reference_allele == sample_allele){
+                  
+                  sample_phenotype = c(sample_phenotype, 'Sensitive phenotype')  
+                  
+                }else if(reference_allele != sample_allele & !grepl('\\?',sample_allele)){
+                  
+                  sample_phenotype = c(sample_phenotype, paste0(aacigar_haplotype[aacigar_haplotype[['position']] == position,'aacigar_haplotype'], ' polymorphism in gene ', gene,' respect to Reference Strain'))  
+                  
+                }else if(grepl('\\?',sample_allele)){
+                  
+                  sample_phenotype = c(sample_phenotype, paste0(amplicon, ' amplicon did not amplify'))
+                  
+                }
                 
               }
-              
             }
+            
             
           }
           
@@ -1540,6 +1797,183 @@ drug_resistant_haplotypes = function(ampseq_object,
     }
   }
   
+  
+  # Remove duplicates from phenotype_table
+  print("Summarizing phenotype_table")
+  for(sample in rownames(phenotype_table)){
+    
+    for(gene in colnames(phenotype_table)){
+      
+      phenotype = strsplit(phenotype_table[sample, gene], '; ')[[1]]
+      
+      if(sum(grepl('\\|', phenotype)) > 0){# if sample is heterozygous for the gene
+
+        phenotype_clone1 = gsub('\\|.+','',phenotype)
+        phenotype_clone2 = gsub('.+\\|','',phenotype)
+        
+        phenotypes = rbind(phenotype_clone1, phenotype_clone2)
+        
+        unique_phenotypes = NULL
+        
+        for(phenotype in 1:nrow(phenotypes)){
+          
+          phenotype = phenotypes[phenotype,]
+          temp_unique_phenotypes = unique(phenotype)
+          
+          
+          if(sum(grepl('resistance', temp_unique_phenotypes))>0){
+            
+            resistance_phenotypes = temp_unique_phenotypes[grepl('resistance', temp_unique_phenotypes)]
+            for(temp_resistance_phenotype in resistance_phenotypes){
+              number_of_DR_mutations = sum(grepl(temp_resistance_phenotype, phenotype))
+              
+              if(number_of_DR_mutations == 1){
+                resistance_phenotype = paste0(number_of_DR_mutations,
+                                              ' ',
+                                              temp_unique_phenotypes[grepl(temp_resistance_phenotype, temp_unique_phenotypes)],
+                                              ' mutation')
+                temp_unique_phenotypes[grepl(temp_resistance_phenotype, temp_unique_phenotypes)] = resistance_phenotype
+                
+              }else if(number_of_DR_mutations > 1){
+                resistance_phenotype = paste0(number_of_DR_mutations,
+                                              ' ',
+                                              temp_unique_phenotypes[grepl(temp_resistance_phenotype, temp_unique_phenotypes)],
+                                              ' mutations')
+                temp_unique_phenotypes[grepl(temp_resistance_phenotype, temp_unique_phenotypes)] = resistance_phenotype
+              }
+              
+            }
+          }
+          
+          
+          if(sum(grepl('did not amplify',temp_unique_phenotypes)) >= 1 &
+             sum(grepl('did not amplify',temp_unique_phenotypes)) < length(temp_unique_phenotypes)){
+            
+            not_amplified_amplicons = sort(gsub(' amplicon did not amplify', '', temp_unique_phenotypes[grepl('did not amplify',temp_unique_phenotypes)]))
+            
+            temp_unique_phenotypes[grepl('did not amplify',temp_unique_phenotypes)] = paste0('Amplicon(s) ', paste(not_amplified_amplicons, collapse = ','), ' for gene ', gene, " didn't amplified" )
+            
+            temp_unique_phenotypes = unique(temp_unique_phenotypes)
+            
+          }else if(sum(grepl('did not amplify',temp_unique_phenotypes)) == length(temp_unique_phenotypes)){
+            temp_unique_phenotypes = paste0('Gene ', gene, ' did not amplified')
+          }
+          
+          if(length(temp_unique_phenotypes) > 1 & sum(grepl('Sensitive', temp_unique_phenotypes)) > 0){
+            temp_unique_phenotypes = temp_unique_phenotypes[!grepl('Sensitive', temp_unique_phenotypes)]
+          }
+          
+          
+          temp_unique_phenotypes = paste(temp_unique_phenotypes, collapse = '; ')
+          
+          if(is.null(unique_phenotypes)){
+            unique_phenotypes = temp_unique_phenotypes
+          }else{
+            unique_phenotypes = paste(unique_phenotypes, temp_unique_phenotypes, sep = "|")
+          }
+          
+          
+        }
+        
+        phenotype_table[sample, gene] = unique_phenotypes
+        
+      }else{# if sample is homozygous for the gene
+        
+        
+        unique_phenotypes = unique(phenotype)
+        
+        
+        if(sum(grepl('resistance', unique_phenotypes))>0){
+          
+          resistance_phenotypes = unique_phenotypes[grepl('resistance', unique_phenotypes)]
+          for(temp_resistance_phenotype in resistance_phenotypes){
+            number_of_DR_mutations = sum(grepl(temp_resistance_phenotype, phenotype))
+            
+            if(number_of_DR_mutations == 1){
+              resistance_phenotype = paste0(number_of_DR_mutations,
+                                            ' ',
+                                            unique_phenotypes[grepl(temp_resistance_phenotype, unique_phenotypes)],
+                                            ' mutation')
+              unique_phenotypes[grepl(temp_resistance_phenotype, unique_phenotypes)] = resistance_phenotype
+              
+            }else if(number_of_DR_mutations > 1){
+              resistance_phenotype = paste0(number_of_DR_mutations,
+                                            ' ',
+                                            unique_phenotypes[grepl(temp_resistance_phenotype, unique_phenotypes)],
+                                            ' mutations')
+              unique_phenotypes[grepl(temp_resistance_phenotype, unique_phenotypes)] = resistance_phenotype
+            }
+            
+          }
+        }
+        
+        
+        if(sum(grepl('did not amplify',unique_phenotypes)) >= 1 &
+           sum(grepl('did not amplify',unique_phenotypes)) < length(unique_phenotypes)){
+          
+          not_amplified_amplicons = sort(gsub(' amplicon did not amplify', '', unique_phenotypes[grepl('did not amplify',unique_phenotypes)]))
+          
+          unique_phenotypes[grepl('did not amplify',unique_phenotypes)] = paste0('Amplicon(s) ', paste(not_amplified_amplicons, collapse = ','), ' for gene ', gene, " didn't amplified" )
+          
+          unique_phenotypes = unique(unique_phenotypes)
+          
+        }else if(sum(grepl('did not amplify',unique_phenotypes)) == length(unique_phenotypes)){
+          unique_phenotypes = paste0('Gene ', gene, ' did not amplified')
+        }
+        
+        if(length(unique_phenotypes) > 1 & sum(grepl('Sensitive', unique_phenotypes)) > 0){
+          unique_phenotypes = unique_phenotypes[!grepl('Sensitive', unique_phenotypes)]
+        }
+        
+        
+        unique_phenotypes = paste(unique_phenotypes, collapse = '; ')
+        
+        phenotype_table[sample, gene] = unique_phenotypes
+        
+        
+        
+      }
+      
+      
+      
+      }
+      
+      
+    }
+    
+  # Match Genotypes with Phenotypes
+  
+  print("Match Genotypes with Phenotypes")
+  genotype_phenotype_table = data.frame(Sample = rownames(aacigar_table),
+                                        Gene = rep(colnames(aacigar_table), each = nrow(aacigar_table)),
+                                        Genotype = c(aacigar_table),
+                                        Phenotype = c(phenotype_table))
+  
+  
+  genotype_phenotype_match = genotype_phenotype_table[!duplicated(genotype_phenotype_table$Genotype),-1]
+  
+  
+  genotype_phenotype_match_mono = genotype_phenotype_match[!grepl('\\|',genotype_phenotype_match$Genotype),]
+  
+  genotype_phenotype_match_poly1 = genotype_phenotype_match[grepl('\\|',genotype_phenotype_match$Genotype),]
+  genotype_phenotype_match_poly1$Genotype = gsub('\\|[A-z]', '', genotype_phenotype_match_poly1$Genotype)
+  genotype_phenotype_match_poly1$Phenotype = gsub('\\|.+', '', genotype_phenotype_match_poly1$Phenotype)
+  
+  
+  genotype_phenotype_match_poly2 = genotype_phenotype_match[grepl('\\|',genotype_phenotype_match$Genotype),]
+  genotype_phenotype_match_poly2$Genotype = gsub('[A-z]\\|', '', genotype_phenotype_match_poly2$Genotype)
+  genotype_phenotype_match_poly2$Phenotype = gsub('.+\\|', '', genotype_phenotype_match_poly2$Phenotype)
+  
+  
+  genotype_phenotype_match = rbind(genotype_phenotype_match_mono,
+                                   genotype_phenotype_match_poly1,
+                                   genotype_phenotype_match_poly2)
+  
+  
+  genotype_phenotype_match = genotype_phenotype_match[!duplicated(genotype_phenotype_match$Genotype),]
+  
+  print("Handeling polyclonal samples for haplotype count")
+  
   mon_aacigar_table = aacigar_table[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) == 0),]
   
   poly_aacigar_table = aacigar_table[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) != 0),]
@@ -1552,15 +1986,17 @@ drug_resistant_haplotypes = function(ampseq_object,
                                  poly1,
                                  poly2)
   
-  extended_aacigar_table = data.frame(samples = rownames(extended_aacigar_table), extended_aacigar_table)
+  extended_aacigar_table = data.frame(Sample_id = rownames(extended_aacigar_table), extended_aacigar_table)
   
-  metadata = ampseq_object@metadata[,variables]
+  print("Adding metadata to haplotype counts")
   
-  names(metadata) = c('samples', 'var1', 'var2')
+  metadata = ampseq_object@metadata[,c(variables, Longitude, Latitude)]
+  
+  names(metadata) = c('Sample_id', 'var1', 'var2', 'Longitude', 'Latitude')
   
   extended_aacigar_table = merge(extended_aacigar_table,
                                  metadata,
-                                 by = 'samples',
+                                 by = 'Sample_id',
                                  all.x = TRUE)
   
   extended_aacigar_table %<>% pivot_longer(cols = all_of(gene_ids),
@@ -1588,44 +2024,61 @@ drug_resistant_haplotypes = function(ampseq_object,
         (!is.na(var2))&(!grepl('NA',var2)) ~ var2))
   }
   
+
+  samples_pop_quarter = extended_aacigar_table %>%
+    summarise(count = nlevels(as.factor(Sample_id)), .by = c(var1, var2)) 
   
-  samples_pop_quarter = extended_aacigar_table %>% group_by(var1, var2)%>%
-    summarise(count = nlevels(as.factor(samples))) 
+  print("Summarizing haplotype counts")
   
-  haplotype_counts = extended_aacigar_table %>% group_by(gene_names, var1, var2, haplotype)%>%
-    summarise(count = n())
+  haplotype_counts = extended_aacigar_table %>%
+    summarise(count = n(), .by = c(gene_names, var1, var2, haplotype))
   
-  if(!is.null(filters)){
-    filters = strsplit(filters,';')
-    for(temp_filter in 1:length(filters)){
-      if(which(variables == filters[[temp_filter]][1]) == 2){
-        haplotype_counts %<>% filter(var1 %in% strsplit(filters[[temp_filter]][2],',')[[1]])
-        samples_pop_quarter %<>% filter(var1 %in% strsplit(filters[[temp_filter]][2],',')[[1]])
-      }else if(which(variables == filters[[temp_filter]][1]) == 3){
-        haplotype_counts %<>% filter(var2 %in% strsplit(filters[[temp_filter]][2],',')[[1]])
-        samples_pop_quarter %<>% filter(var2 %in% strsplit(filters[[temp_filter]][2],',')[[1]])
-      }
-    }
-  }
+  # 
+  # print("Removing undesired categories based on var_filter")
+  # if(!is.null(filters)){
+  #   filters = strsplit(filters,';')
+  #   for(temp_filter in 1:length(filters)){
+  #     if(which(variables == filters[[temp_filter]][1]) == 2){
+  #       haplotype_counts %<>% filter(var1 %in% strsplit(filters[[temp_filter]][2],',')[[1]])
+  #       samples_pop_quarter %<>% filter(var1 %in% strsplit(filters[[temp_filter]][2],',')[[1]])
+  #     }else if(which(variables == filters[[temp_filter]][1]) == 3){
+  #       haplotype_counts %<>% filter(var2 %in% strsplit(filters[[temp_filter]][2],',')[[1]])
+  #       samples_pop_quarter %<>% filter(var2 %in% strsplit(filters[[temp_filter]][2],',')[[1]])
+  #     }
+  #   }
+  # }
   
-  
+  print('Calculating haplotype frequencies')
   haplotype_counts$freq = NA
+  haplotype_counts$freq_lower = NA
+  haplotype_counts$freq_upper = NA
+  
   
   for(gene in levels(as.factor(haplotype_counts$gene_names))){
     for(Pop in levels(as.factor(haplotype_counts[haplotype_counts$gene_names == gene,][['var1']]))){
       for(date in levels(as.factor(haplotype_counts[haplotype_counts$gene_names == gene&
                                                     haplotype_counts$var1 == Pop,][['var2']]))){
         
+        temp_freq = binconf(haplotype_counts[haplotype_counts$gene_names == gene&
+                                               haplotype_counts$var1 == Pop&
+                                               haplotype_counts$var2 == date,][['count']],
+                            sum(haplotype_counts[haplotype_counts$gene_names == gene&
+                                                   haplotype_counts$var1 == Pop&
+                                                   haplotype_counts$var2 == date,][['count']]),
+                            method = 'exact'
+                            )
+        
         haplotype_counts[haplotype_counts$gene_names == gene&
                            haplotype_counts$var1 == Pop&
-                           haplotype_counts$var2 == date,][['freq']] = haplotype_counts[haplotype_counts$gene_names == gene&
-                                                                                          haplotype_counts$var1 == Pop&
-                                                                                          haplotype_counts$var2 == date,][['count']]/
-          sum(haplotype_counts[haplotype_counts$gene_names == gene&
-                                 haplotype_counts$var1 == Pop&
-                                 haplotype_counts$var2 == date,][['count']])
-        # samples_pop_quarter[samples_pop_quarter$var1 == Pop&
-        #                       samples_pop_quarter$var2 == date,][['count']]
+                           haplotype_counts$var2 == date,][['freq']] = temp_freq[,1]
+        
+        haplotype_counts[haplotype_counts$gene_names == gene&
+                           haplotype_counts$var1 == Pop&
+                           haplotype_counts$var2 == date,][['freq_lower']] = temp_freq[,2]
+        
+        haplotype_counts[haplotype_counts$gene_names == gene&
+                           haplotype_counts$var1 == Pop&
+                           haplotype_counts$var2 == date,][['freq_upper']] = temp_freq[,3]
         
       }
     }
@@ -1633,34 +2086,442 @@ drug_resistant_haplotypes = function(ampseq_object,
   
   haplotype_counts %<>% mutate(gene_haplo = paste(gene_names, haplotype, sep = ": "))
   
-  nhaplo = haplotype_counts %>% group_by(gene_names)%>% summarise(nhaplo = nlevels(as.factor(haplotype))) 
+  haplotype_counts$phenotype = NA
   
-  max_ncolors = brewer.pal(max(nhaplo$nhaplo), 'Set3')
-  
-  colors = NULL
-  
-  for(n in 1:nrow(nhaplo)){
-    colors = c(colors, max_ncolors[1:nhaplo[n,][['nhaplo']]])
+  for(haplotype in haplotype_counts$haplotype){
+    haplotype_counts[haplotype_counts$haplotype == haplotype, ][['phenotype']] =
+      genotype_phenotype_match[genotype_phenotype_match$Genotype == haplotype, ][['Phenotype']]
   }
   
-  haplo_freq_plot = haplotype_counts%>%
+  print('Assigning colors to haplotypes based on their phenotype')
+  blue = brewer.pal(9, 'Blues')[7]
+  reds = brewer.pal(9, 'Reds')[5:8]
+  orange = brewer.pal(9, 'YlOrRd')[4]
+  
+  genotype_phenotype_match %<>% mutate(color_pal = case_when(
+    grepl('resistance', Phenotype) & as.numeric(str_extract(str_extract(Phenotype, '\\d+ ([A-z]| )+ resistance'), '\\d+')) == 1 ~ reds[1],
+    grepl('resistance', Phenotype) & as.numeric(str_extract(str_extract(Phenotype, '\\d+ ([A-z]| )+ resistance'), '\\d+')) == 2 ~ reds[2],
+    grepl('resistance', Phenotype) & as.numeric(str_extract(str_extract(Phenotype, '\\d+ ([A-z]| )+ resistance'), '\\d+')) == 3 ~ reds[3],
+    grepl('resistance', Phenotype) & as.numeric(str_extract(str_extract(Phenotype, '\\d+ ([A-z]| )+ resistance'), '\\d+')) >= 4 ~ reds[4],
+    
+    grepl('Sensitive', Phenotype) ~ blue,
+    
+    grepl('polymorphism', Phenotype) & !grepl('resistance', Phenotype) ~ orange,
+    
+    grepl("^Amplicon.+amplified$", Phenotype) ~ 'gray70',
+    
+    grepl('Gene .+ did not amplified', Phenotype) ~ 'gray30'
+    
+  ))
+  
+  
+  # Sort haplotypes based on gene and phenotype
+  
+  genotype_phenotype_match_sorted = NULL
+  
+  for(gene in unique(genotype_phenotype_match$Gene)){
+    
+    for(color_pal in c(reds[4:1], orange, blue, 'gray70','gray30')){
+      
+      genotype_phenotype_match_sorted = rbind(genotype_phenotype_match_sorted,
+                                genotype_phenotype_match[genotype_phenotype_match$Gene == gene &
+                                 genotype_phenotype_match$color_pal == color_pal,])
+      
+    }
+    
+  }
+  
+  genotype_phenotype_match_sorted$Gene_name = NA
+  
+  for(gene in gene_ids){
+    
+    genotype_phenotype_match_sorted[genotype_phenotype_match_sorted$Gene == gene, ][['Gene_name']] = gene_names[gene_ids == gene]
+    
+  }
+  
+  
+  genotype_phenotype_match_sorted %<>% mutate(
+    gene_haplo = paste(Gene_name, Genotype, sep = ': ')
+  )
+  
+  
+  haplotype_counts$gene_haplo = factor(haplotype_counts$gene_haplo,
+                                       levels = genotype_phenotype_match_sorted$gene_haplo)
+  
+  print('haplotype_freq_barplot')
+  haplotype_freq_barplot = haplotype_counts %>%
     ggplot(aes(y = freq, x = var2, fill  = gene_haplo)) +
     geom_col()+
     facet_grid(var1 ~ gene_names)+
-    scale_fill_manual(values = colors)+
+    scale_fill_manual(values = genotype_phenotype_match_sorted$color_pal)+
     theme_bw()+
-    theme(axis.text.x = element_text(angle = 45, vjust = 0.5))+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5),
+          legend.position = 'bottom') +
     labs(y = 'Frequency in population',
          x = 'Date of Collection',
          fill = 'Gene: Haplotype')
   
-  names(haplotype_counts) = c(names(haplotype_counts)[1], variables[2:3], names(haplotype_counts)[-1:-3])
+  
+  print('haplotypes_freq_lineplot')
+  haplotypes_freq_lineplot = haplotype_counts %>%
+    ggplot(aes(y = freq, x = var2, group  = gene_haplo, color = gene_haplo)) +
+    geom_point()+
+    geom_errorbar(aes(ymin = freq_lower, ymax = freq_upper), alpha = .5, width = .2)+
+    geom_line()+
+    facet_grid(var1 ~ gene_names)+
+    scale_color_manual(values = genotype_phenotype_match_sorted$color_pal)+
+    theme_bw()+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5),
+          legend.position = 'bottom') +
+    labs(y = 'Frequency in population',
+         x = 'Date of Collection',
+         color = 'Gene: Haplotype')
+  
+  #names(haplotype_counts) = c(names(haplotype_counts)[1], variables[2:3], names(haplotype_counts)[-1:-3])
+  
+  print('Defining phenotypes based to drug of interest')
+  
+  drug_phenotype_table = data.frame(Sample_id = rownames(aacigar_table))
+  
+  for(drug in drugs){
+    
+    genes = unique(drugR_reference_alleles[grepl(drug, drugR_reference_alleles$Anotation),][['Gene_Id']])
+    
+    temp_drug_phenotype_table = as.data.frame(drug_phenotype_table[,'Sample_id'])
+    
+    for(gene in genes){
+      
+      temp_drug_phenotype_table = cbind(temp_drug_phenotype_table,
+                                        genotype_phenotype_table[genotype_phenotype_table$Gene == gene, ][['Phenotype']])
+      
+    }
+    
+    colnames(temp_drug_phenotype_table) = c('Sample_id', genes)
+    
+    
+    rownames(temp_drug_phenotype_table) = drug_phenotype_table$Sample
+    
+    temp_drug_phenotype_table[[drug]] = NA
+    
+    for(sample in rownames(temp_drug_phenotype_table)){
+      
+      phenotype = temp_drug_phenotype_table[sample,genes]
+      
+      # Check for resistance associated mutants
+      
+      if(sum(grepl(paste0('\\d+ ([A-z]+ and )?', drug, '( and [A-z]+)? resistance mutations?'), phenotype)) > 0){
+        
+        resistance_phenotype_genes = which(grepl(paste0('\\d+ ([A-z]+ and )?', drug, '( and [A-z]+)? resistance mutations?'), phenotype))
+        
+        for(resistante_gene in resistance_phenotype_genes){
+          
+          gene_phenotype = str_extract(temp_drug_phenotype_table[sample,][[genes[resistante_gene]]], paste0('\\d+ ([A-z]+ and )?', drug, '( and [A-z]+)? resistance mutations?'))
+          
+          gene_phenotype = paste0(gene_phenotype, ' in gene ', genes[resistante_gene])
+          
+          if(is.na(temp_drug_phenotype_table[sample,][[drug]])){
+            
+            temp_drug_phenotype_table[sample,][[drug]] = gene_phenotype
+            
+          }else{
+            
+            temp_drug_phenotype_table[sample,][[drug]] = paste(temp_drug_phenotype_table[sample,][[drug]],
+                                                          gene_phenotype, sep = '; ')
+            
+          }
+          
+        }
+        
+      }
+      
+      # Check for not reported mutants
+      
+      if(sum(grepl('polymorphism', phenotype)) > 0){
+        
+        unreported_mutations = which(grepl('polymorphism', phenotype))
+        
+        for(unreported_mutation in unreported_mutations){
+          
+          gene_phenotype = str_extract(temp_drug_phenotype_table[sample,][[genes[unreported_mutation]]], paste0('[a-z]\\d+[a-z] polymorphism in gene ', genes[unreported_mutation]))
+          
+          
+          if(is.na(temp_drug_phenotype_table[sample,][[drug]])){
+            
+            temp_drug_phenotype_table[sample,][[drug]] = gene_phenotype
+            
+          }else{
+            
+            temp_drug_phenotype_table[sample,][[drug]] = paste(temp_drug_phenotype_table[sample,][[drug]],
+                                                          gene_phenotype, sep = '; ')
+            
+          }
+          
+        }
+        
+      }
+      
+      # Check for sensitive phenotypes
+      
+      if(sum(grepl('Sensitive', phenotype)) == length(phenotype)){
+        
+        temp_drug_phenotype_table[sample,][[drug]] = paste0('Sensitive phenotype based on gene(s) ',
+                                                       ifelse(length(genes) > 1,
+                                                              paste(paste(genes[-length(genes)], collapse = ', '), genes[length(genes)], sep = ' and '),
+                                                              genes)
+                                                       )
+        
+      }
+      
+      # Check for complete missing data
+      
+      if(sum(grepl('Gene .+ did not amplified', phenotype)) == length(phenotype)){
+        
+        temp_drug_phenotype_table[sample,][[drug]] = paste0('Gene(s) ',
+                                                       ifelse(length(genes) > 1,
+                                                              paste(paste(genes[-length(genes)], collapse = ', '), genes[length(genes)], sep = ' and '),
+                                                              genes),
+                                                       ' did not amplified'
+        )
+        
+      }
+      
+      
+      # Check for partial haplotypes
+      
+      if(is.na(temp_drug_phenotype_table[sample,][[drug]])){
+
+
+        partial_haplotypes = phenotype[which(!grepl('Sensitive', phenotype))]
+        
+        
+        temp_drug_phenotype_table[sample,][[drug]] = paste0('Partial haplotype: ',
+                                                       ifelse(length(partial_haplotypes) > 1,
+                                                              paste(paste(partial_haplotypes[-length(partial_haplotypes)], collapse = ', '), partial_haplotypes[length(partial_haplotypes)], sep = ' and '),
+                                                              partial_haplotypes))
+    
+
+      }
+      
+      
+         
+    }
+    
+    drug_phenotype_table[[drug]] = temp_drug_phenotype_table[[drug]]
+      
+  }
   
   
-  drug_resistant_hap_list = list(aacigar_table = aacigar_table,
-                                 phenotype_table = phenotype_table,
-                                 haplotype_counts =haplotype_counts,
-                                 haplo_freq_plot = haplo_freq_plot)
+  drug_phenotype_table %<>% pivot_longer(cols = all_of(drugs), names_to = 'Drug', values_to = 'Phenotype')
+  
+  
+  drug_phenotype_summary = drug_phenotype_table %>% mutate(
+    Phenotype = case_when(
+      grepl(paste0('\\d+ ([A-z]+ and )?(', paste(drugs, collapse = '|'), ')( and [A-z]+)? resistance mutations?'), Phenotype) ~ "Mutation(s) associated with a resistant phenotype",
+      grepl(paste0('^[a-z]\\d+[a-z] polymorphism in gene (', paste(gene_ids, collapse = '|'), ')'), Phenotype) ~ "Polymorphism(s) respect to reference strain",
+      grepl('Sensitive phenotype', Phenotype) ~ "Sensitive Phenotype",
+      grepl('Partial haplotype:', Phenotype) ~ "Partial Haplotype",
+      grepl('Gene\\(s\\).+did not amplified', Phenotype) ~ "Missing data"
+    ))
+  
+  
+  drug_phenotype_summary = merge(drug_phenotype_summary,
+                                 metadata,
+                                 by = 'Sample_id',
+                                 all.x = TRUE)
+  
+  
+  if(na.var.rm){
+    drug_phenotype_summary = drug_phenotype_summary[!is.na(drug_phenotype_summary$var1)|
+                                                      (!is.na(drug_phenotype_summary$var2)|
+                                                         grepl('NA',drug_phenotype_summary$var2)),]
+  }else{
+    drug_phenotype_summary %<>% mutate(var1 = case_when(
+      is.na(var1) ~ paste(variables[2], 'missing'),
+      !is.na(var1) ~ var1),
+      var2 = case_when(
+        is.na(var2)|grepl('NA',var2) ~ paste(variables[3], 'missing'),
+        (!is.na(var2))&(!grepl('NA',var2)) ~ var2))
+  }
+  
+  
+  if(na.hap.rm){
+    drug_phenotype_summary = drug_phenotype_summary[!grepl('(Partial|Missing)',drug_phenotype_summary$Phenotype),]
+  }
+  
+  
+  samples_pop_quarter = drug_phenotype_summary %>%
+    summarise(count = nlevels(as.factor(Sample_id)), .by = c(var1, var2)) 
+  
+  drug_phenotype_summary = drug_phenotype_summary %>%
+    summarise(count = n(),
+              Longitude = mean(Longitude),
+              Latitude = mean(Latitude),
+              .by = c(Drug, var1, var2, Phenotype))
+  
+  # if(!is.null(filters)){
+  #   #filters = strsplit(filters,';')
+  #   for(temp_filter in 1:length(filters)){
+  #     if(which(variables == filters[[temp_filter]][1]) == 2){
+  #       drug_phenotype_summary %<>% filter(var1 %in% strsplit(filters[[temp_filter]][2],',')[[1]])
+  #       samples_pop_quarter %<>% filter(var1 %in% strsplit(filters[[temp_filter]][2],',')[[1]])
+  #     }else if(which(variables == filters[[temp_filter]][1]) == 3){
+  #       drug_phenotype_summary %<>% filter(var2 %in% strsplit(filters[[temp_filter]][2],',')[[1]])
+  #       samples_pop_quarter %<>% filter(var2 %in% strsplit(filters[[temp_filter]][2],',')[[1]])
+  #     }
+  #   }
+  # }
+  
+  drug_phenotype_summary$freq = NA
+  drug_phenotype_summary$freq_lower = NA
+  drug_phenotype_summary$freq_upper = NA
+  
+  
+  for(drug in levels(as.factor(drug_phenotype_summary$Drug))){
+    for(Pop in levels(as.factor(drug_phenotype_summary[drug_phenotype_summary$Drug == drug,][['var1']]))){
+      for(date in levels(as.factor(drug_phenotype_summary[drug_phenotype_summary$Drug == drug&
+                                                          drug_phenotype_summary$var1 == Pop,][['var2']]))){
+        
+        temp_freq = binconf(drug_phenotype_summary[drug_phenotype_summary$Drug == drug&
+                                                     drug_phenotype_summary$var1 == Pop&
+                                                     drug_phenotype_summary$var2 == date,][['count']],
+                            sum(drug_phenotype_summary[drug_phenotype_summary$Drug == drug&
+                                                         drug_phenotype_summary$var1 == Pop&
+                                                         drug_phenotype_summary$var2 == date,][['count']]),
+                            method = 'exact'
+        )
+        
+        drug_phenotype_summary[drug_phenotype_summary$Drug == drug&
+                                 drug_phenotype_summary$var1 == Pop&
+                                 drug_phenotype_summary$var2 == date,][['freq']] = temp_freq[,1]
+        
+        drug_phenotype_summary[drug_phenotype_summary$Drug == drug&
+                                 drug_phenotype_summary$var1 == Pop&
+                                 drug_phenotype_summary$var2 == date,][['freq_lower']] = temp_freq[,2]
+        
+        drug_phenotype_summary[drug_phenotype_summary$Drug == drug&
+                                 drug_phenotype_summary$var1 == Pop&
+                                 drug_phenotype_summary$var2 == date,][['freq_upper']] = temp_freq[,3]
+        
+        
+      }
+    }
+  }
+  
+  print('drug_phenotype_barplot')
+  drug_phenotype_barplot = drug_phenotype_summary %>%
+    ggplot(aes(y = freq, x = var2, fill  = factor(Phenotype,
+                                                  levels = c("Mutation(s) associated with a resistant phenotype",
+                                                             "Polymorphism(s) respect to reference strain",
+                                                             "Sensitive Phenotype",
+                                                             "Partial Haplotype",
+                                                             "Missing data")))) +
+    geom_col()+
+    facet_grid(var1 ~ Drug)+
+    scale_fill_manual(values = c('firebrick3', 'gold3', 'dodgerblue3', 'gray70', 'gray30'))+
+    theme_bw()+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5),
+          legend.position = 'bottom') +
+    labs(y = 'Pop. Frequency',
+         x = 'Date of Collection',
+         fill = 'Phenotype')
+  
+  
+  print('drug_phenotyope_lineplot')
+  drug_phenotyope_lineplot = drug_phenotype_summary %>%
+    ggplot(aes(y = freq, x = var2, group  = factor(Phenotype,
+                                                           levels = c("Mutation(s) associated with a resistant phenotype",
+                                                                      "Polymorphism(s) respect to reference strain",
+                                                                      "Sensitive Phenotype",
+                                                                      "Partial Haplotype",
+                                                                      "Missing data")),
+               color = factor(Phenotype,
+                                      levels = c("Mutation(s) associated with a resistant phenotype",
+                                                 "Polymorphism(s) respect to reference strain",
+                                                 "Sensitive Phenotype",
+                                                 "Partial Haplotype",
+                                                 "Missing data")))) +
+    geom_point()+
+    geom_errorbar(aes(ymin = freq_lower, ymax = freq_upper), alpha = .5, width = .2)+
+    geom_line()+
+    facet_grid(var1 ~ Drug)+
+    scale_color_manual(values = c('firebrick3', 'gold3', 'dodgerblue3', 'gray70', 'gray30'))+
+    theme_bw()+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5),
+          legend.position = 'bottom') +
+    labs(y = 'Pop. Frequency',
+         x = 'Date of Collection',
+         color = 'Phenotype')
+  
+  print("Estimating frequencyr fo drug phenotypes")
+
+  drug_phenotype_summary_sdf = drug_phenotype_summary %>% 
+    summarise(Longitude = mean(Longitude),
+              Latitude = mean(Latitude),
+              count = sum(count), .by = c(Drug, Phenotype, var1))
+  
+  drug_phenotype_summary_sdf$ssize = NA
+  drug_phenotype_summary_sdf$freq = NA
+  drug_phenotype_summary_sdf$freq_lower = NA
+  drug_phenotype_summary_sdf$freq_upper = NA
+  
+  
+  for(drug in levels(as.factor(drug_phenotype_summary_sdf$Drug))){
+    for(Pop in levels(as.factor(drug_phenotype_summary_sdf[drug_phenotype_summary_sdf$Drug == drug,][['var1']]))){
+      
+      ssize = sum(drug_phenotype_summary_sdf[drug_phenotype_summary_sdf$Drug == drug &
+                                               drug_phenotype_summary_sdf$var1 == Pop,][['count']])
+        
+        temp_freq = binconf(drug_phenotype_summary_sdf[drug_phenotype_summary_sdf$Drug == drug &
+                                                         drug_phenotype_summary_sdf$var1 == Pop,][['count']],
+                            ssize,
+                            method = 'exact'
+        )
+        
+        drug_phenotype_summary_sdf[drug_phenotype_summary_sdf$Drug == drug &
+                                     drug_phenotype_summary_sdf$var1 == Pop,][['ssize']] = ssize
+        
+        drug_phenotype_summary_sdf[drug_phenotype_summary_sdf$Drug == drug &
+                                     drug_phenotype_summary_sdf$var1 == Pop,][['freq']] = round(temp_freq[,1], 2)
+        
+        drug_phenotype_summary_sdf[drug_phenotype_summary_sdf$Drug == drug &
+                                     drug_phenotype_summary_sdf$var1 == Pop,][['freq_lower']] = round(temp_freq[,2], 2)
+        
+        drug_phenotype_summary_sdf[drug_phenotype_summary_sdf$Drug == drug &
+                                     drug_phenotype_summary_sdf$var1 == Pop,][['freq_upper']] = round(temp_freq[,3], 2)
+        
+        
+    }
+  }
+  
+  drug_phenotype_summary_sdf %<>% mutate(logssize = log(ssize, 1.3))
+  
+  drug_phenotype_summary_sdf %<>% filter(Phenotype == "Mutation(s) associated with a resistant phenotype")
+  
+  
+  print("Transforming data to spatial points")
+  drug_phenotype_summary_sdf = SpatialPointsDataFrame(coords = drug_phenotype_summary_sdf[,c("Latitude", "Longitude")],
+                                                    data = drug_phenotype_summary_sdf,
+                                                    proj4string = CRS("+init=epsg:4326"))
+
+
+  tmap_mode('view')
+  print('i_drug_map')
+  i_drug_map = tm_shape(drug_phenotype_summary_sdf)+
+    tm_dots(size = "logssize", style="pretty", col = "freq")+
+    tm_text("freq", size=1)+
+    tm_facets(by = "Drug")+
+    tm_scale_bar()
+  
+  drug_resistant_hap_list = list(aa_mutations = haps_respect_to_ref$loci_aa_table,
+                                 dna_mutations = haps_respect_to_ref$loci_dna_table,
+                                 genotype_phenotype_table = genotype_phenotype_table,
+                                 drug_phenotype_table = drug_phenotype_table,
+                                 drug_phenotyope_lineplot = drug_phenotyope_lineplot,
+                                 drug_phenotype_barplot = drug_phenotype_barplot,
+                                 drug_phenotype_summary_sdf = drug_phenotype_summary_sdf,
+                                 i_drug_map = i_drug_map,
+                                 haplotypes_freq_lineplot = haplotypes_freq_lineplot,
+                                 haplotype_freq_barplot = haplotype_freq_barplot)
   
   return(drug_resistant_hap_list)
   
@@ -2137,9 +2998,16 @@ plot_relatedness_distribution = function(pairwise_relatedness = pairwise_related
   
   # }
   
-  pairwise_relatedness_l$Pop_comparison = factor(pairwise_relatedness_l$Pop_comparison,
-                                                 levels = c(sort(unique(metadata[!is.na(metadata[[Population]]),][[Population]])),
-                                                            apply(combn(unique(metadata[!is.na(metadata[[Population]]),][[Population]]),2), 2, function(x){paste(sort(x), collapse = '-')})))
+  
+  if(!is.null(pop_levels)){
+    pairwise_relatedness_l$Pop_comparison = factor(pairwise_relatedness_l$Pop_comparison,
+                                                   levels = pop_levels)
+  }else{
+    pairwise_relatedness_l$Pop_comparison = factor(pairwise_relatedness_l$Pop_comparison,
+                                                   levels = c(sort(unique(metadata[!is.na(metadata[[Population]]),][[Population]])),
+                                                              apply(combn(unique(metadata[!is.na(metadata[[Population]]),][[Population]]),2), 2, function(x){paste(sort(x), collapse = '-')})))
+  }
+  
   
   pairwise_relatedness_l$Type_of_comparison = factor(pairwise_relatedness_l$Type_of_comparison, levels =
                                                        c('Within', 'Between'))
@@ -2149,12 +3017,12 @@ plot_relatedness_distribution = function(pairwise_relatedness = pairwise_related
   if(type_pop_comparison == 'within'){
     plot_pairwise_relatedness_distribution = pairwise_relatedness_l %>%
       filter(Type_of_comparison == 'Within')%>%
-      ggplot(aes(x = rhat, fill = factor(Pop_comparison, levels = pop_levels))) +
+      ggplot(aes(x = rhat, fill = Pop_comparison)) +
       geom_histogram(position = "stack", alpha = .7)+
       geom_vline(xintercept = mean(pairwise_relatedness_l$rhat), linetype = 2)+
       scale_fill_manual(values = fill_color)+
       theme_bw()+
-      facet_wrap(~factor(Pop_comparison, levels = pop_levels), ncol = ncol,
+      facet_wrap(~Pop_comparison, ncol = ncol,
                  scales = "free_y")+
       labs(y = "Count",
            x = "Relatedness",
@@ -2166,12 +3034,12 @@ plot_relatedness_distribution = function(pairwise_relatedness = pairwise_related
   }else if(type_pop_comparison == 'between'){
     plot_pairwise_relatedness_distribution = pairwise_relatedness_l %>%
       filter(Type_of_comparison == 'Between')%>%
-      ggplot(aes(x = rhat, fill = factor(Pop_comparison, levels = pop_levels))) +
+      ggplot(aes(x = rhat, fill = Pop_comparison)) +
       geom_histogram(position = "stack", alpha = .7)+
       geom_vline(xintercept = mean(pairwise_relatedness_l$rhat), linetype = 2)+
       scale_fill_manual(values = fill_color)+
       theme_bw()+
-      facet_wrap(~factor(Pop_comparison, levels = pop_levels), ncol = ncol,
+      facet_wrap(~Pop_comparison, ncol = ncol,
                  scales = "free_y")+
       labs(y = "Count",
            x = "Relatedness",
@@ -2258,9 +3126,19 @@ plot_frac_highly_related = function(pairwise_relatedness = pairwise_relatedness,
   
   # }
   
-  pairwise_relatedness_l$Pop_comparison = factor(pairwise_relatedness_l$Pop_comparison,
-                                                 levels = c(sort(unique(metadata[!is.na(metadata[[Population]]),][[Population]])),
-                                                            apply(combn(unique(metadata[!is.na(metadata[[Population]]),][[Population]]),2), 2, function(x){paste(sort(x), collapse = '-')})))
+  if(!is.null(pop_levels)){
+    pairwise_relatedness_l$Pop_comparison = factor(pairwise_relatedness_l$Pop_comparison,
+                                                   levels = pop_levels)
+    
+  }else{
+    pairwise_relatedness_l$Pop_comparison = factor(pairwise_relatedness_l$Pop_comparison,
+                                                   levels = c(sort(unique(metadata[!is.na(metadata[[Population]]),][[Population]])),
+                                                              apply(combn(unique(metadata[!is.na(metadata[[Population]]),][[Population]]),2), 2, function(x){paste(sort(x), collapse = '-')})))
+    
+  }
+  
+   
+  
   pairwise_relatedness_l$Type_of_comparison = factor(pairwise_relatedness_l$Type_of_comparison, levels =
                                                        c('Within', 'Between'))
   
@@ -2292,7 +3170,7 @@ plot_frac_highly_related = function(pairwise_relatedness = pairwise_relatedness,
     
     plot_frac_highly_related = highly_related_table %>%
       filter(Type_of_comparison == 'Within') %>%
-      ggplot(aes(x = factor(Pop_comparison, levels = pop_levels), y = prop, fill = factor(Pop_comparison, levels = pop_levels))) + 
+      ggplot(aes(x = Pop_comparison, y = prop, fill = Pop_comparison)) + 
       geom_col(alpha = .85)+
       geom_errorbar(aes(ymin = lower, ymax = upper), width = .2)+
       scale_fill_manual(values = fill_color)+
@@ -2309,7 +3187,7 @@ plot_frac_highly_related = function(pairwise_relatedness = pairwise_relatedness,
     
     plot_frac_highly_related = highly_related_table %>%
       filter(Type_of_comparison == 'Between') %>%
-      ggplot(aes(x = factor(Pop_comparison, levels = pop_levels), y = prop, fill = factor(Pop_comparison, levels = pop_levels))) + 
+      ggplot(aes(x = Pop_comparison, y = prop, fill = Pop_comparison)) + 
       geom_col(alpha = .85)+
       geom_errorbar(aes(ymin = lower, ymax = upper), width = .2)+
       scale_fill_manual(values = fill_color)+
@@ -2325,7 +3203,7 @@ plot_frac_highly_related = function(pairwise_relatedness = pairwise_relatedness,
   }else if(type_pop_comparison == 'both'){
     
     plot_frac_highly_related = highly_related_table %>%
-      ggplot(aes(x = factor(Pop_comparison, levels = pop_levels), y = prop, fill = factor(Pop_comparison, levels = pop_levels))) + 
+      ggplot(aes(x = Pop_comparison, y = prop, fill = Pop_comparison)) + 
       geom_col(alpha = .85)+
       geom_errorbar(aes(ymin = lower, ymax = upper), width = .2)+
       scale_fill_manual(values = fill_color)+
@@ -2434,10 +3312,17 @@ plot_frac_highly_related_over_time = function(pairwise_relatedness = pairwise_re
       Date_Yi == Date_Yj ~ "Within")
   )
   
-  pairwise_relatedness_l$Pop_comparison = factor(pairwise_relatedness_l$Pop_comparison,
-                                                 levels = c(sort(unique(pairwise_relatedness_l$Pop_comparison)[!grepl("_", unique(pairwise_relatedness_l$Pop_comparison))]),
-                                                            sort(unique(pairwise_relatedness_l$Pop_comparison)[grepl("_", unique(pairwise_relatedness_l$Pop_comparison))])))
+  if(!is.null(pop_levels)){
+    pairwise_relatedness_l$Pop_comparison = factor(pairwise_relatedness_l$Pop_comparison,
+                                                   levels = pop_levels)
+    
+  }else{
+    pairwise_relatedness_l$Pop_comparison = factor(pairwise_relatedness_l$Pop_comparison,
+                                                   levels = c(sort(unique(pairwise_relatedness_l$Pop_comparison)[!grepl("_", unique(pairwise_relatedness_l$Pop_comparison))]),
+                                                              sort(unique(pairwise_relatedness_l$Pop_comparison)[grepl("_", unique(pairwise_relatedness_l$Pop_comparison))])))
+  }
   
+    
   pairwise_relatedness_l$Type_Pop_comparison = factor(pairwise_relatedness_l$Type_Pop_comparison, levels =
                                                         c('Within', 'Between'))
   
@@ -2469,11 +3354,11 @@ plot_frac_highly_related_over_time = function(pairwise_relatedness = pairwise_re
   if(type_pop_comparison == 'both'){
     
     plot_frac_highly_related = frac_highly_related %>%
-      ggplot(aes(x = Date_Yi, y = prop, fill = factor(Pop_comparison, levels = pop_levels))) + 
+      ggplot(aes(x = Date_Yi, y = prop, fill = Pop_comparison)) + 
       geom_col(alpha = .85)+
       geom_errorbar(aes(ymin = lower, ymax = upper), width = .2)+
       scale_fill_manual(values = fill_color)+
-      facet_wrap(Type_Pop_comparison~factor(Pop_comparison, levels = pop_levels))+
+      facet_wrap(Type_Pop_comparison~Pop_comparison)+
       theme_bw()+
       labs(y = paste0('Proportion of highly related samples, IBD >= ', threshold))+
       theme(axis.text = element_text(size = 12),
@@ -2487,11 +3372,11 @@ plot_frac_highly_related_over_time = function(pairwise_relatedness = pairwise_re
     
     plot_frac_highly_related = frac_highly_related %>%
       filter(Type_Pop_comparison == 'Within')%>%
-      ggplot(aes(x = Date_Yi, y = prop, fill = factor(Pop_comparison, levels = pop_levels))) + 
+      ggplot(aes(x = Date_Yi, y = prop, fill = Pop_comparison)) + 
       geom_col(alpha = .85)+
       geom_errorbar(aes(ymin = lower, ymax = upper), width = .2)+
       scale_fill_manual(values = fill_color)+
-      facet_wrap(~factor(Pop_comparison, levels = pop_levels), ncol = ncol)+
+      facet_wrap(~Pop_comparison, ncol = ncol)+
       theme_bw()+
       labs(y = paste0('Proportion of highly related samples, IBD >= ', threshold))+
       theme(axis.text = element_text(size = 12),
@@ -2506,11 +3391,11 @@ plot_frac_highly_related_over_time = function(pairwise_relatedness = pairwise_re
     
     plot_frac_highly_related = frac_highly_related %>%
       filter(Type_Pop_comparison == 'Between')%>%
-      ggplot(aes(x = Date_Yi, y = prop, fill = factor(Pop_comparison, levels = pop_levels))) + 
+      ggplot(aes(x = Date_Yi, y = prop, fill = Pop_comparison)) + 
       geom_col(alpha = .85)+
       geom_errorbar(aes(ymin = lower, ymax = upper), width = .2)+
       scale_fill_manual(values = fill_color)+
-      facet_wrap(~factor(Pop_comparison, levels = pop_levels), ncol = ncol)+
+      facet_wrap(~Pop_comparison, ncol = ncol)+
       theme_bw()+
       labs(y = paste0('Proportion of highly related samples, IBD >= ', threshold))+
       theme(axis.text = element_text(size = 12),
@@ -2830,8 +3715,24 @@ IBD_evectors = function(ampseq_object, relatedness_table, k = NULL, Pop = 'Popul
   pairwise_relatedness_matrix[is.na(pairwise_relatedness_matrix)] = 1
   
   pairwise_dist_matrix = 1 - pairwise_relatedness_matrix
+
+  #evector = fastGRMCpp(pairwise_relatedness_matrix, k, q)
   
-  evector = fastGRMCpp(pairwise_relatedness_matrix, k, q)
+  ibd_pca = princomp(pairwise_dist_matrix)
+  
+  evector = ibd_pca$scores
+  evalues = ibd_pca$sdev
+
+  contrib = 100*(evalues)^2/sum((evalues)^2)
+  
+  
+  # evalues = NULL
+  # 
+  # for(i in 1:k){
+  #   evalues = c(evalues, unlist((pairwise_dist_matrix %*% evector[,i])/evector[,i])[1])
+  # }
+  
+  #contrib = 100*(((evalues + abs(min(evalues))))^2/sum(((evalues + abs(min(evalues))))^2))
   
   #### Add metadata to the PCA----
   Pop_col = merge(data.frame(Sample_id = gsub('_C[1,2]$','',colnames(pairwise_relatedness_matrix)),
@@ -2842,7 +3743,10 @@ IBD_evectors = function(ampseq_object, relatedness_table, k = NULL, Pop = 'Popul
   evector = data.frame(Pop_col, evector)
   names(evector) = c(colnames(Pop_col), paste0(rep('PC', k), 1:k))
   
-  return(evector)
+  
+  ibd_pca = list(eigenvector=evector, eigenvalues = evalues, contrib = contrib)
+  
+  return(ibd_pca)
   
 }
 

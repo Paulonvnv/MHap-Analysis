@@ -1,0 +1,64 @@
+{
+  "vmem": 32,
+  "cores": 8,
+  "h_rt1": 00:30:00,
+  "h_rt2": 02:00:00,
+  "h_rt3": 01:00:00,
+  "nTasks": 50,
+  
+  "wd": "/Users/pam3650/Documents/Github/MHap-Analysis/docs/data/Pfal_example/",
+  "fd": "/Users/pam3650/Documents/Github/MHap-Analysis/docs/functions_and_libraries/",
+  "rd": "/Users/pam3650/Documents/Github/MHap-Analysis/docs/reference/Pfal_3D7/",
+  
+  "cigar_paths": NaN,
+  "cigar_files": "cigar_tables",
+  "ampseq_jsonfile": NaN,
+  "ampseq_excelfile": NaN,
+  
+  "output": "MHap_test2",
+  
+  "sample_id_pattern": "^ID",
+  "markers": "markers.csv",
+  "min_abd": 10,
+  "min_ratio": 0.1,
+  
+  "PerformanceReport": false,
+  
+  "sample_ampl_rate": 0.75,
+  "locus_ampl_rate": 0.75,
+  
+  "Drug_Surveillance_Report": true,
+  "Variants_of_Interest_Report": false,
+  
+  "ref_gff": "PlasmoDB-59_Pfalciparum3D7.gff",
+  "ref_fasta": "PlasmoDB-59_Pfalciparum3D7_Genome.fasta",
+  "reference_alleles": "drugR_alleles.csv",
+  
+  "gene_names": "PfDHFR,PfMDR1,PfDHPS,PfKelch13,PF3D7_1447900",
+  "gene_ids": "PF3D7_0417200,PF3D7_0523000,PF3D7_0810800,PF3D7_1343700,PF3D7_1447900",
+  
+  
+
+
+  "metadata": "Pfal_metadata.csv", 
+  "join_by": "Sample_id",
+  "Variable1": "Subnational_level2",
+  "Variable2": "Quarter_of_Collection",
+  "Longitude": "Longitude",
+  "Latitude": "Latitude",
+  "na_var_rm": true,
+  "na_hap_rm": true,
+  "drugs": "Artemisinin,Chloroquine,Pyrimethamine,Sulfadoxine,Lumefantrine,Mefloquine",
+  "var_filter": "Subnational_level2;Municipality.1,Municipality.2,Municipality.3/Quarter_of_Collection;2021-Q1,2021-Q2,2021-Q3,2021-Q4,2022-Q1,2022-Q2",
+  "include_all_drug_markers": true,
+  
+  "ibd_thres": "NaN",
+  "parallel": true,
+  "ibd_ncol": 4,
+  "pop_levels":null,
+  
+  "nchunks": 500
+}
+
+
+

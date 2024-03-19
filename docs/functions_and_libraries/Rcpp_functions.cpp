@@ -7,6 +7,8 @@
 #include <cmath>
 #include <RcppEigen.h>
 #include <random>
+#define EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS
+#include <Eigen/Eigen>
 using namespace Rcpp;
 using namespace std;
 using namespace Eigen;
