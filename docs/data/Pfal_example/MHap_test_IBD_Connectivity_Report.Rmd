@@ -1,0 +1,113 @@
+---
+title: "*MHap Analysis Report*: Genetic Relatedness (IBD) and Connectivity"
+author: "Neafsey Lab"
+output:
+  html_document:
+    toc: yes
+    number_sections: no
+    toc_float: yes
+    code_folding: hide
+editor_options:
+  markdown:
+    wrap: 72
+  chunk_output_type: inline
+params:
+  RData_image: ""
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, include = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(magrittr)
+
+
+setClass('ampseq', slots = c(
+  gt = "ANY",
+  metadata = "ANY",
+  markers = "ANY",
+  loci_performance = "ANY",
+  pop_summary = "ANY",
+  controls = "ANY",
+  discarded_loci = "ANY",
+  discarded_samples = "ANY",
+  plots = "ANY"
+))
+
+load(params$RData_image)
+
+```
+
+The haplotype of each sample is stored in the table `aacigar_table`
+within the object `drug_resistant_haplotypes_plot`.
+
+```{r, fig.width=10, fig.height=10, fig.cap = "**Figure 1:** IBD distribution between sites"}
+
+plot_relatedness_distribution_between$plot
+
+```
+
+```{r, fig.width=10, fig.height=6, fig.cap = "**Figure 2:** Frequency of highly related among sites"}
+
+plot_frac_highly_related_between$plot
+```
+
+
+```{r, fig.width=10, fig.height=10, fig.cap = "**Figure 2:** Frequency of highly related between sites over time"}
+
+if(!is.na(Variable2)){plot_frac_highly_related_overtime_between$plot_IBD_correlation_matrix}
+```
+
+```{r, fig.width=10, fig.height=10, fig.cap = "**Figure 2:** Frequency of highly related between sites over time"}
+
+if(!is.na(Variable2)){plot_frac_highly_related_overtime_between$plot_frac_highly_related}
+```
+
+
+```{r, fig.width=10, fig.height=12, fig.cap="**Figure 3:** IBD PCA"}
+IBD_PCA
+```
+
+```{r, fig.width=10, fig.height=12, fig.cap="**Figure 4:** IBD network"}
+plot_network(pairwise_relatedness,
+                               threshold = ibd_thres,
+                               metadata = ampseq_object@metadata, 
+                               sample_id = 'Sample_id', 
+                               group_by = Variable1, 
+                               levels = levels(as.factor(ampseq_object@metadata[[Variable1]])),
+                               colors = brewer.pal(n = nlevels(as.factor(ampseq_object@metadata[[Variable1]])), name = 'Accent')
+                              )
+```
+
+### Pairwise relatedness comparisons between categories of Variable1
+
+```{r}
+
+plot_relatedness_distribution_between$relatedness %>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+
+```
+
+### Fraction of highly related comparisons between categories of Variable1
+
+```{r}
+plot_frac_highly_related_between$highly_related_table %>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+```
+
+
+### Fraction of highly related comparisons between categories of Variable1 over Variable2
+
+```{r}
+if(!is.na(Variable2)){plot_frac_highly_related_overtime_between$frac_highly_related %>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))}
+```
+

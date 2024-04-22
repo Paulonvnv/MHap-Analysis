@@ -144,6 +144,30 @@ fi
 echo "min_ratio: "${min_ratio}
 
 
+off_target_formula=$(json_extract off_target_formula "$(cat ${json})")
+if [[ ${off_target_formula} == "" ]]
+then 
+off_target_formula="dVSITES_ij>=0.3"
+fi
+echo "off_target_formula: "${off_target_formula}
+
+
+flanking_INDEL_formula=$(json_extract flanking_INDEL_formula "$(cat ${json})")
+if [[ ${flanking_INDEL_formula} == "" ]]
+then 
+flanking_INDEL_formula="flanking_INDEL==TRUE&h_ij>=0.66"
+fi
+echo "flanking_INDEL_formula: "${flanking_INDEL_formula}
+
+
+PCR_errors_formula=$(json_extract PCR_errors_formula "$(cat ${json})")
+if [[ ${PCR_errors_formula} == "" ]]
+then 
+PCR_errors_formula="h_ij>= 0.66&h_ijminor>=0.66"
+fi
+echo "PCR_errors_formula: "${PCR_errors_formula}
+
+
 PerformanceReport=$(json_extract PerformanceReport "$(cat ${json})")
 
 if [[ ${PerformanceReport} == "" ]]
@@ -402,6 +426,19 @@ fi
 echo "ibd_thres: "${ibd_thres}
 
 
+pairwise_relatedness_table=$(json_extract pairwise_relatedness_table "$(cat ${json})")
+
+if [[ ${pairwise_relatedness_table} != "" ]]
+then 
+pairwise_relatedness_table=${pairwise_relatedness_table%\"}
+pairwise_relatedness_table=${pairwise_relatedness_table#\"}
+else
+pairwise_relatedness_table="NaN"
+fi
+
+echo "pairwise_relatedness_table: "${pairwise_relatedness_table}
+
+
 nTasks=$(json_extract nTasks "$(cat ${json})")
 
 if [[ ${nTasks} == "" ]]
@@ -450,6 +487,16 @@ fi
 echo "pop_levels: "${pop_levels}
 
 
+poly_quantile=$(json_extract poly_quantile "$(cat ${json})")
+
+if [[ ${poly_quantile} == "" ]]
+then 
+poly_quantile="NaN"
+fi
+
+echo "poly_quantile: "${poly_quantile}
+
+
 # Run pre-filtering
 
 Rscript ${fd}/MHap_Analysis_pipeline.R \
@@ -465,6 +512,9 @@ Rscript ${fd}/MHap_Analysis_pipeline.R \
   -markers ${markers} \
   -min_abd ${min_abd} \
   -min_ratio ${min_ratio} \
+  -off_target_formula ${off_target_formula} \
+  -flanking_INDEL_formula ${flanking_INDEL_formula} \
+  -PCR_errors_formula ${PCR_errors_formula} \
   -PerformanceReport ${PerformanceReport} \
   -samprate ${sample_ampl_rate} \
   -lamprate ${locus_ampl_rate} \
@@ -475,6 +525,8 @@ Rscript ${fd}/MHap_Analysis_pipeline.R \
   -reference_alleles ${reference_alleles} \
   -gene_names ${gene_names} \
   -gene_ids ${gene_ids} \
+  -drugs ${drugs} \
+  -include_all_drug_markers ${include_all_drug_markers} \
   -metadata ${metadata} \
   -join_by ${join_by} \
   -Var1 ${Variable1} \
@@ -483,13 +535,13 @@ Rscript ${fd}/MHap_Analysis_pipeline.R \
   -Latitude ${Latitude} \
   -na_var_rm ${na_var_rm} \
   -na_hap_rm ${na_hap_rm} \
-  -drugs ${drugs} \
   -var_filter ${var_filter} \
-  -include_all_drug_markers ${include_all_drug_markers} \
   -t ${nTasks} \
   -tid 1 \
   -ibd ${ibd_thres} \
+  -pairwise_relatedness_table ${pairwise_relatedness_table} \
   -parallel ${parallel} \
   -ibd_ncol ${ibd_ncol} \
   -pop_levels ${pop_levels} \
-  -nchunks ${nchunks}
+  -nchunks ${nchunks} \
+  -poly_quantile ${poly_quantile}

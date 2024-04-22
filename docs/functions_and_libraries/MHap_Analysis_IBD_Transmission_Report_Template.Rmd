@@ -1,0 +1,81 @@
+---
+title: "*MHap Analysis Report*: Genetic Relatedness (IBD) and Tranmission"
+author: "Neafsey Lab"
+output:
+  html_document:
+    toc: yes
+    number_sections: no
+    toc_float: yes
+    code_folding: hide
+editor_options:
+  markdown:
+    wrap: 72
+  chunk_output_type: inline
+params:
+  RData_image: ""
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, include = TRUE)
+```
+
+
+```{r}
+library(dplyr)
+library(magrittr)
+load(params$RData_image)
+
+```
+
+
+
+```{r, fig.width=10, fig.height=10, fig.cap = "**Figure 1:** IBD distribution within sites"}
+
+plot_relatedness_distribution_within$plot
+
+```
+
+```{r, fig.width=10, fig.height=6, fig.cap = "**Figure 2:** Frequency of highly related among sites"}
+
+plot_frac_highly_related_within$plot
+```
+
+
+
+```{r, fig.width=10, fig.height=10, fig.cap = "**Figure 2:** Frequency of highly related between sites over time"}
+
+if(!is.na(Variable2)){plot_frac_highly_related_overtime_within$plot_frac_highly_related}
+```
+
+
+### Pairwise relatedness comparisons between categories of Variable1
+
+```{r}
+
+plot_relatedness_distribution_within$relatedness %>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+
+```
+
+### Fraction of highly related comparisons between categories of Variable1
+
+```{r}
+plot_frac_highly_related_within$highly_related_table %>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+```
+
+
+### Fraction of highly related comparisons between categories of Variable1 over Variable2
+
+```{r}
+if(!is.na(Variable2)){plot_frac_highly_related_overtime_within$frac_highly_related %>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))}
+```
+
+

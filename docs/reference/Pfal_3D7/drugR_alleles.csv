@@ -1,4 +1,4 @@
-Chromosome,Gene_Id,Description,Mutation,Anotation
+Chromosome,Gene_Id,Description,Mutation,Annotation
 Pf3D7_04_v3,PF3D7_0417200,dhfr ,N51I,Pyrimethamine resistance
 Pf3D7_04_v3,PF3D7_0417200,dhfr ,C59R,Pyrimethamine resistance
 Pf3D7_04_v3,PF3D7_0417200,dhfr ,C59Y,Pyrimethamine resistance
@@ -18,19 +18,19 @@ Pf3D7_08_v3,PF3D7_0810800,dhps ,K540N,Sulfadoxine resistance
 Pf3D7_08_v3,PF3D7_0810800,dhps ,A581G,Sulfadoxine resistance
 Pf3D7_08_v3,PF3D7_0810800,dhps ,A613S,Sulfadoxine resistance
 Pf3D7_08_v3,PF3D7_0810800,dhps ,A613T,Sulfadoxine resistance
-Pf3D7_14_v3,PF3D7_1447900,mdr2 ,T484I,Linked to K13 C580Y mutation
+Pf3D7_14_v3,PF3D7_1447900,mdr2 ,T484I,Linked to Artemisinin K13 C580Y mutation
 Pf3D7_14_v3,PF3D7_1447900,mdr2 ,F423Y,Pyrimethamine resistance
 Pf3D7_13_v3,PF3D7_1343700,Kelch13,C580Y,Artemisinin resistance
 Pf3D7_13_v3,PF3D7_1343700,Kelch13,Y493H,Artemisinin resistance
 Pf3D7_13_v3,PF3D7_1343700,Kelch13,R539T,Artemisinin resistance
 Pf3D7_13_v3,PF3D7_1343700,Kelch13,I543T,Artemisinin resistance
 Pf3D7_13_v3,PF3D7_1343700,Kelch13,R561H,Artemisinin resistance
-Pf3D7_13_v3,PF3D7_1343700,Kelch13,M476I,Delayed clerance in vivo
-Pf3D7_13_v3,PF3D7_1343700,Kelch13,P441L,Delayed clerance in vivo by Artemisinin
-Pf3D7_13_v3,PF3D7_1343700,Kelch13,F446I,Delayed clerance in vivo by Artemisinin
-Pf3D7_13_v3,PF3D7_1343700,Kelch13,S449A,Delayed clerance in vivo by Artemisinin
-Pf3D7_13_v3,PF3D7_1343700,Kelch13,N458Y,Delayed clerance in vivo by Artemisinin
-Pf3D7_13_v3,PF3D7_1343700,Kelch13,P553L,Delayed clerance in vivo by Artemisinin
-Pf3D7_13_v3,PF3D7_1343700,Kelch13,V568G,Delayed clerance in vivo by Artemisinin
-Pf3D7_13_v3,PF3D7_1343700,Kelch13,P574L,Delayed clerance in vivo by Artemisinin
-Pf3D7_13_v3,PF3D7_1343700,Kelch13,L675V,Delayed clerance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,M476I,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,P441L,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,F446I,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,S449A,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,N458Y,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,P553L,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,V568G,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,P574L,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,L675V,Delayed clearance in vivo by Artemisinin

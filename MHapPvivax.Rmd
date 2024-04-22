@@ -10,7 +10,7 @@ output:
 editor_options:
   markdown:
     wrap: 72
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 ```{r setup, include=FALSE}
@@ -241,6 +241,253 @@ Finally we are going to convert our data to the ampseq format:
 # (alleles and abundance will be in cells)
 markers = read.csv("docs/reference/Pviv_P01/PvGTSeq271_markersTable.csv")
 ampseq = cigar2ampseq(cigar_object, markers = markers, min_abd = 1, min_ratio = .1, remove_controls = T)
+```
+
+## Identifying and fixing off-target products genotyping errors
+
+The generation of off-target products by a pair of primers affects the
+proportion of samples that are heterozygous for that particular loci.
+
+Lets calculates the proportion of heterozygous samples detected by each
+loci. For that we can use the function get_polygenomic.
+
+```{r}
+
+COI = get_polygenomic(ampseq, update_popsummary = F)
+
+```
+
+Inspect the table that contains the proportion of heterozygous samples
+detected by each loci
+
+```{r}
+
+COI$coi_byLoci %>% arrange(desc(prop_poly_detected)) %>% DT::datatable()
+```
+
+As it is observed, the amplicons SPM1, PVP01_1136100 and RAMA are clear
+outliers. Lets look closer by using a histogram:
+
+```{r}
+COI$coi_byLoci %>%
+  ggplot(aes(x = prop_poly_detected))+
+  geom_histogram()
+```
+
+We can inspect this amplicons closer by checking some attributes of
+their aleternative alleles, such us: the number and density of variant
+sites (SNPs and INDELs) of each microhaplotype respect to the reference,
+the presence of INDELs in the flanking region of the microhaplotype, the
+frequency of the microhaplotype (p_ij), the frequency in which the
+microhaplotye is present as heterozygous, and the frequency the
+microhaplotype is the minor allele (microhaplotype) in heterozygous
+samples containing the microhaplotype.
+
+For that lets use use the function frac_ofHet_pAlt_byAllele tot
+calculate all this metrics for each allele (microhaplotype)
+
+```{r}
+allele_count_frac_ofHet_pAlt = frac_ofHet_pAlt_byAllele(ampseq)
+```
+
+Inspect the distribution of the density of variant sites (sVSITES_ij) of
+each microhaplotype:
+
+```{r}
+
+allele_count_frac_ofHet_pAlt %>%
+  ggplot(aes(x= dVSITES_ij)) + 
+  geom_histogram(binwidth = 0.01)
+
+```
+
+There are some microhaplotypes (alleles) that have too many polymorphism respect to the reference sequence, lets check how t
+
+```{r}
+
+allele_count_frac_ofHet_pAlt %>%
+  filter(MHap %in% (COI$coi_byLoci %>% 
+                      filter(prop_poly_detected> 0.5) %>% 
+                      select(locus) %>% 
+                      unlist)) %>%
+    ggplot(aes(x = p_ij, 
+               y = h_ij,
+               color = h_ijminor,
+               size = dVSITES_ij#,
+               #shape = flanking_INDEL
+               ))+
+    geom_point()+
+    theme_bw()+
+    scale_color_continuous(type = 'viridis')+
+    facet_grid(MHap~.)+
+    labs(x = 'Alternative allele frequency (p_ij)',
+         y = 'h_ij (H_ij/P_ij)',
+         color = 'h_ijminor')
+
+```
+
+
+```{r}
+
+allele_count_frac_ofHet_pAlt %>%
+  filter(MHap %in% (allele_count_frac_ofHet_pAlt %>% 
+                      filter(dVSITES_ij > 0.3) %>% 
+                      select(MHap) %>% 
+                      unlist)) %>%
+    ggplot(aes(x = p_ij, 
+               y = h_ij,
+               color = h_ijminor,
+             size = dVSITES_ij
+               ))+
+    geom_point()+
+    theme_bw()+
+    scale_color_continuous(type = 'viridis')+
+    facet_wrap(MHap~., ncol = 3)+
+    labs(x = 'Alternative allele frequency (p_ij)',
+         y = 'h_ij (H_ij/P_ij)',
+         color = 'h_ijminor')
+
+```
+
+
+
+
+```{r}
+
+View(allele_count_frac_ofHet_pAlt %>%
+  mutate(dVISTES_cat = case_when(
+    dVSITES_ij < 0.05 ~ 'Low_dVSITEs',
+    dVSITES_ij < 0.3 & dVSITES_ij >= 0.05 ~ 'Medium_dVSITEs',
+    dVSITES_ij >= 0.3 ~ 'High_dVSITEs'
+  ),
+  h_ijminor_cat = case_when(
+    h_ijminor < 0.6 ~ 'Low_h_ijminor',
+    h_ijminor >= 0.6 ~ 'High_h_ijminor'
+  )
+  
+  ) %>%
+  filter(dVISTES_cat == 'Low_dVSITEs' &
+           h_ijminor_cat == 'Low_h_ijminor' &
+           h_ij > .6 &
+           p_ij >.1
+         )
+  )
+
+```
+
+## Mask off-target products
+
+```{r}
+
+ampseq_masked = ampseq
+ampseq_masked@gt = mask_alt_alleles(ampseq_masked, mask_formula = "dVSITES_ij >= 0.3")
+
+
+```
+
+```{r}
+allele_count_frac_ofHet_pAlt2 = frac_ofHet_pAlt_byAllele(ampseq_masked)
+```
+
+```{r}
+
+allele_count_frac_ofHet_pAlt2 %>%
+  mutate(dVISTES_cat = case_when(
+    dVSITES_ij < 0.05 ~ 'Low_dVSITEs',
+    dVSITES_ij < 0.3 & dVSITES_ij >= 0.05 ~ 'Medium_dVSITEs',
+    dVSITES_ij >= 0.3 ~ 'High_dVSITEs'
+  ),
+  h_ijminor_cat = case_when(
+    h_ijminor < 0.6 ~ 'Low_h_ijminor',
+    h_ijminor >= 0.6 ~ 'High_h_ijminor'
+  )#,
+  
+  # dVISTES_cat = factor(dVISTES_cat, 
+  #                      levels = c('Low_dVSITEs',
+  #                                 'Medium_dVSITEs',
+  #                                 'High_dVSITEs'))
+  
+  )%>%
+    ggplot(aes(x = p_ij, 
+               y = h_ij,
+               color = h_ijminor#,
+               #size = dVSITES_ij#,
+               #shape = flanking_INDEL
+               ))+
+    geom_point()+
+    theme_bw()+
+    scale_color_continuous(type = 'viridis')+
+  facet_grid(flanking_INDEL~h_ijminor_cat)+
+    labs(x = 'Alternative allele frequency (p_ij)',
+         y = 'h_ij (H_ij/P_ij)',
+         color = 'h_ijminor')
+```
+
+```{r}
+
+ampseq_masked@gt[,mhap]
+
+```
+
+```{r}
+
+ampseq_masked@gt = mask_alt_alleles(ampseq_masked, mask_formula = "h_ij >= 0.66 & flanking_INDEL == TRUE")
+
+```
+
+```{r}
+
+allele_count_frac_ofHet_pAlt3 = frac_ofHet_pAlt_byAllele(ampseq_masked)
+
+```
+
+```{r}
+allele_count_frac_ofHet_pAlt3 %>%
+       mutate(dVISTES_cat = case_when(
+    dVSITES_ij < 0.05 ~ 'Low_dVSITEs',
+    dVSITES_ij < 0.3 & dVSITES_ij >= 0.05 ~ 'Medium_dVSITEs',
+    dVSITES_ij >= 0.3 ~ 'High_dVSITEs'
+  ),
+  h_ijminor_cat = case_when(
+    h_ijminor < 0.6 ~ 'Low_h_ijminor',
+    h_ijminor >= 0.6 ~ 'High_h_ijminor'
+  ),
+  
+  dVISTES_cat = factor(dVISTES_cat, 
+                       levels = c('Low_dVSITEs',
+                                  'Medium_dVSITEs',
+                                  'High_dVSITEs'))
+  
+  )%>%
+  #filter(flanking_INDEL == TRUE)%>%
+    ggplot(aes(x = p_ij, 
+               y = h_ij,
+               color = h_ijminor,
+               size = dVSITES_ij#,
+               #shape = flanking_INDEL
+               ))+
+    geom_point()+
+    theme_bw()+
+    scale_color_continuous(type = 'viridis')+
+  facet_grid(dVISTES_cat~h_ijminor_cat)+
+    labs(x = 'Alternative allele frequency (p_ij)',
+         y = 'h_ij (H_ij/P_ij)',
+         color = 'h_ijminor')
+
+```
+
+```{r}
+
+View(allele_count_frac_ofHet_pAlt3 %>%
+  filter(h_ij > .75, h_ijminor >.75))
+
+
+```
+
+```{r}
+allele_count_frac_ofHet_pAlt %>%
+    ggplot(aes(x = h_ijminor))+
+  geom_histogram(binwidth = 0.01)
 ```
 
 ## Perfomance and filtering of our data

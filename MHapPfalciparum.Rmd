@@ -84,7 +84,7 @@ instead of the argument `paths`, where `list_of_files` is a vector with
 the names of all files we want to read.
 
 ```{r 'Uploading data sets'}
-cigar_object = read_cigar_tables(paths = "docs/data/Pfal_sequencing_data/", sample_id_pattern = "ID")
+cigar_object = read_cigar_tables(paths = "docs/data/Pfal_sequencing_data", sample_id_pattern = "ID")
 ```
 
 This function generates a S4 cigar object containing two data.frames, 1)
@@ -125,31 +125,6 @@ metadata = read.csv('docs/data/Pfal_metadata.csv')
 cigar_object@metadata = left_join(cigar_object@metadata,
                               metadata,
                               by = 'Sample_id')
-```
-
-Moreover, there are some artifacts that the `dada2` pipeline doesn't
-resolve well like the generation of chimeras (artificial fusion of two
-different haplotypes during the PCR amplification) in polyclonal
-samples. That is the case of the alleles `PF3D7_1302900,1G` and
-`PF3D7_0612900,215A` that are observed in polyclonal infections only. So
-we are going to proceed to remove both alleles from our `cigar_table`.
-Additionally, `PvDHFR` locus was amplified in order to detect mixed
-infections with *Plasmodium vivax*, so we are going to remove this locus
-too as this locus is not of our interest in this tutorial.
-
-```{r 'Removing artifacts and Pvivax control locus'}
-
-# removing allele PF3D7_1302900,1G----
-# this polymorphism is always present as a minor allele in polygenomic samples, increasing the proportion of polygenomic infections to up to 27%
-
-cigar_object@cigar_table = cigar_object@cigar_table[,!grepl("PF3D7_1302900.1G", colnames(cigar_object@cigar_table))]
-cigar_object@cigar_table = cigar_object@cigar_table[,!grepl("PF3D7_0612900.215A", colnames(cigar_object@cigar_table))]
-
-# removing locus PvDHFR----
-# this loci belongs to P. vivax
-
-cigar_object@cigar_table = cigar_object@cigar_table[,!grepl("PvDHFR", colnames(cigar_object@cigar_table))]
-
 ```
 
 We can use ggplot2 to plot the sample size (number of genotyped samples)
@@ -227,6 +202,43 @@ for the next steps such as `loci_performance` and `pop_summary`.
 # (alleles and abundance will be in cells)
 markers = read.csv("docs/reference/Pfal_3D7/markers.csv")
 ampseq = cigar2ampseq(cigar_object, markers = markers, min_abd = 10, min_ratio = .1, remove_controls = T)
+```
+
+### Removing PCR artefacts
+
+There are some artifacts that the `dada2` pipeline doesn't resolve well
+like the generation of chimeras (artificial fusion of two different
+haplotypes during the PCR amplification) in polyclonal samples. That is
+the case of the alleles `PF3D7_1302900,1G` and `PF3D7_0612900,215A` that
+are observed in polyclonal infections only. So we are going to proceed
+to remove both alleles from our `cigar_table`. Additionally, `PvDHFR`
+locus was amplified in order to detect mixed infections with *Plasmodium
+vivax*, so we are going to remove this locus too as this locus is not of
+our interest in this tutorial.
+
+```{r}
+allele_count_frac_ofHet_pAlt = frac_ofHet_pAlt_byAllele(ampseq)
+```
+
+```{r}
+allele_count_frac_ofHet_pAlt %>%
+  ggplot(aes(x = p_ij, 
+               y = h_ij,
+               color = h_ijminor,
+               size = dVSITES_ij,
+               shape = flanking_INDEL
+               ))+
+    geom_point()+
+    theme_bw()+
+    scale_color_continuous(type = 'viridis')+
+  #facet_grid(flanking_INDEL~h_ijminor_cat)+
+    labs(x = 'Alternative allele frequency (p_ij)',
+         y = 'h_ij (H_ij/P_ij)',
+         color = 'h_ijminor')
+```
+
+```{r 'Removing artifacts and Pvivax control locus'}
+ampseq@gt = mask_alt_alleles(ampseq, mask_formula = "h_ij >= 0.75 & h_ijminor >= 0.75")
 ```
 
 ### Read depth coverage
@@ -334,7 +346,7 @@ amplified (by default 0.8).
 
 ```{r 'Filtering samples of low amplification rate', fig.width=5, fig.height=5, fig.cap='**Figure 3:** Proportion of amplified loci per sample. The figure shows the distribution of the amplification rate (or proportion of amplified loci) of the samples, with the number of samples in the y-axis and the amplification rate in the x-axis.'}
 
-ampseq_filtered = sample_amplification_rate(ampseq_filtered)
+ampseq_filtered = sample_amplification_rate(ampseq_filtered, threshold = .8)
 
 ampseq_filtered@plots$samples_amplification_rate+
          theme(axis.text = element_text(size = 12),
@@ -404,23 +416,61 @@ that information from the slot `discarded_loci`.
 
 ```{r 'Molecular surveillance of drug resistance'}
 
-drug_resistant_haplotypes_plot = drug_resistant_haplotypes(ampseq_filtered,
-                                                         reference_alleles = 'docs/reference/Pfal_3D7/drugR_alleles.csv',
-                                        gene_names = c('PfDHFR',
-                                                       'PfMDR1',
-                                                       'PfDHPS',
-                                                       'PfKelch13',
-                                                       'PF3D7_1447900'),
-                                        gene_ids = c('PF3D7_0417200',
-                                                     'PF3D7_0523000',
-                                                     'PF3D7_0810800',
-                                                     'PF3D7_1343700',
-                                                     'PF3D7_1447900'),
-                                        gff_file = "docs/reference/Pfal_3D7/PlasmoDB-59_Pfalciparum3D7.gff",
-                                        fasta_file = "docs/reference/Pfal_3D7/PlasmoDB-59_Pfalciparum3D7_Genome.fasta",
-                                        variables = c('Sample_id', 'Subnational_level2', 'Quarter_of_Collection'),
-                                        na.var.rm = TRUE,
-                                        filters = c('Subnational_level2;Municipality 1,Municipality 2,Municipality 3,Municipality 4,Municipality 5',                               'Quarter_of_Collection;2020-Q4,2021-Q1,2021-Q2,2021-Q3,2021-Q4,2022-Q1,2022-Q2,2022-Q3'))
+gene_names = c('PfDHFR',
+               'PfMDR1',
+               'PfDHPS',
+               'PfKelch13',
+               'PF3D7_1447900')
+
+gene_ids = c('PF3D7_0417200',
+             'PF3D7_0523000',
+             'PF3D7_0810800',
+             'PF3D7_1343700',
+             'PF3D7_1447900')
+
+drugs = c('Artemisinine',
+          'Chloroquine', 
+          'Pyrimethamine',
+          'Sulfadoxine',
+          'Lumefantrine',
+          'Mefloquine')
+
+ampseq_drug = ampseq_filtered
+    
+ampseq_drug@gt = cbind(ampseq_drug@gt,
+                       ampseq_drug@discarded_loci$gt[
+                         rownames(ampseq_drug@discarded_loci$gt) %in%
+                           rownames(ampseq_drug@gt),
+                         grepl(paste0(gene_names, collapse = '|'),
+                               colnames(ampseq_drug@discarded_loci$gt))]
+                       )
+    
+ampseq_drug@markers = 
+  rbind(ampseq_drug@markers,
+        ampseq_drug@discarded_loci$markers[
+          grepl(paste0(gene_names, collapse = '|'),
+                ampseq_drug@discarded_loci$markers$amplicon),])
+    
+    
+
+drug_resistant_haplotypes_plot = drug_resistant_haplotypes(
+  ampseq_drug,
+  reference_alleles = 'docs/reference/Pfal_3D7/drugR_alleles.csv',
+  gene_names = gene_names,
+  gene_ids = gene_ids,
+  drugs = drugs,
+  gff_file = "docs/reference/Pfal_3D7/PlasmoDB-59_Pfalciparum3D7.gff",
+  fasta_file = "docs/reference/Pfal_3D7/PlasmoDB-59_Pfalciparum3D7_Genome.fasta",
+  variables = c('Sample_id',
+                'Subnational_level2',
+                'Quarter_of_Collection'),
+  Longitude = NULL,
+  Latitude = NULL,
+  na.var.rm = FALSE,
+  na.hap.rm = TRUE,
+  filters = c(
+    'Subnational_level2;Municipality 1,Municipality 2,Municipality 3,Municipality 4,Municipality 5',
+    'Quarter_of_Collection;2020-Q4,2021-Q1,2021-Q2,2021-Q3,2021-Q4,2022-Q1,2022-Q2,2022-Q3'))
 
 ```
 
@@ -428,7 +478,7 @@ The haplotype of each sample is stored in the table `aacigar_table`
 within the object `drug_resistant_haplotypes_plot`.
 
 ```{r}
-drug_resistant_haplotypes_plot$aacigar_table%>%datatable()
+drug_resistant_haplotypes_plot$aa_mutations%>%datatable()
 ```
 
 The phenotype of each sample, of each polymorphic position is in the
@@ -437,14 +487,14 @@ table `phenotype_table` within the object
 within the same marker is concatenated using `";"`.
 
 ```{r}
-drug_resistant_haplotypes_plot$phenotype_table%>%datatable()
+drug_resistant_haplotypes_plot$genotype_phenotype_table%>%datatable()
 ```
 
 The colors assigned to the haplotypes in the bar blot are randomly
 chosen, see below:
 
 ```{r, fig.width=12, fig.height=7}
-drug_resistant_haplotypes_plot$haplo_freq_plot
+drug_resistant_haplotypes_plot$haplotype_freq_barplot
 ```
 
 However, we can manually assign colors based on the resistance profile
@@ -452,19 +502,8 @@ of the haplotype:
 
 ```{r 'Plot drug resistance', fig.width=12, fig.height=7, fig.cap='**Figure 4:** Frequency of haplotypes of genes associated with drug resistance. y-axis shows the frequency in the sub-population, x-axis shows the quarter of the year where the sample was collected, rows panels corresponds to the five study areas, and column panels represents each genotyped gene. Colors were assigned based on the possible phenotype, dark blue indicates sensitive, while dark red indicates resistance. Light colors where assigned for partial haplotype information, and gray for complete missging data'}
 
-blues = brewer.pal(9, 'Blues')
-reds = brewer.pal(9, 'Reds')
 
-drug_resistant_haplotypes_plot$haplo_freq_plot+
-  theme(axis.text.x = element_text(angle = 90))+
-  scale_fill_manual(values = c(
-    'gray75',blues[6], reds[3], # MDR2
-    reds[c(8,7)], blues[3], reds[6], blues[6], reds[c(9,3)], # DFHR
-    'gray75',blues[4], reds[5], blues[c(2,6)], reds[c(4,9,6,8)], # DHPS
-    blues[6], #K13
-    'gray75', reds[c(5,4)], blues[2], reds[6] # MDR1
-  ))+
-  labs(y = 'Haplotype prevalence in infected individuals')
+drug_resistant_haplotypes_plot$drug_phenotype_barplot
 
 ```
 
@@ -588,8 +627,18 @@ ampseq_filtered@loci_performance %>%
 
 ```{r}
 ampseq_filtered@metadata %>%
-  select(Sample_id,NPolyLoci, Polyloci, alleles_at_loci, nalleles_per_loci, coi)%>%
+  select(Sample_id,NPolyLoci, Frac_PolyLoci, Polyloci, alleles_at_loci, nalleles_per_loci, coi)%>%
   datatable(rownames = F)
+```
+
+3.  Distribution of fraction of polyclonal loci per sample
+
+```{r}
+
+ampseq_filtered@metadata %>%
+  ggplot(aes(x = Frac_PolyLoci))+
+  geom_histogram(binwidth = 0.005)
+
 ```
 
 3.  A pop summary table that summarize the mean COI in each population,
@@ -687,7 +736,7 @@ poly_by_pop_over_time = get_polygenomic(ampseq_object = ampseq_filtered,
                                         na.rm = TRUE,
                                         filters = 'Municipality 1|Municipality 2|Municipality 3')
 
-poly_by_pop_over_time %>% datatable() %>%
+poly_by_pop_over_time$pop_summary %>% datatable() %>%
   formatRound(columns=c('mean_coi', 'prop_poly', 'prop_poly_lower', 'prop_poly_upper'),
               digits=3)
 
@@ -697,7 +746,7 @@ Now we can generate a bar plot using ggplot.
 
 ```{r 'Temporal change of complexity of infection', fig.width=7, fig.height=4, fig.cap = '**Figure 8:** Proportion of polyclonal infections per study area over year quarters.'}
 
-plot_poly_by_pop_over_time = poly_by_pop_over_time %>%
+plot_poly_by_pop_over_time = poly_by_pop_over_time$pop_summary %>%
   filter(pop != 'Total')%>%
   mutate(
   Population = stringr::str_split(pop, '_', simplify = TRUE)[,1],
@@ -737,7 +786,7 @@ of our metadata table.
 
 ```{r 'Correlation between the proportion of polyclonal infections and number of samples collected'}
 nsamples_vs_proppoly = 
-  left_join(poly_by_pop_over_time%>% 
+  left_join(poly_by_pop_over_time$pop_summary%>% 
               select(pop, prop_poly), metadata %>%
               mutate(Quarter_of_Collection = 
                        paste(substr(Date_of_Collection, 1, 4), quarters.Date(Date_of_Collection), sep='-')) %>%
@@ -828,6 +877,22 @@ plot_relatedness_distribution_within = plot_relatedness_distribution(
 plot_relatedness_distribution_within$plot
 ```
 
+3)  Median fraction of IBD:
+
+```{r}
+c(median(pairwise_relatedness$rhat), IQR(pairwise_relatedness$rhat))
+```
+
+```{r}
+
+plot_relatedness_distribution_within$relatedness %>%
+  summarise(median_rhat = round(median(rhat), 2),
+            iqr_rhat = round(IQR(rhat), 2),
+            .by = c(Pop_comparison,Type_of_comparison))%>%
+  DT::datatable()
+
+```
+
 3)  `plot_frac_highly_related`: visualizes the fraction of highly
     related haplotypes within and between study areas. It has the same
     arguments than the previous function plus `threshold` (minimum value
@@ -839,9 +904,16 @@ plot_frac_highly_related_within = plot_frac_highly_related(
   metadata = ampseq@metadata,
   Population = 'Subnational_level2',
   fill_color = pop_colors,
-  threshold = 0.99, type_pop_comparison = 'within', pop_levels = pop_levels)
+  threshold = 0.97, type_pop_comparison = 'within', pop_levels = pop_levels)
 
 plot_frac_highly_related_within$plot
+```
+
+4)  Table
+
+```{r}
+plot_frac_highly_related_within$highly_related_table%>%
+  DT::datatable()
 ```
 
 4)  `plot_frac_highly_related_over_time`: visualizes the fraction of
@@ -865,6 +937,8 @@ plot_frac_highly_related_over_months_within$plot_frac_highly_related
 ```{r 'Correlation between the proportion of highly related samples and number of samples collected', fig.width = 7, fig.height = 4, fig.cap = '**Figure 13:** Spearman correlation of the proportion of highly related samples per year quarter in each estudy area and the number of collected samples by passive case detection.'}
 nsamples_vs_highlyR = left_join(plot_frac_highly_related_over_months_within$plot_frac_highly_related$data %>% mutate(pop = paste(Pop_comparison, Date_Yi, sep = '_'))%>%
                                    ungroup()%>%
+                                  filter(!(Date_Yi %in%
+                                             paste0('2022-0', 1:8)))%>%
                                    select(pop, prop),
           metadata %>%
   filter(!is.na(Subnational_level2)) %>%
@@ -922,12 +996,14 @@ Relatedness_network = plot_network(pairwise_relatedness = pairwise_relatedness,
 evectors_IBD = IBD_evectors(ampseq_object = ampseq_filtered, relatedness_table = pairwise_relatedness, k = nrow(ampseq_filtered@metadata), Pop = 'Subnational_level2', q = 2)
 
 
-evectors_IBD %>% ggplot(aes(x = PC1, y = PC2, color = Subnational_level2))+
+evectors_IBD$eigenvector %>% ggplot(aes(x = PC1, y = PC2, color = Subnational_level2))+
   geom_point(alpha = .7, size = 2) +
   stat_ellipse(level = .6)+
   theme_bw()+
   scale_color_manual(values = pop_colors)+
-  labs(color = 'Municipalities')
+  labs(color = 'Municipalities',
+       x = paste0('1st PC (', round(evectors_IBD$contrib[1],1), '%)'),
+       y = paste0('2nd PC (', round(evectors_IBD$contrib[2],1), '%)'))
 ```
 
 ## Measuring geographic connectivity
@@ -985,4 +1061,25 @@ plot_frac_highly_related_between = plot_frac_highly_related(
                   "M4-M5"))
 
 plot_frac_highly_related_between$plot
+```
+
+```{r}
+plot_frac_highly_related_between$highly_related_table%>%
+  filter(grepl('M(1|2|3)-M(1|2|3)',Pop_comparison))%>%
+  DT::datatable()
+
+```
+
+### Genetic diversity
+
+```{r}
+
+diversity = fx_pop_diversity(ampseq_object = ampseq_filtered, strata = 'Subnational_level2')
+
+diversity %>% DT::datatable()
+
+```
+
+```{r}
+polyclonas = get_polygenomic(ampseq_object, strata = '')
 ```

@@ -32,9 +32,11 @@ read_cigar_tables = function(paths = NULL, files = NULL, sample_id_pattern = '.'
     for(run in list.files(paths)){
       
       if(file.exists(file.path(paths, run, "dada2/run_dada2/CIGARVariants.out.tsv"))){
-        cigar_run = read.table(file.path(paths, run, "dada2/run_dada2/CIGARVariants.out.tsv"), header = T)
+        cigar_run = read.table(file.path(paths, run, "dada2/run_dada2/CIGARVariants.out.tsv"), header = T, check.names = FALSE
+                               )
       }else if(file.exists(file.path(paths, run, "dada2/run_dada2/CIGARVariants_Bfilter.out.tsv"))){
-        cigar_run = read.table(file.path(paths, run, "dada2/run_dada2/CIGARVariants_Bfilter.out.tsv"), header = T)
+        cigar_run = read.table(file.path(paths, run, "dada2/run_dada2/CIGARVariants_Bfilter.out.tsv"), header = T, check.names = FALSE
+                               )
       }else{
         print(paste0('Cigar file ', file.path(paths, run, "dada2/run_dada2/CIGARVariants_Bfilter.out.tsv"), ' not found'))
       }
@@ -50,7 +52,8 @@ read_cigar_tables = function(paths = NULL, files = NULL, sample_id_pattern = '.'
     }
   }else if(is.null(paths)&!is.null(files)){
     for(file in files){
-      cigar_run = read.table(file, header = T)
+      cigar_run = read.table(file, header = T, check.names = FALSE
+                             )
       #samples = gsub('_S\\d+$','', cigar_run[,1])
       samples = cigar_run[,1]
       samples[!grepl(sample_id_pattern,samples)] = paste0(samples[!grepl(sample_id_pattern,samples)], '_file', which(files == file))
@@ -98,8 +101,27 @@ read_cigar_tables = function(paths = NULL, files = NULL, sample_id_pattern = '.'
   }
   
   metadata = data.frame(Sample_id = gsub("^.+/|_S\\d+$","",cigar_table[['Sample_id']]),
-                        run = gsub('/.+$', '',gsub("^\\d+/","",cigar_table[['Sample_id']])),
                         order_in_plate = as.integer(gsub("^S|_$","",str_extract(cigar_table[['Sample_id']], "(S\\d+$|S\\d+_)"))), typeofSamp = NA)
+  
+  if(!is.null(paths)){
+    
+    metadata[['run']] = gsub('/.+$', '',
+                             gsub("^\\d+/",
+                                  "",
+                                  cigar_table[['Sample_id']]))
+    
+  }else if(!is.null(files) & length(files) > 1){
+    
+    metadata[['run']] = gsub('^/|_CIGARVariants',
+                             '',
+                             str_extract(cigar_table[['Sample_id']], 
+                                         pattern = '/\\w+_CIGARVariants'))
+    
+  }else if(!is.null(files) & length(files) == 1){
+    
+    metadata[['run']] = 'Run1'
+    
+  }
   
   
   if(sample_id_pattern != '.'){
@@ -178,7 +200,7 @@ cigar2ampseq = function(cigar_object, min_abd = 1, min_ratio = .1, markers = NUL
     all_alleles = paste0(paste(c(all_alleles[all_alleles != '.'], '\\.'), collapse = '|'), '$')
     ampseq_loci_vector = unique(gsub(all_alleles, '',colnames(cigar_table)))
     
-  }else if(is.null(markers) & is.null(markers)){
+  }else if(is.null(markers) & is.null(markers_pattern)){
     ampseq_loci_vector = unique(sapply(strsplit(colnames(cigar_table), ","), function(x) x[1]))
   }
   
@@ -186,7 +208,7 @@ cigar2ampseq = function(cigar_object, min_abd = 1, min_ratio = .1, markers = NUL
   
   for(sample in rownames(ampseq_loci_abd_table)){
     for(locus in colnames(ampseq_loci_abd_table)){
-      alleles = cigar_table[sample, grepl(paste0("^",locus,'\\.'), colnames(cigar_table))]
+      alleles = cigar_table[sample, grepl(paste0("^",locus,'(,|\\.)'), colnames(cigar_table))]
       
       if(length(alleles) == 1){
         names(alleles) <- paste(locus, ",.", sep = "")
@@ -342,11 +364,11 @@ read_ampseq = function(file = NULL, format = 'excel'){
 
 # sample_TotalReadDepth----
 
-sample_TotalReadDepth = function(ampseq){
+sample_ReadDepth = function(ampseq_object, stat = c('sum', 'mean', 'median', 'sd', 'iqr', 'q25', 'q75')){
   
-  coverage = sapply(1:ncol(ampseq@gt), function(mhap){
+  coverage = sapply(1:ncol(ampseq_object@gt), function(mhap){
     
-    temp_mhap = strsplit(ampseq@gt[,mhap], '_')
+    temp_mhap = strsplit(ampseq_object@gt[,mhap], '_')
     
     sapply(1:length(temp_mhap), function(sample){
       
@@ -355,20 +377,53 @@ sample_TotalReadDepth = function(ampseq){
     })
   })
   
-  colnames(coverage) = colnames(ampseq@gt)
-  rownames(coverage) = rownames(ampseq@gt)
+  colnames(coverage) = colnames(ampseq_object@gt)
+  rownames(coverage) = rownames(ampseq_object@gt)
   
+  output = data.frame(Sample_id = rownames(coverage))
   
-  return(rowSums(coverage, na.rm = T))
+  if('sum' %in% stat){
+    output[['Total_ReadDepth']] = rowSums(coverage, na.rm = T)
+  }
+  
+  if('mean' %in% stat){
+    output[['Mean_ReadDepth']] = rowMeans(coverage, na.rm = T)
+  }
+  
+  if('sd' %in% stat){
+    output[['SD_ReadDepth']] = apply(coverage, 1, function(x){sd(x, na.rm = T)})
+  }
+  
+  if('median' %in% stat){
+    output[['Median_ReadDepth']] = apply(coverage, 1, function(x){median(x, na.rm = T)})
+  }
+  
+  if('iqr' %in% stat){
+    output[['IQR_ReadDepth']] = apply(coverage, 1, function(x){IQR(x, na.rm = T)})
+  }
+  
+  if(sum(grepl('^q\\d+$',stat)) > 0){
+    
+    q = gsub('q','',stat[grepl('^q\\d+$',stat)])
+    
+    for(q_i in q){
+      
+      output[[paste0('q', q_i, '_ReadDepth')]] = apply(coverage, 1, function(x){quantile(x, probs = as.numeric(paste0('.', q_i)), na.rm = T)})
+    }
+    
+    
+  }
+  
+  return(output)
   
 }
 
-# plot_coverage----
+# get_ReadDepth_coverage----
 
-plot_coverage = function(ampseq, variable){
-  coverage = sapply(1:ncol(ampseq@gt), function(mhap){
+get_ReadDepth_coverage = function(ampseq_object, variable){
+  coverage = sapply(1:ncol(ampseq_object@gt), function(mhap){
     
-    temp_mhap = strsplit(ampseq@gt[,mhap], '_')
+    temp_mhap = strsplit(ampseq_object@gt[,mhap], '_')
     
     sapply(1:length(temp_mhap), function(sample){
       
@@ -377,16 +432,25 @@ plot_coverage = function(ampseq, variable){
     })
   })
   
-  colnames(coverage) = colnames(ampseq@gt)
-  rownames(coverage) = rownames(ampseq@gt)
+  colnames(coverage) = colnames(ampseq_object@gt)
+  rownames(coverage) = rownames(ampseq_object@gt)
   
   coverage = as.data.frame(coverage)
   coverage$Sample_id = rownames(coverage)
   
+  if(!is.null(variable)){
+    
+    coverage$var = ampseq_object@metadata[[variable]]
+    
+  }else{
+    
+    coverage$var = 'Population'
+    
+  }
   
-  coverage$var = ampseq@metadata[[variable]]
+  coverage %<>% filter(!is.na(var))
   
-  coverage %<>% pivot_longer(cols = all_of(colnames(ampseq@gt)),
+  coverage %<>% pivot_longer(cols = all_of(colnames(ampseq_object@gt)),
                              names_to = 'Markers',
                              values_to = 'Read_depth')
   
@@ -403,7 +467,7 @@ plot_coverage = function(ampseq, variable){
     scale_fill_gradient(low="white", high="red",
                         breaks = 1:ceiling(log10(max(coverage$Read_depth, na.rm = T))),
                         labels = 10^(1:ceiling(log10(max(coverage$Read_depth, na.rm = T)))))+
-    facet_wrap(var~., ncol = 1, scales = 'free_y')+
+    facet_wrap(var~., scales = 'free_y', ncol = 1)+
     labs(y = 'Samples',
          fill = "Read depth")+
     theme_bw()+
@@ -445,100 +509,229 @@ plot_coverage = function(ampseq, variable){
 # filter_samples----
 
 
-filter_samples = function(ampseq, v){
+filter_samples = function(ampseq_object, v){
   
-  obj = ampseq
+  obj = ampseq_object
   
-  obj@gt = ampseq@gt[v,]
-  obj@metadata = ampseq@metadata[v,]
+  obj@gt = ampseq_object@gt[v,]
+  obj@metadata = ampseq_object@metadata[v,]
   
   return(obj)
 }
 
 # locus_amplification_rate----
 
-locus_amplification_rate = function(ampseq_object, threshold = .65, chr_lengths = c(640851,
-                                                                                      947102,
-                                                                                      1067971,
-                                                                                      1200490,
-                                                                                      1343557,
-                                                                                      1418242,
-                                                                                      1445207,
-                                                                                      1472805,
-                                                                                      1541735,
-                                                                                      1687656,
-                                                                                      2038340,
-                                                                                      2271494,
-                                                                                      2925236,
-                                                                                      3291936)){
+locus_amplification_rate = function(ampseq_object, threshold = .65, update_loci = TRUE, strata = NULL){
+  
+  # , chr_lengths = c(640851,
+  #                   947102,
+  #                   1067971,
+  #                   1200490,
+  #                   1343557,
+  #                   1418242,
+  #                   1445207,
+  #                   1472805,
+  #                   1541735,
+  #                   1687656,
+  #                   2038340,
+  #                   2271494,
+  #                   2925236,
+  #                   3291936)
   
   ampseq_loci_abd_table = ampseq_object@gt
   
   loci_performance = data.frame(loci = colnames(ampseq_loci_abd_table),
-                                loci_ampl_rate = apply(ampseq_loci_abd_table, 2, function(x) 1 - sum(is.na(x))/length(x)))
+                                loci_ampl_rate_Total = apply(ampseq_loci_abd_table, 2, function(x) 1 - sum(is.na(x))/length(x)))
   
   
-  all_loci_performance_plot = loci_performance %>% ggplot(aes(loci_ampl_rate))+
-    geom_histogram(binwidth = 0.05, alpha = .7, boundary = 1)+
-    labs(title = paste(sum(loci_performance[["loci_ampl_rate"]] > threshold), "Loci have an amplification rate >",threshold),
-         x = "Amplification rate",
+  if(!is.null(strata)){
+    
+    ampseq_object@metadata[['Strata']] = ampseq_object@metadata[[strata]]
+    
+    ampseq_object@metadata %<>% mutate(Strata = case_when(
+      !is.na(Strata) ~ Strata,
+      is.na(Strata) ~ 'Missing data'
+    ))
+    
+    for(pop in unique(ampseq_object@metadata[['Strata']])){
+      
+      temp_ampseq_object = filter_samples(ampseq_object,
+                                          v = (ampseq_object@metadata[['Strata']] == pop)
+                                          )
+      
+      if(sum((ampseq_object@metadata[['Strata']] == pop)) == 1){
+        
+        temp_loci_ampl_rate = as.integer(is.na(temp_ampseq_object@gt))
+        
+      }else if(sum((ampseq_object@metadata[['Strata']] == pop)) >1){
+        
+        temp_loci_ampl_rate = apply(temp_ampseq_object@gt,
+                                    2,
+                                    function(x){1 - sum(is.na(x))/length(x)})
+        
+      }
+      
+      
+      
+      loci_performance = cbind(loci_performance,
+                              temp_loci_ampl_rate
+                              )
+      
+      colnames(loci_performance) = c(colnames(loci_performance)[-ncol(loci_performance)],
+                                     paste0('loci_ampl_rate_', pop))
+      
+    }
+    
+    
+  }
+  
+  loci_pass_thres = loci_performance %>% 
+    pivot_longer(cols = starts_with('loci_ampl_rate'), names_to = 'Strata', values_to = 'loci_ampl_rate') %>%
+    mutate(Strata = gsub('loci_ampl_rate_', '', Strata),
+           Strata = factor(Strata, 
+                           levels = c(sort(unique(ampseq_object@metadata[['Strata']])), 'Total'))) %>%
+    summarise(pass_loci = sum(loci_ampl_rate > threshold), .by = Strata)
+  
+  
+  all_loci_performance_plot = loci_performance %>% 
+    pivot_longer(cols = starts_with('loci_ampl_rate'), names_to = 'Strata', values_to = 'loci_ampl_rate') %>%
+    mutate(Strata = gsub('loci_ampl_rate_', '', Strata),
+           Strata = factor(Strata, 
+                           levels = c(sort(unique(ampseq_object@metadata[['Strata']])), 'Total')))%>%
+    ggplot(aes(loci_ampl_rate)) +
+    geom_histogram(binwidth = 0.05, alpha = .7, boundary = 1) +
+    geom_text(data = loci_pass_thres, aes(x = threshold - .1, y = max(pass_loci)/2, label = paste0(pass_loci, ' loci > ', threshold)))+
+    labs(x = "Amplification rate",
          y = "# of Loci")+
+    facet_grid(Strata~.)+
     geom_vline(xintercept = threshold) +
     theme_bw()
   
-  amplification_rate_per_locus = ggplot()+
-    geom_segment(data = data.frame(x = 0, y = 1:14, xend =chr_lengths, yend = 1:14),
-                 aes(x=x, y=y, xend=xend, yend=yend), alpha = .5)+
-    geom_point(data = data.frame(Position = ampseq_object@markers$pos,
-                                 Amplification_rate = 
-                                   loci_performance$loci_ampl_rate,
-                                 Chr = as.integer(gsub("(Pf3D7_|_v3|PvP01_|_v1)", "", ampseq_object@markers$chromosome))),
-               aes(x = Position, y = Chr, color = Amplification_rate),
-               pch = "|", size = 5)+
-    theme_bw()+
-    labs(title = "Amplification rate by locus",
-         x = "Chromosome position",
-         y = "Chromosome",
-         color = NULL)+
-    theme(legend.position = c(.9,.4))+
-    scale_y_continuous(breaks = 1:14)+
-    scale_color_continuous(type = "viridis")
+  # amplification_rate_per_locus = ggplot()+
+  #   geom_segment(data = data.frame(x = 0, y = 1:14, xend =chr_lengths, yend = 1:14),
+  #                aes(x=x, y=y, xend=xend, yend=yend), alpha = .5)+
+  #   geom_point(data = data.frame(Position = ampseq_object@markers$pos,
+  #                                Amplification_rate = 
+  #                                  loci_performance$loci_ampl_rate,
+  #                                Chr = as.character(gsub("(Pf3D7_|_v3|PvP01_|_v1)", "", ampseq_object@markers$chromosome))),
+  #              aes(x = Position, y = Chr, color = Amplification_rate),
+  #              pch = "|", size = 5)+
+  #   theme_bw()+
+  #   labs(title = "Amplification rate by locus",
+  #        x = "Chromosome position",
+  #        y = "Chromosome",
+  #        color = NULL)+
+  #   theme(legend.position = c(.9,.4))+
+  #   scale_y_continuous(breaks = 1:14)+
+  #   scale_color_continuous(type = "viridis")
   
-  ampseq_loci_abd_table_discarded_loci = ampseq_loci_abd_table[, !(colnames(ampseq_loci_abd_table) %in% loci_performance[loci_performance[["loci_ampl_rate"]] > threshold,][["loci"]])]
-  ampseq_loci_abd_table = ampseq_loci_abd_table[, colnames(ampseq_loci_abd_table) %in% loci_performance[loci_performance[["loci_ampl_rate"]] > threshold,][["loci"]]]
-  
-  markers = ampseq_object@markers
-  
-  discarded_markers = markers[loci_performance[["loci_ampl_rate"]] <= threshold ,]
-  markers = markers[loci_performance[["loci_ampl_rate"]] > threshold ,]
-  
-  markers[["distance"]] = Inf
-  
-  for(chromosome in levels(as.factor(markers[["chromosome"]]))){
-    for(amplicon in 1:(nrow(markers[markers[["chromosome"]] == chromosome,])-1)){
-      markers[markers[["chromosome"]] == chromosome,][amplicon, "distance"] = markers[markers[["chromosome"]] == chromosome,][amplicon + 1, "pos"] - markers[markers[["chromosome"]] == chromosome,][amplicon, "pos"]
+  if(update_loci){
+    
+    if(!is.null(strata)){
+      
+      discarded_loci = loci_performance[apply(loci_performance[, grepl('loci_ampl_rate', colnames(loci_performance))], 
+                                              1,
+                                              function(x){
+                                                sum(x >= threshold) == 0
+                                              }),][["loci"]]
+      keeped_loci = loci_performance[apply(loci_performance[, grepl('loci_ampl_rate', colnames(loci_performance))], 
+                                           1,
+                                           function(x){
+                                             sum(x >= threshold) > 0
+                                           }),][["loci"]]
+      
+      ampseq_loci_abd_table_discarded_loci =
+        ampseq_loci_abd_table[, colnames(ampseq_loci_abd_table) %in% discarded_loci]
+      
+      ampseq_loci_abd_table = 
+        ampseq_loci_abd_table[, colnames(ampseq_loci_abd_table) %in% keeped_loci]
+      
+      markers = ampseq_object@markers
+      
+      discarded_markers = markers[markers[['amplicon']] %in% discarded_loci,]
+      markers = markers[markers[['amplicon']] %in% keeped_loci,]
+      
+      markers[["distance"]] = Inf
+      
+      for(chromosome in levels(as.factor(markers[["chromosome"]]))){
+        for(amplicon in 1:(nrow(markers[markers[["chromosome"]] == chromosome,])-1)){
+          markers[
+            markers[["chromosome"]] == chromosome,
+            ][amplicon, "distance"] = 
+            markers[markers[["chromosome"]] == chromosome,][amplicon + 1, "pos"] - 
+            markers[markers[["chromosome"]] == chromosome,][amplicon, "pos"]
+        }
+      }
+      
+      loci_performance_complete = loci_performance
+      loci_performance = loci_performance[keeped_loci,]
+      
+      ampseq_object@gt = ampseq_loci_abd_table
+      ampseq_object@markers = markers
+      ampseq_object@loci_performance = loci_performance
+      ampseq_object@discarded_loci = list(gt = ampseq_loci_abd_table_discarded_loci,
+                                          loci_performance = loci_performance_complete,
+                                          markers = discarded_markers)
+      ampseq_object@plots[["all_loci_amplification_rate"]] = all_loci_performance_plot
+      #ampseq_object@plots[["amplification_rate_per_locus"]] = amplification_rate_per_locus
+      return(ampseq_object)
+      
+    }else if(is.null(strata)){
+      
+      discarded_loci = loci_performance[loci_performance[["loci_ampl_rate_Total"]] <= threshold,][["loci"]]
+      keeped_loci = loci_performance[loci_performance[["loci_ampl_rate_Total"]] > threshold,][["loci"]]
+      
+      ampseq_loci_abd_table_discarded_loci =
+        ampseq_loci_abd_table[, colnames(ampseq_loci_abd_table) %in% discarded_loci]
+      ampseq_loci_abd_table = 
+        ampseq_loci_abd_table[, colnames(ampseq_loci_abd_table) %in% keeped_loci]
+      
+      markers = ampseq_object@markers
+      
+      discarded_markers = markers[markers[['amplicon']] %in% discarded_loci,]
+      markers = markers[markers[['amplicon']] %in% keeped_loci,]
+      
+      markers[["distance"]] = Inf
+      
+      for(chromosome in levels(as.factor(markers[["chromosome"]]))){
+        for(amplicon in 1:(nrow(markers[markers[["chromosome"]] == chromosome,])-1)){
+          markers[
+            markers[["chromosome"]] == chromosome,
+          ][amplicon, "distance"] = 
+            markers[markers[["chromosome"]] == chromosome,][amplicon + 1, "pos"] - 
+            markers[markers[["chromosome"]] == chromosome,][amplicon, "pos"]
+        }
+      }
+      
+      loci_performance_complete = loci_performance
+      loci_performance = loci_performance[keeped_loci,]
+      
+      ampseq_object@gt = ampseq_loci_abd_table
+      ampseq_object@markers = markers
+      ampseq_object@loci_performance = loci_performance
+      ampseq_object@discarded_loci = list(gt = ampseq_loci_abd_table_discarded_loci,
+                                          loci_performance = loci_performance_complete,
+                                          markers = discarded_markers)
+      ampseq_object@plots[["all_loci_amplification_rate"]] = all_loci_performance_plot
+      #ampseq_object@plots[["amplification_rate_per_locus"]] = amplification_rate_per_locus
+      return(ampseq_object)
+      
     }
+    
+    
+  }else{
+    
+    return(all_loci_performance_plot)
+        
   }
   
   
-  loci_performance_complete = loci_performance
-  loci_performance = loci_performance[loci_performance[["loci_ampl_rate"]] > threshold ,]
-  
-  ampseq_object@gt = ampseq_loci_abd_table
-  ampseq_object@markers = markers
-  ampseq_object@loci_performance = loci_performance
-  ampseq_object@discarded_loci = list(gt = ampseq_loci_abd_table_discarded_loci,
-                                           loci_performance = loci_performance_complete,
-                                           markers = discarded_markers)
-  ampseq_object@plots[["all_loci_amplification_rate"]] = all_loci_performance_plot
-  ampseq_object@plots[["amplification_rate_per_locus"]] = amplification_rate_per_locus
-  return(ampseq_object)
   
 }
 
 # sample_amplification_rate----
 
-sample_amplification_rate = function(ampseq_object, threshold = .8){
+sample_amplification_rate = function(ampseq_object, threshold = .8, update_samples = TRUE, strata = NULL){
   
   metadata = ampseq_object@metadata
   ampseq_loci_abd_table = ampseq_object@gt
@@ -546,46 +739,74 @@ sample_amplification_rate = function(ampseq_object, threshold = .8){
   
   metadata[["sample_ampl_rate"]] = apply(ampseq_loci_abd_table, 1, function(x) 1 - sum(is.na(x))/length(x))
   
+  if(!is.null(strata)){
+    
+    
+    sample_pass_thres = metadata %>% 
+      summarise(pass_samples = sum(sample_ampl_rate >= threshold), .by = all_of(strata))
+    
+    all_samples_performance_plot = metadata %>% ggplot(aes(sample_ampl_rate))+
+      geom_histogram(binwidth = 0.05, alpha = .7, boundary = 1)+
+      geom_text(data = sample_pass_thres, aes(x = threshold - .1, 
+                                              y = max(pass_samples)/3, 
+                                              label = paste0(pass_samples, ' samples > ', threshold))) +
+      labs(title = paste(sum(metadata[["sample_ampl_rate"]] > threshold), "Samples have an amplification rate >",threshold),
+           x = "Amplification rate",
+           y = "# of samples")+
+      geom_vline(xintercept = threshold) +
+      facet_grid(get(strata)~.)+
+      theme_bw()
+    
+  }else{
+    
+    all_samples_performance_plot = metadata %>% ggplot(aes(sample_ampl_rate))+
+      geom_histogram(binwidth = 0.05, alpha = .7, boundary = 1)+
+      labs(title = paste(sum(metadata[["sample_ampl_rate"]] > threshold), "Samples have an amplification rate >",threshold),
+           x = "Amplification rate",
+           y = "# of samples")+
+      geom_vline(xintercept = threshold) +
+      theme_bw()
+    
+  }
   
-  all_samples_performance_plot = metadata %>% ggplot(aes(sample_ampl_rate))+
-    geom_histogram(binwidth = 0.05, alpha = .7, boundary = 1)+
-    labs(title = paste(sum(metadata[["sample_ampl_rate"]] > threshold), "Samples have an amplification rate >",threshold),
-         x = "Amplification rate",
-         y = "# of samples")+
-    geom_vline(xintercept = threshold) +
-    theme_bw()
-  
-  ampseq_loci_abd_table_discarded_samples = ampseq_loci_abd_table[!(rownames(ampseq_loci_abd_table) %in% metadata[metadata[["sample_ampl_rate"]] > threshold ,][["Sample_id"]]),]
-  ampseq_loci_abd_table = ampseq_loci_abd_table[rownames(ampseq_loci_abd_table) %in% metadata[metadata[["sample_ampl_rate"]] > threshold ,][["Sample_id"]],]
-  
-  metadata_complete = metadata
-  metadata = metadata[metadata[["sample_ampl_rate"]] > threshold ,]
-  
-  
-  loci_performance[["loci_ampl_rate2"]] = apply(ampseq_loci_abd_table, 2, function(x) 1- sum(is.na(x))/length(x))
-  
-  
-  loci_performance_plot = loci_performance %>% ggplot(aes(loci_ampl_rate2))+
-    geom_histogram(binwidth = 0.05, alpha = .7, boundary = 1)+
-    labs(title = "Loci amplification rate",
-         x = "Amplification rate",
-         y = "# of Loci")+
-    geom_vline(xintercept = threshold) +
-    theme_bw()
-  
-  
-  ampseq_object@gt = ampseq_loci_abd_table
-  ampseq_object@metadata = metadata
-  ampseq_object@loci_performance = loci_performance
-  
-  ampseq_object@discarded_samples = list(gt = ampseq_loci_abd_table_discarded_samples,
-                                              metadata = metadata_complete)
-  
-  ampseq_object@plots[["loci_amplification_rate"]] = loci_performance_plot
-  ampseq_object@plots[["samples_amplification_rate"]] = all_samples_performance_plot
-  
-  return(ampseq_object)
-  
+  if(update_samples){
+    
+    ampseq_loci_abd_table_discarded_samples = ampseq_loci_abd_table[!(rownames(ampseq_loci_abd_table) %in% metadata[metadata[["sample_ampl_rate"]] > threshold ,][["Sample_id"]]),]
+    ampseq_loci_abd_table = ampseq_loci_abd_table[rownames(ampseq_loci_abd_table) %in% metadata[metadata[["sample_ampl_rate"]] > threshold ,][["Sample_id"]],]
+    
+    metadata_complete = metadata
+    metadata = metadata[metadata[["sample_ampl_rate"]] > threshold ,]
+    
+    
+    # loci_performance[["loci_ampl_rate2"]] = apply(ampseq_loci_abd_table, 2, function(x) 1- sum(is.na(x))/length(x))
+    # 
+    # 
+    # loci_performance_plot = loci_performance %>% ggplot(aes(loci_ampl_rate2))+
+    #   geom_histogram(binwidth = 0.05, alpha = .7, boundary = 1)+
+    #   labs(title = "Loci amplification rate",
+    #        x = "Amplification rate",
+    #        y = "# of Loci")+
+    #   geom_vline(xintercept = threshold) +
+    #   theme_bw()
+    
+    
+    ampseq_object@gt = ampseq_loci_abd_table
+    ampseq_object@metadata = metadata
+    # ampseq_object@loci_performance = loci_performance
+    
+    ampseq_object@discarded_samples = list(gt = ampseq_loci_abd_table_discarded_samples,
+                                           metadata = metadata_complete)
+    
+    # ampseq_object@plots[["loci_amplification_rate"]] = loci_performance_plot
+    ampseq_object@plots[["samples_amplification_rate"]] = all_samples_performance_plot
+    
+    return(ampseq_object)
+    
+  }else{
+    
+    return(all_samples_performance_plot)
+    
+  }
   
 }
 
@@ -1367,18 +1588,18 @@ drug_resistant_haplotypes = function(ampseq_object,
   # Empty table to fill cigar outputs
   aacigar_table = matrix(NA,
                          nrow = nrow(loci_aa_table),
-                         ncol = length(unique(drugR_reference_alleles$Gene_Id)),
+                         ncol = length(gene_ids),
                          dimnames = list(rownames(loci_aa_table),
-                                         unique(drugR_reference_alleles$Gene_Id)))
+                                         gene_ids))
   
   phenotype_table = matrix(NA,
                            nrow = nrow(loci_aa_table),
-                           ncol = length(unique(drugR_reference_alleles$Gene_Id)),
+                           ncol = length(gene_ids),
                            dimnames = list(rownames(loci_aa_table),
-                                           unique(drugR_reference_alleles$Gene_Id)))
+                                           gene_ids))
   
   print("Defining aa haplotypes and phenotipe respect to the presence of resistant alleles")
-  for(gene in unique(drugR_reference_alleles$Gene_Id)){ # For each gene
+  for(gene in gene_ids){ # For each gene
     
     for(amplicon in drug_markers[drug_markers$gene_ids == gene, 'amplicon']){ # for each amplicon in the gene
       
@@ -1653,7 +1874,7 @@ drug_resistant_haplotypes = function(ampseq_object,
                     
                     phenotype = drugR_reference_alleles[drugR_reference_alleles[['Gene_Id']] == gene &
                                                           drugR_reference_alleles[['position']] == position  &
-                                                          drugR_reference_alleles[['mutant']] == sample_allele,'Anotation']
+                                                          drugR_reference_alleles[['mutant']] == sample_allele,'Annotation']
                     
                     temp_clone_phenotype = phenotype
                     
@@ -1728,7 +1949,7 @@ drug_resistant_haplotypes = function(ampseq_object,
                     
                     phenotype = drugR_reference_alleles[drugR_reference_alleles[['Gene_Id']] == gene &
                                                           drugR_reference_alleles[['position']] == position  &
-                                                          drugR_reference_alleles[['mutant']] == sample_allele,'Anotation']
+                                                          drugR_reference_alleles[['mutant']] == sample_allele,'Annotation']
                     
                     sample_phenotype = c(sample_phenotype, phenotype)
                     
@@ -1851,12 +2072,12 @@ drug_resistant_haplotypes = function(ampseq_object,
             
             not_amplified_amplicons = sort(gsub(' amplicon did not amplify', '', temp_unique_phenotypes[grepl('did not amplify',temp_unique_phenotypes)]))
             
-            temp_unique_phenotypes[grepl('did not amplify',temp_unique_phenotypes)] = paste0('Amplicon(s) ', paste(not_amplified_amplicons, collapse = ','), ' for gene ', gene, " didn't amplified" )
+            temp_unique_phenotypes[grepl('did not amplify',temp_unique_phenotypes)] = paste0('Amplicon(s) ', paste(not_amplified_amplicons, collapse = ','), ' for gene ', gene, " did not amplify" )
             
             temp_unique_phenotypes = unique(temp_unique_phenotypes)
             
           }else if(sum(grepl('did not amplify',temp_unique_phenotypes)) == length(temp_unique_phenotypes)){
-            temp_unique_phenotypes = paste0('Gene ', gene, ' did not amplified')
+            temp_unique_phenotypes = paste0('Gene ', gene, ' did not amplify')
           }
           
           if(length(temp_unique_phenotypes) > 1 & sum(grepl('Sensitive', temp_unique_phenotypes)) > 0){
@@ -1913,12 +2134,12 @@ drug_resistant_haplotypes = function(ampseq_object,
           
           not_amplified_amplicons = sort(gsub(' amplicon did not amplify', '', unique_phenotypes[grepl('did not amplify',unique_phenotypes)]))
           
-          unique_phenotypes[grepl('did not amplify',unique_phenotypes)] = paste0('Amplicon(s) ', paste(not_amplified_amplicons, collapse = ','), ' for gene ', gene, " didn't amplified" )
+          unique_phenotypes[grepl('did not amplify',unique_phenotypes)] = paste0('Amplicon(s) ', paste(not_amplified_amplicons, collapse = ','), ' for gene ', gene, " did not amplify" )
           
           unique_phenotypes = unique(unique_phenotypes)
           
         }else if(sum(grepl('did not amplify',unique_phenotypes)) == length(unique_phenotypes)){
-          unique_phenotypes = paste0('Gene ', gene, ' did not amplified')
+          unique_phenotypes = paste0('Gene ', gene, ' did not amplify')
         }
         
         if(length(unique_phenotypes) > 1 & sum(grepl('Sensitive', unique_phenotypes)) > 0){
@@ -1990,9 +2211,15 @@ drug_resistant_haplotypes = function(ampseq_object,
   
   print("Adding metadata to haplotype counts")
   
-  metadata = ampseq_object@metadata[,c(variables, Longitude, Latitude)]
+  if(!is.null(Longitude) & !is.null(Latitude)){
+    metadata = ampseq_object@metadata[,c(variables, Longitude, Latitude)]
+    names(metadata) = c('Sample_id', 'var1', 'var2', 'Longitude', 'Latitude')
+  }else{
+    metadata = ampseq_object@metadata[,c(variables)]
+    names(metadata) = c('Sample_id', 'var1', 'var2')
+  }
   
-  names(metadata) = c('Sample_id', 'var1', 'var2', 'Longitude', 'Latitude')
+  
   
   extended_aacigar_table = merge(extended_aacigar_table,
                                  metadata,
@@ -2012,9 +2239,9 @@ drug_resistant_haplotypes = function(ampseq_object,
   
   
   if(na.var.rm){
-    extended_aacigar_table = extended_aacigar_table[!is.na(extended_aacigar_table$var1)|
-                                                      (!is.na(extended_aacigar_table$var2)|
-                                                         grepl('NA',extended_aacigar_table$var2)),]
+    extended_aacigar_table = extended_aacigar_table[!is.na(extended_aacigar_table$var1) &
+                                                      (!is.na(extended_aacigar_table$var2) &
+                                                         !grepl('NA',extended_aacigar_table$var2)),]
   }else{
     extended_aacigar_table %<>% mutate(var1 = case_when(
       is.na(var1) ~ paste(variables[2], 'missing'),
@@ -2025,8 +2252,8 @@ drug_resistant_haplotypes = function(ampseq_object,
   }
   
 
-  samples_pop_quarter = extended_aacigar_table %>%
-    summarise(count = nlevels(as.factor(Sample_id)), .by = c(var1, var2)) 
+  # samples_pop_quarter = extended_aacigar_table %>%
+  #   summarise(count = nlevels(as.factor(Sample_id)), .by = c(var1, var2)) 
   
   print("Summarizing haplotype counts")
   
@@ -2095,24 +2322,47 @@ drug_resistant_haplotypes = function(ampseq_object,
   
   print('Assigning colors to haplotypes based on their phenotype')
   blue = brewer.pal(9, 'Blues')[7]
-  reds = brewer.pal(9, 'Reds')[5:8]
+  reds = brewer.pal(9, 'Reds')[3:8]
   orange = brewer.pal(9, 'YlOrRd')[4]
   
-  genotype_phenotype_match %<>% mutate(color_pal = case_when(
-    grepl('resistance', Phenotype) & as.numeric(str_extract(str_extract(Phenotype, '\\d+ ([A-z]| )+ resistance'), '\\d+')) == 1 ~ reds[1],
-    grepl('resistance', Phenotype) & as.numeric(str_extract(str_extract(Phenotype, '\\d+ ([A-z]| )+ resistance'), '\\d+')) == 2 ~ reds[2],
-    grepl('resistance', Phenotype) & as.numeric(str_extract(str_extract(Phenotype, '\\d+ ([A-z]| )+ resistance'), '\\d+')) == 3 ~ reds[3],
-    grepl('resistance', Phenotype) & as.numeric(str_extract(str_extract(Phenotype, '\\d+ ([A-z]| )+ resistance'), '\\d+')) >= 4 ~ reds[4],
+  genotype_phenotype_match$color_pal = sapply(genotype_phenotype_match$Phenotype, function(Phenotype){
     
-    grepl('Sensitive', Phenotype) ~ blue,
+    if(grepl('Delayed clearance', Phenotype)){
+      reds[1]
+    }else if(grepl('Linked', Phenotype)){
+      reds[1]
+    }else if(grepl('resistance', Phenotype) & 
+             sum(as.integer(unlist(str_extract_all(unlist(str_extract_all(Phenotype, '\\d+ ([A-z]| )+ resistance')), '\\d+')))) == 1){
+      reds[2]
+    }else if(grepl('resistance', Phenotype) & 
+             sum(as.integer(unlist(str_extract_all(unlist(str_extract_all(Phenotype, '\\d+ ([A-z]| )+ resistance')), '\\d+')))) == 2){
+      reds[3]
+    }else if(grepl('resistance', Phenotype) & 
+             sum(as.integer(unlist(str_extract_all(unlist(str_extract_all(Phenotype, '\\d+ ([A-z]| )+ resistance')), '\\d+')))) == 3){
+      reds[5]
+    }else if(grepl('resistance', Phenotype) & 
+             sum(as.integer(unlist(str_extract_all(unlist(str_extract_all(Phenotype, '\\d+ ([A-z]| )+ resistance')), '\\d+')))) >= 4){
+      reds[6]
+    }else if(grepl('Sensitive', Phenotype)){
+      blue
+    }else if(grepl('polymorphism', Phenotype) &
+             !grepl('resistance', Phenotype)){
+      orange
+    }else if(grepl('variant unreported', Phenotype) & !grepl('resistance', Phenotype)){
+      'gold3'
+    }else if(grepl("^Amplicon.+amplify$", Phenotype)){
+      'gray70'
+    }else if(grepl('Gene .+ did not amplify', Phenotype)){
+      'gray30'
+    }
     
-    grepl('polymorphism', Phenotype) & !grepl('resistance', Phenotype) ~ orange,
-    
-    grepl("^Amplicon.+amplified$", Phenotype) ~ 'gray70',
-    
-    grepl('Gene .+ did not amplified', Phenotype) ~ 'gray30'
-    
-  ))
+  }, simplify = T)
+  
+  
+  genotype_phenotype_match$transparency = sapply(genotype_phenotype_match$Phenotype, function(Phenotype){
+    1 - 0.15*length(unlist(str_extract_all(Phenotype, '(variant unreported|polymorphism in gene)')))
+  }, simplify = T)
+  
   
   
   # Sort haplotypes based on gene and phenotype
@@ -2121,7 +2371,7 @@ drug_resistant_haplotypes = function(ampseq_object,
   
   for(gene in unique(genotype_phenotype_match$Gene)){
     
-    for(color_pal in c(reds[4:1], orange, blue, 'gray70','gray30')){
+    for(color_pal in c(reds[4:1], 'gold3', orange, blue, 'gray70','gray30')){
       
       genotype_phenotype_match_sorted = rbind(genotype_phenotype_match_sorted,
                                 genotype_phenotype_match[genotype_phenotype_match$Gene == gene &
@@ -2145,21 +2395,35 @@ drug_resistant_haplotypes = function(ampseq_object,
   )
   
   
+  genotype_phenotype_match_sorted = 
+    genotype_phenotype_match_sorted[genotype_phenotype_match_sorted$gene_haplo %in%
+                                    unique(haplotype_counts$gene_haplo ),]
+  
+  
+  haplotype_counts = left_join(haplotype_counts,
+                               genotype_phenotype_match_sorted[,c("gene_haplo",
+                                                                  "transparency")],
+                               by = 'gene_haplo')
+  
+  
   haplotype_counts$gene_haplo = factor(haplotype_counts$gene_haplo,
                                        levels = genotype_phenotype_match_sorted$gene_haplo)
   
   print('haplotype_freq_barplot')
   haplotype_freq_barplot = haplotype_counts %>%
-    ggplot(aes(y = freq, x = var2, fill  = gene_haplo)) +
-    geom_col()+
+    ggplot(aes(y = freq, x = var2, fill  = gene_haplo, alpha = gene_haplo)) +
+    geom_col(color = 'gray75')+
     facet_grid(var1 ~ gene_names)+
     scale_fill_manual(values = genotype_phenotype_match_sorted$color_pal)+
+    scale_alpha_manual(breaks = genotype_phenotype_match_sorted$gene_haplo, values = genotype_phenotype_match_sorted$transparency)+
     theme_bw()+
     theme(axis.text.x = element_text(angle = 45, vjust = 0.5),
           legend.position = 'bottom') +
     labs(y = 'Frequency in population',
          x = 'Date of Collection',
-         fill = 'Gene: Haplotype')
+         fill = 'Gene: Haplotype')+
+    guides(alpha = "none",
+           fill=guide_legend(ncol=3))
   
   
   print('haplotypes_freq_lineplot')
@@ -2175,7 +2439,8 @@ drug_resistant_haplotypes = function(ampseq_object,
           legend.position = 'bottom') +
     labs(y = 'Frequency in population',
          x = 'Date of Collection',
-         color = 'Gene: Haplotype')
+         color = 'Gene: Haplotype')+
+    guides(fill=guide_legend(ncol=3))
   
   #names(haplotype_counts) = c(names(haplotype_counts)[1], variables[2:3], names(haplotype_counts)[-1:-3])
   
@@ -2185,7 +2450,9 @@ drug_resistant_haplotypes = function(ampseq_object,
   
   for(drug in drugs){
     
-    genes = unique(drugR_reference_alleles[grepl(drug, drugR_reference_alleles$Anotation),][['Gene_Id']])
+    genes = unique(drugR_reference_alleles[grepl(drug, drugR_reference_alleles$Annotation),][['Gene_Id']])
+    
+    genes = genes[genes %in% gene_ids]
     
     temp_drug_phenotype_table = as.data.frame(drug_phenotype_table[,'Sample_id'])
     
@@ -2331,9 +2598,9 @@ drug_resistant_haplotypes = function(ampseq_object,
   
   
   if(na.var.rm){
-    drug_phenotype_summary = drug_phenotype_summary[!is.na(drug_phenotype_summary$var1)|
-                                                      (!is.na(drug_phenotype_summary$var2)|
-                                                         grepl('NA',drug_phenotype_summary$var2)),]
+    drug_phenotype_summary = drug_phenotype_summary[!is.na(drug_phenotype_summary$var1) &
+                                                      (!is.na(drug_phenotype_summary$var2) &
+                                                         !grepl('NA',drug_phenotype_summary$var2)),]
   }else{
     drug_phenotype_summary %<>% mutate(var1 = case_when(
       is.na(var1) ~ paste(variables[2], 'missing'),
@@ -2349,14 +2616,26 @@ drug_resistant_haplotypes = function(ampseq_object,
   }
   
   
-  samples_pop_quarter = drug_phenotype_summary %>%
-    summarise(count = nlevels(as.factor(Sample_id)), .by = c(var1, var2)) 
+  # samples_pop_quarter = drug_phenotype_summary %>%
+  #   summarise(count = nlevels(as.factor(Sample_id)), .by = c(var1, var2)) 
   
-  drug_phenotype_summary = drug_phenotype_summary %>%
-    summarise(count = n(),
-              Longitude = mean(Longitude),
-              Latitude = mean(Latitude),
-              .by = c(Drug, var1, var2, Phenotype))
+  if(!is.null(Longitude) & !is.null(Latitude)){
+    
+    drug_phenotype_summary = drug_phenotype_summary %>%
+      summarise(count = n(),
+                Longitude = mean(Longitude),
+                Latitude = mean(Latitude),
+                .by = c(Drug, var1, var2, Phenotype))
+    
+  }else{
+    
+    drug_phenotype_summary = drug_phenotype_summary %>%
+      summarise(count = n(),
+                .by = c(Drug, var1, var2, Phenotype))
+    
+  }
+  
+  
   
   # if(!is.null(filters)){
   #   #filters = strsplit(filters,';')
@@ -2452,12 +2731,17 @@ drug_resistant_haplotypes = function(ampseq_object,
          x = 'Date of Collection',
          color = 'Phenotype')
   
-  print("Estimating frequencyr fo drug phenotypes")
 
-  drug_phenotype_summary_sdf = drug_phenotype_summary %>% 
-    summarise(Longitude = mean(Longitude),
-              Latitude = mean(Latitude),
-              count = sum(count), .by = c(Drug, Phenotype, var1))
+  
+  print("Estimating frequency for drug resistant phenotypes")
+
+  if(!is.null(Longitude) & !is.null(Latitude)){
+    
+    drug_phenotype_summary_sdf = drug_phenotype_summary %>% 
+      summarise(Longitude = mean(Longitude),
+                Latitude = mean(Latitude),
+                count = sum(count), .by = c(Drug, Phenotype, var1))
+    
   
   drug_phenotype_summary_sdf$ssize = NA
   drug_phenotype_summary_sdf$freq = NA
@@ -2493,13 +2777,16 @@ drug_resistant_haplotypes = function(ampseq_object,
     }
   }
   
+  
+  drug_phenotype_summary_sdf %<>% filter(!is.na(Longitude), !is.na(Latitude))
+  
   drug_phenotype_summary_sdf %<>% mutate(logssize = log(ssize, 1.3))
   
   drug_phenotype_summary_sdf %<>% filter(Phenotype == "Mutation(s) associated with a resistant phenotype")
   
   
   print("Transforming data to spatial points")
-  drug_phenotype_summary_sdf = SpatialPointsDataFrame(coords = drug_phenotype_summary_sdf[,c("Latitude", "Longitude")],
+  drug_phenotype_summary_sdf = SpatialPointsDataFrame(coords = drug_phenotype_summary_sdf[,c("Longitude", "Latitude")],
                                                     data = drug_phenotype_summary_sdf,
                                                     proj4string = CRS("+init=epsg:4326"))
 
@@ -2512,6 +2799,7 @@ drug_resistant_haplotypes = function(ampseq_object,
     tm_facets(by = "Drug")+
     tm_scale_bar()
   
+  
   drug_resistant_hap_list = list(aa_mutations = haps_respect_to_ref$loci_aa_table,
                                  dna_mutations = haps_respect_to_ref$loci_dna_table,
                                  genotype_phenotype_table = genotype_phenotype_table,
@@ -2523,97 +2811,232 @@ drug_resistant_haplotypes = function(ampseq_object,
                                  haplotypes_freq_lineplot = haplotypes_freq_lineplot,
                                  haplotype_freq_barplot = haplotype_freq_barplot)
   
+  }else{
+    
+    drug_resistant_hap_list = list(aa_mutations = haps_respect_to_ref$loci_aa_table,
+                                   dna_mutations = haps_respect_to_ref$loci_dna_table,
+                                   genotype_phenotype_table = genotype_phenotype_table,
+                                   drug_phenotype_table = drug_phenotype_table,
+                                   drug_phenotyope_lineplot = drug_phenotyope_lineplot,
+                                   drug_phenotype_barplot = drug_phenotype_barplot,
+                                   haplotypes_freq_lineplot = haplotypes_freq_lineplot,
+                                   haplotype_freq_barplot = haplotype_freq_barplot)
+  }
+  
+  
+  
   return(drug_resistant_hap_list)
   
 }
 
+
+get_Fws = function(ampseq_object = NULL){
+  
+  gt = ampseq_object@gt
+  
+  ExpHet = get_loci_diversity(loci_abd_table = ampseq_object@gt, variance = F)
+  
+  ExpHet = ExpHet[['Hexp']]
+  
+  Hw = sapply(1:nrow(gt), function(sample){
+    
+    samp_alleles= gsub(':\\d+', '', gt[sample,])
+    samp_allcounts = gsub('([A-Z]|\\d|\\.)+:', '', gt[sample,])
+    
+    samp_alleles1 = gsub('_([A-Z]|\\d|\\.)+$', '', samp_alleles)
+    samp_alleles2 = gsub('^([A-Z]|\\d|\\.)+_', '', samp_alleles)
+    
+    samp_check = samp_alleles1 != samp_alleles2
+    
+    samp_alleles2[!samp_check] = NA
+    
+    samp_allcounts1 = gsub('_\\d+$', '', samp_allcounts)
+    samp_allcounts2 = gsub('^\\d+_', '', samp_allcounts)
+    
+    samp_allcounts2[!samp_check] = NA
+    
+    samp_allcountsT = rowSums(cbind(as.integer(samp_allcounts1), as.integer(samp_allcounts2)), na.rm = T)
+    
+    samp_allfreq = cbind(as.integer(samp_allcounts1), as.integer(samp_allcounts2))/samp_allcountsT
+    
+    Hw = 1 - rowSums(samp_allfreq^2, na.rm = T)
+    Hw[Hw==1] = NA
+    Hw
+  })
+  
+  Fws = 1 - (Hw/ExpHet)
+  
+  Fws = colMeans(Fws, na.rm = T)
+  
+  Fws[Fws < 0] = 0 
+  
+  return(Fws)
+  
+}
+
+
 # get_polygenomic----
 
-get_polygenomic = function(ampseq_object, strata, update_popsummary = T, na.rm = FALSE, filters = NULL){
+get_polygenomic = function(ampseq_object, strata = NULL, update_popsummary = T, na.rm = FALSE, filters = NULL, poly_quantile = .75){
   
   library(Hmisc)
   
-  ampseq_loci_abd_table = ampseq_object@gt
+  gt = ampseq_object@gt
   metadata = ampseq_object@metadata
   loci_performance = ampseq_object@loci_performance
   
-  if(na.rm){
-    ampseq_loci_abd_table = ampseq_loci_abd_table[!(is.na(metadata[[strata]]) | grepl('NA',metadata[[strata]])),]
-    metadata = metadata[!(is.na(metadata[[strata]]) | grepl('NA',metadata[[strata]])),]
-  }else if(length(metadata[is.na(metadata[[strata]]) | grepl('NA',metadata[[strata]]),][[strata]])>0){
-    metadata[is.na(metadata[[strata]]) | grepl('NA',metadata[[strata]]),][[strata]] = 'missing data'
+  if(!is.null(strata)){
+    if(na.rm){
+      gt = gt[!(is.na(metadata[[strata]]) | grepl('NA',metadata[[strata]])),]
+      metadata = metadata[!(is.na(metadata[[strata]]) | grepl('NA',metadata[[strata]])),]
+    }else if(length(metadata[is.na(metadata[[strata]]) | grepl('NA',metadata[[strata]]),][[strata]])>0){
+      metadata[is.na(metadata[[strata]]) | grepl('NA',metadata[[strata]]),][[strata]] = 'missing data'
+    }
+    
+    if(!is.null(filters)){
+      gt = gt[grepl(filters,metadata[[strata]]),]
+      metadata = metadata[grepl(filters,metadata[[strata]]),]
+    }
+    
   }
   
-  if(!is.null(filters)){
-    ampseq_loci_abd_table = ampseq_loci_abd_table[grepl(filters,metadata[[strata]]),]
-    metadata = metadata[grepl(filters,metadata[[strata]]),]
-  }
   
   polygenomic = NULL
   
-  for(sample in rownames(ampseq_loci_abd_table)){
-    polygenomic = rbind(polygenomic, data.frame(NPolyLoci = sum(grepl("_",ampseq_loci_abd_table[sample, ])),
-                                                Polyloci = paste(names(ampseq_loci_abd_table[sample, ])[which(grepl("_",ampseq_loci_abd_table[sample, ]))], collapse = "/"),
-                                                alleles_at_loci = paste(ampseq_loci_abd_table[sample, ][which(grepl("_",ampseq_loci_abd_table[sample, ]))], collapse = "/"),
+  for(sample in rownames(gt)){
+    polygenomic = rbind(polygenomic, data.frame(NPolyLoci = sum(grepl("_",gt[sample, ])),
+                                                Frac_PolyLoci = sum(grepl("_",gt[sample, ]))/sum(!is.na(gt[sample, ])),
+                                                Polyloci = paste(names(gt[sample, ])[which(grepl("_",gt[sample, ]))], collapse = "/"),
+                                                alleles_at_loci = paste(gt[sample, ][which(grepl("_",gt[sample, ]))], collapse = "/"),
                                                 nalleles_per_loci = paste(
                                                   sapply(
                                                     sapply(
-                                                      ampseq_loci_abd_table[sample, ][which(grepl("_", ampseq_loci_abd_table[sample, ]))], function(x){strsplit(x, "_")}),
+                                                      gt[sample, ][which(grepl("_", gt[sample, ]))], function(x){strsplit(x, "_")}),
                                                     function(x) length(x)),
                                                   collapse = "/"),
-                                                coi = ifelse(sum(grepl("_",ampseq_loci_abd_table[sample, ])) == 0,
+                                                max_nAlleles = ifelse(sum(grepl("_",gt[sample, ])) == 0,
                                                              1,
                                                              max(unlist(sapply(
                                                                sapply(
-                                                                 ampseq_loci_abd_table[sample, ][which(grepl("_",ampseq_loci_abd_table[sample, ]))], function(x){strsplit(x, "_")}),
+                                                                 gt[sample, ][which(grepl("_",gt[sample, ]))], function(x){strsplit(x, "_")}),
                                                                function(x) length(x)))))))
   }
+  
+  
+  polygenomic[['Fws']] = get_Fws(ampseq_object)
+  
+  
+  fracHet_quantile = quantile(polygenomic$Frac_PolyLoci, poly_quantile, na.rm = T)
+  Fws_quantile = quantile(polygenomic$Fws, probs = 1 - poly_quantile, na.rm = T)
+
+  
+
+  plot_fracHet_vs_Fws = ggdraw()+
+    draw_plot(polygenomic %>%
+                ggplot(aes(x = Frac_PolyLoci, y = Fws,
+                           color = as.character(max_nAlleles)
+                ))+
+                geom_point(alpha = .5)+
+                geom_vline(xintercept = fracHet_quantile, linetype = 2)+
+                geom_hline(yintercept = Fws_quantile, linetype = 2)+
+                scale_color_viridis_d()+
+                labs(color = 'max_nAlleles')+
+                theme_bw()+
+                theme(axis.title = element_blank(),
+                      axis.text = element_blank(),
+                      legend.position = c(.8,.8)),
+              x = .3,
+              width = .7,
+              y = .3,
+              height = .7
+              )+
+    draw_plot(polygenomic %>%
+                ggplot(aes(x = Frac_PolyLoci))+
+                geom_histogram()+
+                geom_vline(xintercept = c(fracHet_quantile), linetype = 2)+
+                theme_bw(),
+              x = .225,
+              width = .775,
+              y = 0,
+              height = .3)+
+    draw_plot(polygenomic %>%
+                ggplot(aes(x = Fws))+
+                geom_histogram()+
+                geom_vline(xintercept = c(Fws_quantile), linetype = 2)+
+                theme_bw()+
+                coord_flip(),
+              x = 0,
+              width = .3,
+              y = .25,
+              height = .75)
+  
+  
+  polygenomic %<>% mutate(Clonality = 
+                            case_when(
+                              Frac_PolyLoci > fracHet_quantile &
+                                Fws < Fws_quantile ~ 'Polyclonal',
+                              !(Frac_PolyLoci > fracHet_quantile &
+                                Fws < Fws_quantile) ~ 'Monoclonal'
+                            ))
+  
   
   pop_summary = data.frame(
     pop = "Total",
     n = nrow(polygenomic),
-    mean_coi = mean(polygenomic[["coi"]]),
-    n_poly = nrow(polygenomic[polygenomic[["coi"]] > 1,]),
-    prop_poly = binconf(x = nrow(polygenomic[polygenomic[["coi"]] > 1,]),
+    #mean_coi = mean(polygenomic[["coi"]]),
+    n_poly = nrow(polygenomic[polygenomic[["Clonality"]] == 'Polyclonal',]),
+    prop_poly = binconf(x = nrow(polygenomic[polygenomic[["Clonality"]] == 'Polyclonal',]),
                         n = nrow(polygenomic),
                         method = "exact")[1],
-    prop_poly_lower = binconf(x = nrow(polygenomic[polygenomic[["coi"]] > 1,]),
+    prop_poly_lower = binconf(x = nrow(polygenomic[polygenomic[["Clonality"]] == 'Polyclonal',]),
                               n = nrow(polygenomic),
                               method = "exact")[2],
-    prop_poly_upper = binconf(x = nrow(polygenomic[polygenomic[["coi"]] > 1,]),
+    prop_poly_upper = binconf(x = nrow(polygenomic[polygenomic[["Clonality"]] == 'Polyclonal',]),
                               n = nrow(polygenomic),
                               method = "exact")[3])
   
   
-  for(pop in levels(as.factor(metadata[[strata]]))){
-    pop_summary = rbind(pop_summary,
-                        data.frame(
-                          pop = pop,
-                          n = nrow(polygenomic[metadata[[strata]] == pop,]),
-                          mean_coi = mean(polygenomic[metadata[[strata]] == pop,][["coi"]]),
-                          n_poly = nrow(polygenomic[metadata[[strata]] == pop & polygenomic[["coi"]] > 1,]),
-                          prop_poly = binconf(x = nrow(polygenomic[metadata[[strata]] == pop & polygenomic[["coi"]] > 1,]),
-                                              n = nrow(polygenomic[metadata[[strata]] == pop,]),
-                                              method = "exact")[1],
-                          prop_poly_lower = binconf(x = nrow(polygenomic[metadata[[strata]] == pop & polygenomic[["coi"]] > 1,]),
-                                                    n = nrow(polygenomic[metadata[[strata]] == pop,]),
-                                                    method = "exact")[2],
-                          prop_poly_upper = binconf(x = nrow(polygenomic[metadata[[strata]] == pop & polygenomic[["coi"]] > 1,]),
-                                                    n = nrow(polygenomic[metadata[[strata]] == pop,]),
-                                                    method = "exact")[3]))
+  if(!is.null(strata)){
+    
+    for(pop in levels(as.factor(metadata[[strata]]))){
+      pop_summary = rbind(pop_summary,
+                          data.frame(
+                            pop = pop,
+                            n = nrow(polygenomic[metadata[[strata]] == pop,]),
+                            #mean_coi = mean(polygenomic[metadata[[strata]] == pop,][["coi"]]),
+                            n_poly = nrow(polygenomic[metadata[[strata]] == pop & polygenomic[["Clonality"]] == 'Polyclonal',]),
+                            prop_poly = binconf(x = nrow(polygenomic[metadata[[strata]] == pop & polygenomic[["Clonality"]] == 'Polyclonal',]),
+                                                n = nrow(polygenomic[metadata[[strata]] == pop,]),
+                                                method = "exact")[1],
+                            prop_poly_lower = binconf(x = nrow(polygenomic[metadata[[strata]] == pop & polygenomic[["Clonality"]] == 'Polyclonal',]),
+                                                      n = nrow(polygenomic[metadata[[strata]] == pop,]),
+                                                      method = "exact")[2],
+                            prop_poly_upper = binconf(x = nrow(polygenomic[metadata[[strata]] == pop & polygenomic[["Clonality"]] == 'Polyclonal',]),
+                                                      n = nrow(polygenomic[metadata[[strata]] == pop,]),
+                                                      method = "exact")[3]))
+    }
+    
   }
+  
+  
   
   # Defining the proportion of polygenomic infections detected by loci --
   
-  loci_performance[["prop_poly_detected"]] = apply(ampseq_loci_abd_table, 2, function(x) sum(grepl("_",x))/length(x))
+  prop_poly_detected = apply(gt, 2, function(x) sum(grepl("_",x))/length(x))
+  
+  loci_performance[['prop_poly_detected']] = prop_poly_detected
   
   if(update_popsummary){
     ampseq_object@metadata = cbind(ampseq_object@metadata, polygenomic)
     ampseq_object@loci_performance = loci_performance
     ampseq_object@pop_summary = if(is.null(ampseq_object@pop_summary)){pop_summary}else{cbind(ampseq_object@pop_summary, pop_summary)}
+    ampseq_object@plots[['plot_fracHet_vs_Fws']] = plot_fracHet_vs_Fws
     return(ampseq_object)
   }else{
-    return(pop_summary)
+    return(list(coi_bySample = data.frame(Sample_id = rownames(gt),polygenomic),
+                pop_summary = pop_summary,
+                coi_byLoci = data.frame(locus = names(prop_poly_detected), prop_poly_detected = prop_poly_detected),
+                plot_fracHet_vs_Fws = plot_fracHet_vs_Fws))
   }
   
 }
@@ -2959,6 +3382,9 @@ plot_relatedness_distribution = function(pairwise_relatedness = pairwise_related
   
   pairwise_relatedness_l = pairwise_relatedness
   
+  pairwise_relatedness_l %<>% filter(Yi %in% metadata$Sample_id,
+                                     Yj %in% metadata$Sample_id)
+  
   pairwise_relatedness_l = merge(pairwise_relatedness_l, metadata[,c('Sample_id', Population)], by.x = 'Yi', by.y = 'Sample_id', all.x = TRUE)
   
   names(pairwise_relatedness_l) = c(names(pairwise_relatedness_l)[-5], 'Yi_Population')
@@ -2971,8 +3397,8 @@ plot_relatedness_distribution = function(pairwise_relatedness = pairwise_related
   
   pairwise_relatedness_l %<>% mutate(Pop_comparison = case_when(
     Yi_Population == Yj_Population ~ Yi_Population,
-    Yi_Population < Yj_Population ~ paste(Yi_Population, Yj_Population, sep = '-'),
-    Yi_Population > Yj_Population ~ paste(Yj_Population, Yi_Population, sep = '-')
+    Yi_Population < Yj_Population ~ paste(Yi_Population, Yj_Population, sep = '_vs_'),
+    Yi_Population > Yj_Population ~ paste(Yj_Population, Yi_Population, sep = '_vs_')
   ))
   
   # if(sum(is.na(pairwise_relatedness_l$Pop_comparison)) + sum(grepl('NA', pairwise_relatedness_l$Pop_comparison)) >= 1){
@@ -2992,8 +3418,8 @@ plot_relatedness_distribution = function(pairwise_relatedness = pairwise_related
   #   
   
   pairwise_relatedness_l %<>% mutate(Type_of_comparison = case_when(
-    grepl("-",Pop_comparison) ~ "Between",
-    !grepl("-",Pop_comparison) ~ "Within"
+    grepl("_vs_",Pop_comparison) ~ "Between",
+    !grepl("_vs_",Pop_comparison) ~ "Within"
   ))
   
   # }
@@ -3005,7 +3431,7 @@ plot_relatedness_distribution = function(pairwise_relatedness = pairwise_related
   }else{
     pairwise_relatedness_l$Pop_comparison = factor(pairwise_relatedness_l$Pop_comparison,
                                                    levels = c(sort(unique(metadata[!is.na(metadata[[Population]]),][[Population]])),
-                                                              apply(combn(unique(metadata[!is.na(metadata[[Population]]),][[Population]]),2), 2, function(x){paste(sort(x), collapse = '-')})))
+                                                              apply(combn(unique(metadata[!is.na(metadata[[Population]]),][[Population]]),2), 2, function(x){paste(sort(x), collapse = '_vs_')})))
   }
   
   
@@ -3031,6 +3457,9 @@ plot_relatedness_distribution = function(pairwise_relatedness = pairwise_related
             axis.title = element_text(size = 12),
             strip.text = element_text(size = 12),
             legend.position = "none")
+    
+    pairwise_relatedness_l %<>% filter(Type_of_comparison == 'Within')
+    
   }else if(type_pop_comparison == 'between'){
     plot_pairwise_relatedness_distribution = pairwise_relatedness_l %>%
       filter(Type_of_comparison == 'Between')%>%
@@ -3048,6 +3477,9 @@ plot_relatedness_distribution = function(pairwise_relatedness = pairwise_related
             axis.title = element_text(size = 12),
             strip.text = element_text(size = 12),
             legend.position = "none")
+    
+    pairwise_relatedness_l %<>% filter(Type_of_comparison == 'Between')
+    
   }else if(type_pop_comparison == 'both'){
     plot_pairwise_relatedness_distribution = pairwise_relatedness_l %>%
       ggplot(aes(x = rhat, fill = Pop_comparison)) +
@@ -3087,6 +3519,9 @@ plot_frac_highly_related = function(pairwise_relatedness = pairwise_relatedness,
   
   pairwise_relatedness_l = pairwise_relatedness
   
+  pairwise_relatedness_l %<>% filter(Yi %in% metadata$Sample_id,
+                                     Yj %in% metadata$Sample_id)
+  
   pairwise_relatedness_l = merge(pairwise_relatedness_l, metadata[,c('Sample_id', Population)], by.x = 'Yi', by.y = 'Sample_id', all.x = TRUE)
   
   names(pairwise_relatedness_l) = c(names(pairwise_relatedness_l)[-5], 'Yi_Population')
@@ -3100,8 +3535,8 @@ plot_frac_highly_related = function(pairwise_relatedness = pairwise_relatedness,
   
   pairwise_relatedness_l %<>% mutate(Pop_comparison = case_when(
     Yi_Population == Yj_Population ~ Yi_Population,
-    Yi_Population < Yj_Population ~ paste(Yi_Population, Yj_Population, sep = '-'),
-    Yi_Population > Yj_Population ~ paste(Yj_Population, Yi_Population, sep = '-')
+    Yi_Population < Yj_Population ~ paste(Yi_Population, Yj_Population, sep = '_vs_'),
+    Yi_Population > Yj_Population ~ paste(Yj_Population, Yi_Population, sep = '_vs_')
   ))
   
   # if(sum(is.na(pairwise_relatedness_l$Pop_comparison)) + sum(grepl('NA', pairwise_relatedness_l$Pop_comparison)) >= 1){
@@ -3120,8 +3555,8 @@ plot_frac_highly_related = function(pairwise_relatedness = pairwise_relatedness,
   # }else{
   #   
   pairwise_relatedness_l %<>% mutate(Type_of_comparison = case_when(
-    grepl("-",Pop_comparison) ~ "Between",
-    !grepl("-",Pop_comparison) ~ "Within"
+    grepl("_vs_",Pop_comparison) ~ "Between",
+    !grepl("_vs_",Pop_comparison) ~ "Within"
   ))
   
   # }
@@ -3133,7 +3568,7 @@ plot_frac_highly_related = function(pairwise_relatedness = pairwise_relatedness,
   }else{
     pairwise_relatedness_l$Pop_comparison = factor(pairwise_relatedness_l$Pop_comparison,
                                                    levels = c(sort(unique(metadata[!is.na(metadata[[Population]]),][[Population]])),
-                                                              apply(combn(unique(metadata[!is.na(metadata[[Population]]),][[Population]]),2), 2, function(x){paste(sort(x), collapse = '-')})))
+                                                              apply(combn(unique(metadata[!is.na(metadata[[Population]]),][[Population]]),2), 2, function(x){paste(sort(x), collapse = '_vs_')})))
     
   }
   
@@ -3177,11 +3612,14 @@ plot_frac_highly_related = function(pairwise_relatedness = pairwise_relatedness,
       theme_bw()+
       labs(y = paste0('Proportion of highly related samples, IBD >= ', threshold))+
       theme(axis.text = element_text(size = 12),
-            axis.text.x = element_text(angle = 45, vjust = .5),
+            axis.text.x = element_text(angle = 90, vjust = .5),
             axis.title.y = element_text(size = 12),
             axis.title.x = element_blank(),
             strip.text = element_text(size = 12),
             legend.position = "none")
+    
+    highly_related_table %<>%
+      filter(Type_of_comparison == 'Within')
     
   }else if(type_pop_comparison == 'between'){
     
@@ -3194,11 +3632,14 @@ plot_frac_highly_related = function(pairwise_relatedness = pairwise_relatedness,
       theme_bw()+
       labs(y = paste0('Proportion of highly related samples, IBD >= ', threshold))+
       theme(axis.text = element_text(size = 12),
-            axis.text.x = element_text(angle = 45, vjust = .5),
+            axis.text.x = element_text(angle = 90, vjust = .5),
             axis.title.y = element_text(size = 12),
             axis.title.x = element_blank(),
             strip.text = element_text(size = 12),
             legend.position = "none")
+    
+    highly_related_table %<>%
+      filter(Type_of_comparison == 'Between')
     
   }else if(type_pop_comparison == 'both'){
     
@@ -3210,7 +3651,7 @@ plot_frac_highly_related = function(pairwise_relatedness = pairwise_relatedness,
       theme_bw()+
       labs(y = paste0('Proportion of highly related samples, IBD >= ', threshold))+
       theme(axis.text = element_text(size = 12),
-            axis.text.x = element_text(angle = 45, vjust = .5),
+            axis.text.x = element_text(angle = 90, vjust = .5),
             axis.title.y = element_text(size = 12),
             axis.title.x = element_blank(),
             strip.text = element_text(size = 12),
@@ -3237,6 +3678,9 @@ plot_frac_highly_related_over_time = function(pairwise_relatedness = pairwise_re
                                                  pop_levels = NULL){
   
   pairwise_relatedness_l = pairwise_relatedness
+  
+  pairwise_relatedness_l %<>% filter(Yi %in% metadata$Sample_id,
+                                     Yj %in% metadata$Sample_id)
   
   # Giving wraning message, otherwise it is faster
   # pairwise_relatedness_l %<>% mutate(
@@ -3301,8 +3745,8 @@ plot_frac_highly_related_over_time = function(pairwise_relatedness = pairwise_re
   
   
   pairwise_relatedness_l %<>% mutate(Pop_comparison = case_when(
-    Population_Yi < Population_Yj ~ paste(Population_Yi, Population_Yj, sep = '_'),
-    Population_Yi > Population_Yj ~ paste(Population_Yj, Population_Yi, sep = '_'),
+    Population_Yi < Population_Yj ~ paste(Population_Yi, Population_Yj, sep = '_vs_'),
+    Population_Yi > Population_Yj ~ paste(Population_Yj, Population_Yi, sep = '_vs_'),
     Population_Yi == Population_Yj ~ Population_Yi),
     Type_Pop_comparison = case_when(
       Population_Yi != Population_Yj ~ "Between",
@@ -3318,8 +3762,8 @@ plot_frac_highly_related_over_time = function(pairwise_relatedness = pairwise_re
     
   }else{
     pairwise_relatedness_l$Pop_comparison = factor(pairwise_relatedness_l$Pop_comparison,
-                                                   levels = c(sort(unique(pairwise_relatedness_l$Pop_comparison)[!grepl("_", unique(pairwise_relatedness_l$Pop_comparison))]),
-                                                              sort(unique(pairwise_relatedness_l$Pop_comparison)[grepl("_", unique(pairwise_relatedness_l$Pop_comparison))])))
+                                                   levels = c(sort(unique(pairwise_relatedness_l$Pop_comparison)[!grepl("_vs_", unique(pairwise_relatedness_l$Pop_comparison))]),
+                                                              sort(unique(pairwise_relatedness_l$Pop_comparison)[grepl("_vs_", unique(pairwise_relatedness_l$Pop_comparison))])))
   }
   
     
@@ -3362,7 +3806,7 @@ plot_frac_highly_related_over_time = function(pairwise_relatedness = pairwise_re
       theme_bw()+
       labs(y = paste0('Proportion of highly related samples, IBD >= ', threshold))+
       theme(axis.text = element_text(size = 12),
-            axis.text.x = element_text(angle = 45, vjust = .5),
+            axis.text.x = element_text(angle = 90, vjust = .5),
             axis.title.y = element_text(size = 12),
             axis.title.x = element_blank(),
             strip.text = element_text(size = 12),
@@ -3380,12 +3824,14 @@ plot_frac_highly_related_over_time = function(pairwise_relatedness = pairwise_re
       theme_bw()+
       labs(y = paste0('Proportion of highly related samples, IBD >= ', threshold))+
       theme(axis.text = element_text(size = 12),
-            axis.text.x = element_text(angle = 45, vjust = .5),
+            axis.text.x = element_text(angle = 90, vjust = .5),
             axis.title.y = element_text(size = 12),
             axis.title.x = element_blank(),
             strip.text = element_text(size = 12),
             legend.position = "none")
     
+    frac_highly_related %<>%
+      filter(Type_Pop_comparison == 'Within')
     
   }else if(type_pop_comparison == 'between'){
     
@@ -3399,11 +3845,14 @@ plot_frac_highly_related_over_time = function(pairwise_relatedness = pairwise_re
       theme_bw()+
       labs(y = paste0('Proportion of highly related samples, IBD >= ', threshold))+
       theme(axis.text = element_text(size = 12),
-            axis.text.x = element_text(angle = 45, vjust = .5),
+            axis.text.x = element_text(angle = 90, vjust = .5),
             axis.title.y = element_text(size = 12),
             axis.title.x = element_blank(),
             strip.text = element_text(size = 12),
             legend.position = "none")
+    
+    frac_highly_related %<>%
+      filter(Type_Pop_comparison == 'Between')
     
   }
   
@@ -3423,13 +3872,17 @@ plot_network = function(pairwise_relatedness,
                            sample_id,
                            group_by,
                            levels,
-                           colors){
+                           colors,
+                        vertex.size = 4){
   
   if(sum(is.na(metadata[[group_by]])) > 0){
     metadata[is.na(metadata[[group_by]]),][[group_by]] = 'missing data'
   }
   
   pairwise_relatedness_l = pairwise_relatedness
+  
+  pairwise_relatedness_l %<>% filter(Yi %in% metadata$Sample_id,
+                                Yj %in% metadata$Sample_id)
   
   variable = 'rhat'
   cols = c("Yi", "Yj")
@@ -3457,7 +3910,7 @@ plot_network = function(pairwise_relatedness,
   
   plot_network = plot.igraph(network_object,
                              vertex.color = node_colors,
-                             vertex.size=4,
+                             vertex.size=vertex.size,
                              vertex.label.cex=0,
                              vertex.label.dist=.5, 
                              #vertex.label.degree=-pi/2,
@@ -3695,11 +4148,24 @@ IBD_evectors = function(ampseq_object, relatedness_table, k = NULL, Pop = 'Popul
   
   metadata = ampseq_object@metadata
   
+
+  
   pairwise_relatedness_matrix = matrix(data = NA,
                                        ncol = nrow(ampseq_object@metadata),
                                        nrow = nrow(ampseq_object@metadata),
                                        dimnames = list(ampseq_object@metadata$Sample_id,
                                                        ampseq_object@metadata$Sample_id))
+  
+  #### Add metadata to the PCA----
+  Pop_col = merge(data.frame(Sample_id = gsub('_C[1,2]$','',colnames(pairwise_relatedness_matrix)),
+                             order = 1:ncol(pairwise_relatedness_matrix)), metadata[,c('Sample_id', Pop)], by = 'Sample_id', all.y = T)
+  
+  Pop_col = Pop_col[order(Pop_col$order),]
+  
+  
+  relatedness_table %<>% filter(Yi %in% metadata$Sample_id,
+                                Yj %in% metadata$Sample_id)
+  
   
   for(pair in 1:nrow(relatedness_table)){
     
@@ -3715,41 +4181,739 @@ IBD_evectors = function(ampseq_object, relatedness_table, k = NULL, Pop = 'Popul
   pairwise_relatedness_matrix[is.na(pairwise_relatedness_matrix)] = 1
   
   pairwise_dist_matrix = 1 - pairwise_relatedness_matrix
+  
+  ## Using_fastSVDCpp
 
-  #evector = fastGRMCpp(pairwise_relatedness_matrix, k, q)
-  
-  ibd_pca = princomp(pairwise_dist_matrix)
-  
-  evector = ibd_pca$scores
-  evalues = ibd_pca$sdev
-
-  contrib = 100*(evalues)^2/sum((evalues)^2)
-  
-  
+  # evector = fastSVDCpp(pairwise_relatedness_matrix, k, q)
+  # 
+  # for(i in 1:k){
+  #   evector[,i] = sign(evector[1,i])*evector[,i]
+  # }
+  # 
   # evalues = NULL
   # 
   # for(i in 1:k){
   #   evalues = c(evalues, unlist((pairwise_dist_matrix %*% evector[,i])/evector[,i])[1])
   # }
+  # 
+  # contrib = 100*(evalues)^2/sum((evalues)^2)
+  # 
+  # evector = data.frame(Pop_col, evector)
+  # names(evector) = c(colnames(Pop_col), paste0(rep('PC', k), 1:k))
+  # 
+  # ibd_pca_fast = list(eigenvector=evector, eigenvalues = evalues, contrib = contrib)
   
-  #contrib = 100*(((evalues + abs(min(evalues))))^2/sum(((evalues + abs(min(evalues))))^2))
+  ## Using princomp from R
   
-  #### Add metadata to the PCA----
-  Pop_col = merge(data.frame(Sample_id = gsub('_C[1,2]$','',colnames(pairwise_relatedness_matrix)),
-                             order = 1:ncol(pairwise_relatedness_matrix)), metadata[,c('Sample_id', Pop)], by = 'Sample_id', all.x = T)
+  ibd_pca = princomp(pairwise_dist_matrix)
+
+  ibd_evector = ibd_pca$scores
+  ibd_evalues = ibd_pca$sdev
+
+  ibd_contrib = 100*(ibd_evalues)^2/sum((ibd_evalues)^2)
   
-  Pop_col = Pop_col[order(Pop_col$order),]
+  ibd_evector = data.frame(Pop_col, ibd_evector)
+  names(ibd_evector) = c(colnames(Pop_col), paste0(rep('PC', k), 1:k))
   
-  evector = data.frame(Pop_col, evector)
-  names(evector) = c(colnames(Pop_col), paste0(rep('PC', k), 1:k))
-  
-  
-  ibd_pca = list(eigenvector=evector, eigenvalues = evalues, contrib = contrib)
-  
+  ibd_pca = list(eigenvector=ibd_evector, eigenvalues = ibd_evalues, contrib = ibd_contrib)
+
   return(ibd_pca)
   
 }
 
 
 
+# Fraction of heterozygous samples per alternative allele per site----
+setGeneric("frac_ofHet_pAlt_byAllele", function(obj = NULL) standardGeneric("frac_ofHet_pAlt_byAllele"))
+
+setMethod("frac_ofHet_pAlt_byAllele", signature(obj = "ampseq"),
+          
+          function(obj = NULL){
+            
+            gt = obj@gt
+
+            
+            mhaps = obj@markers
+            
+            alt = sapply(colnames(gt), function(mhap){
+              alt = unique(unlist(strsplit(gsub(':\\d+', '',gt[,mhap]), '_')))
+              
+              alt = paste(alt[!is.na(alt) & alt != '.'], collapse = ',')
+            })
+            
+            
+            gt = gsub(':\\d+', '',gt)
+            
+            # Heterozygous positions
+            HetPos = matrix(grepl('_', gt), ncol = ncol(gt), nrow = nrow(gt))
+            
+            allele_count_frac_ofHet_pAlt = NULL
+            
+            for(mhap in 1:ncol(gt)){
+              temp_gts = gt[,mhap] # genotypes observed in that site
+              alleles = strsplit(alt[mhap], ',')[[1]] # alternative alleles observed in that site
+              
+              if(length(alleles) != 0){
+                
+                # Vector of presence or absence of each alternative allele
+                h_ij = t(sapply(alleles,
+                                function(allele){
+                                  P_ij = grepl(allele, temp_gts)
+                                  
+                                  H_ijminor = grepl(paste0('_',allele), temp_gts)
+                                  
+                                  # Samples where alternative alleles are present and the site is heterozygous
+                                  H_ij = (P_ij == 1 & HetPos[,mhap] == 1)    
+                                  
+                                  H_ijminor = (H_ijminor == 1 & HetPos[,mhap] == 1)
+                                  
+                                  # Number and Density of variant sites in the allele i of the mhap j
+                                  nVSITES_ij = length(str_extract_all(allele, '\\d+')[[1]])
+                                  dVSITES_ij = nVSITES_ij/mhaps[mhap,][['length']]
+                                  
+                                  VSITES_ij = unlist(strsplit(allele, '\\d+'))[-1]
+                                  
+                                  # Number and Density of SNPs and INDELs in the allele i of the mhap j
+                                  nSNPs_ij = sum(nchar(VSITES_ij) == 1)
+                                  nINDELs_ij = sum(nchar(VSITES_ij) != 1)
+                                  
+                                  dSNPs_ij = nSNPs_ij/mhaps[mhap,][['length']]
+                                  dINDELs_ij = nINDELs_ij/mhaps[mhap,][['length']]
+                                  
+                                  
+                                  # INDELs in flanking regions
+                                  
+                                  flanking_INDEL = grepl(paste0(paste('(^1', mhaps[mhap,][['length']] + 1, sep = '|'),')I\\.[ATGC]+') ,allele)
+                                  
+                                  c(sum(P_ij, na.rm = T), 
+                                    sum(H_ij, na.rm = T), 
+                                    sum(H_ijminor, na.rm = T),
+                                    sum(H_ij, na.rm = T)/sum(P_ij, na.rm = T),
+                                    ifelse(is.na(sum(H_ijminor, na.rm = T)/sum(H_ij, na.rm = T)), 
+                                           0,
+                                           sum(H_ijminor, na.rm = T)/sum(H_ij, na.rm = T)),
+                                    
+                                    nVSITES_ij,
+                                    dVSITES_ij,
+                                    
+                                    nSNPs_ij,
+                                    dSNPs_ij,
+                                    
+                                    nINDELs_ij,
+                                    dINDELs_ij,
+                                    flanking_INDEL
+                                    
+                                  )
+                                  
+                                }))
+                
+                
+                allele_count_frac_ofHet_pAlt_temp = as.data.frame(cbind(alleles, h_ij))
+                
+                names(allele_count_frac_ofHet_pAlt_temp) = c('Allele',
+                                                             'P_ij',
+                                                             'H_ij',
+                                                             'H_ijminor',
+                                                             'h_ij',
+                                                             'h_ijminor',
+                                                             'nVSITES_ij',
+                                                             'dVSITES_ij',
+                                                             'nSNPs_ij',
+                                                             'dSNPs_ij',
+                                                             'nINDELs_ij',
+                                                             'dINDELs_ij',
+                                                             'flanking_INDEL')
+                
+                allele_count_frac_ofHet_pAlt_temp[['P_ij']] = as.integer(allele_count_frac_ofHet_pAlt_temp[['P_ij']])
+                allele_count_frac_ofHet_pAlt_temp[['H_ij']] = as.integer(allele_count_frac_ofHet_pAlt_temp[['H_ij']])
+                allele_count_frac_ofHet_pAlt_temp[['H_ijminor']] = as.integer(allele_count_frac_ofHet_pAlt_temp[['H_ijminor']])
+                
+                allele_count_frac_ofHet_pAlt_temp[['h_ij']] = as.numeric(allele_count_frac_ofHet_pAlt_temp[['h_ij']])
+                allele_count_frac_ofHet_pAlt_temp[['h_ijminor']] = as.numeric(allele_count_frac_ofHet_pAlt_temp[['h_ijminor']])
+                
+                
+                allele_count_frac_ofHet_pAlt_temp[['nVSITES_ij']] = as.integer(allele_count_frac_ofHet_pAlt_temp[['nVSITES_ij']])
+                allele_count_frac_ofHet_pAlt_temp[['nSNPs_ij']] = as.integer(allele_count_frac_ofHet_pAlt_temp[['nSNPs_ij']])
+                allele_count_frac_ofHet_pAlt_temp[['nINDELs_ij']] = as.integer(allele_count_frac_ofHet_pAlt_temp[['nINDELs_ij']])
+                
+                allele_count_frac_ofHet_pAlt_temp[['dVSITES_ij']] = as.numeric(allele_count_frac_ofHet_pAlt_temp[['dVSITES_ij']])
+                allele_count_frac_ofHet_pAlt_temp[['dSNPs_ij']] = as.numeric(allele_count_frac_ofHet_pAlt_temp[['dSNPs_ij']])
+                
+                allele_count_frac_ofHet_pAlt_temp[['flanking_INDEL']] = as.logical(as.integer(allele_count_frac_ofHet_pAlt_temp[['flanking_INDEL']]))
+                
+                allele_count_frac_ofHet_pAlt_temp[['p_ij']] = allele_count_frac_ofHet_pAlt_temp[['P_ij']]/ncol(gt)
+                
+                allele_count_frac_ofHet_pAlt_temp[['MHap']] = colnames(gt)[mhap]
+                
+                
+                allele_count_frac_ofHet_pAlt = rbind(allele_count_frac_ofHet_pAlt, allele_count_frac_ofHet_pAlt_temp)
+                
+              }
+    
+              
+            }
+            
+            return(allele_count_frac_ofHet_pAlt)
+            
+          }
+)
+
+
+
+
+# Mask alternative alleles----
+setGeneric("mask_alt_alleles", function(obj = NULL, mask_formula = "dVSITES_ij > 0.3") standardGeneric("mask_alt_alleles"))
+
+setMethod("mask_alt_alleles", signature(obj = "ampseq"),
+          
+          function(obj = NULL,  mask_formula = "dVSITES_ij > 0.3"){
+            
+            gt = obj@gt
+            
+            
+            mhaps = obj@markers
+            
+            alt = sapply(colnames(gt), function(mhap){
+              alt = unique(unlist(strsplit(gsub(':\\d+', '',gt[,mhap]), '_')))
+              
+              alt = paste(alt[!is.na(alt) & alt != '.'], collapse = ',')
+            })
+            
+            gt_masked = gt
+            
+            gt = gsub(':\\d+', '',gt)
+            
+            # Heterozygous positions
+            HetPos = matrix(grepl('_', gt), ncol = ncol(gt), nrow = nrow(gt))
+            
+            # Check if formula is correct
+            
+            if(grepl("(h_ij|h_ijminor|p_ij|P_ij|H_ij|H_ijminor|nVSITES_ij|dVSITES_ij|nSNPs_ij|dSNPs_ij|nINDELs_ij|dINDELs_ij|flanking_INDEL)(<|>|!|=)+", mask_formula)){
+              stop("All mathematical and logical operators must be separated by blank spaces in mask_formula")
+            }
+            
+            # modify mask_formula
+            
+            
+            if(grepl("flanking_INDEL ", mask_formula)){
+              
+              mask_filter = str_extract(mask_formula, "flanking_INDEL (=|!|>|<)+ (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)")
+              
+              if(!is.na(mask_filter)){
+                print(paste0('Filter ', str_extract(mask_formula, "flanking_INDEL (=|!|>|<)* (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)"), ' will be applied'))
+                mask_formula = gsub("flanking_INDEL ", "allele_count_frac_ofHet_pAlt_temp[['flanking_INDEL']] ", mask_formula)
+              }else{
+                stop("Filter flanking_INDEL is been called but there are spelling issues in this part of the formula")
+              }
+            }
+            
+            
+            if(grepl("dINDELs_ij ", mask_formula)){
+              
+              mask_filter = str_extract(mask_formula, "dINDELs_ij (=|!|>|<)+ (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)")
+              
+              if(!is.na(mask_filter)){
+                print(paste0('Filter ', str_extract(mask_formula, "dINDELs_ij (=|!|>|<)* (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)"), ' will be applied'))
+                mask_formula = gsub("dINDELs_ij ", "allele_count_frac_ofHet_pAlt_temp[['dINDELs_ij']] ", mask_formula)
+              }else{
+                stop("Filter dINDELs_ij is been called but there are spelling issues in this part of the formula")
+              }
+            }
+            
+            
+            if(grepl("nINDELs_ij ", mask_formula)){
+              
+              mask_filter = str_extract(mask_formula, "nINDELs_ij (=|!|>|<)+ (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)")
+              
+              if(!is.na(mask_filter)){
+                print(paste0('Filter ', str_extract(mask_formula, "nINDELs_ij (=|!|>|<)* (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)"), ' will be applied'))
+                mask_formula = gsub("nINDELs_ij ", "allele_count_frac_ofHet_pAlt_temp[['nINDELs_ij']] ", mask_formula)
+              }else{
+                stop("Filter nINDELs_ij is been called but there are spelling issues in this part of the formula")
+              }
+            }
+            
+            
+            if(grepl("dSNPs_ij ", mask_formula)){
+              
+              mask_filter = str_extract(mask_formula, "dSNPs_ij (=|!|>|<)+ (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)")
+              
+              if(!is.na(mask_filter)){
+                print(paste0('Filter ', str_extract(mask_formula, "dSNPs_ij (=|!|>|<)* (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)"), ' will be applied'))
+                mask_formula = gsub("dSNPs_ij ", "allele_count_frac_ofHet_pAlt_temp[['dSNPs_ij']] ", mask_formula)
+              }else{
+                stop("Filter dSNPs_ij is been called but there are spelling issues in this part of the formula")
+              }
+            }
+            
+            
+            if(grepl("nSNPs_ij ", mask_formula)){
+              
+              mask_filter = str_extract(mask_formula, "nSNPs_ij (=|!|>|<)+ (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)")
+              
+              if(!is.na(mask_filter)){
+                print(paste0('Filter ', str_extract(mask_formula, "nSNPs_ij (=|!|>|<)* (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)"), ' will be applied'))
+                mask_formula = gsub("nSNPs_ij ", "allele_count_frac_ofHet_pAlt_temp[['nSNPs_ij']] ", mask_formula)
+              }else{
+                stop("Filter nSNPs_ij is been called but there are spelling issues in this part of the formula")
+              }
+            }
+            
+            
+            if(grepl("dVSITES_ij ", mask_formula)){
+              
+              mask_filter = str_extract(mask_formula, "dVSITES_ij (=|!|>|<)+ (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)")
+              
+              if(!is.na(mask_filter)){
+                print(paste0('Filter ', str_extract(mask_formula, "dVSITES_ij (=|!|>|<)* (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)"), ' will be applied'))
+                mask_formula = gsub("dVSITES_ij ", "allele_count_frac_ofHet_pAlt_temp[['dVSITES_ij']] ", mask_formula)
+              }else{
+                stop("Filter dVSITES_ij is been called but there are spelling issues in this part of the formula")
+              }
+            }
+            
+            
+            if(grepl("nVSITES_ij ", mask_formula)){
+              
+              mask_filter = str_extract(mask_formula, "nVSITES_ij (=|!|>|<)+ (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)")
+              
+              if(!is.na(mask_filter)){
+                print(paste0('Filter ', str_extract(mask_formula, "nVSITES_ij (=|!|>|<)* (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)"), ' will be applied'))
+                mask_formula = gsub("nVSITES_ij ", "allele_count_frac_ofHet_pAlt_temp[['nVSITES_ij']] ", mask_formula)
+              }else{
+                stop("Filter nVSITES_ij is been called but there are spelling issues in this part of the formula")
+              }
+            }
+            
+            
+            if(grepl("h_ij ", mask_formula)){
+              
+              mask_filter = str_extract(mask_formula, "h_ij (=|!|>|<)+ (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)")
+              
+              if(!is.na(mask_filter)){
+                print(paste0('Filter ', str_extract(mask_formula, "h_ij (=|!|>|<)* (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)"), ' will be applied'))
+                mask_formula = gsub("h_ij ", "allele_count_frac_ofHet_pAlt_temp[['h_ij']] ", mask_formula)
+              }else{
+                stop("Filter h_ij is been called but there are spelling issues in this part of the formula")
+              }
+            }
+            
+            if(grepl("h_ijminor ", mask_formula)){
+              
+              mask_filter = str_extract(mask_formula, "h_ijminor (=|!|>|<)+ (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)")
+              
+              if(!is.na(mask_filter)){
+                print(paste0('Filter ', str_extract(mask_formula, "h_ijminor (=|!|>|<)* (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)"), ' will be applied'))
+                mask_formula = gsub("h_ijminor ", "allele_count_frac_ofHet_pAlt_temp[['h_ijminor']] ", mask_formula)
+              }else{
+                stop("Filter h_ijminor is been called but there are spelling issues in this part of the formula")
+              }
+            }
+            
+            if(grepl("p_ij ", mask_formula)){
+              
+              mask_filter = str_extract(mask_formula, "p_ij (=|!|>|<)+ (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)")
+              
+              if(!is.na(mask_filter)){
+                print(paste0('Filter ', str_extract(mask_formula, "p_ij (=|!|>|<)* (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)"), ' will be applied'))
+                mask_formula = gsub("p_ij ", "allele_count_frac_ofHet_pAlt_temp[['p_ij']] ", mask_formula)
+              }else{
+                stop("Filter p_ij is been called but there are spelling issues in this part of the formula")
+              }
+            }
+            
+            if(grepl("P_ij ", mask_formula)){
+              
+              mask_filter = str_extract(mask_formula, "P_ij (=|!|>|<)+ (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)")
+              
+              if(!is.na(mask_filter)){
+                print(paste0('Filter ', str_extract(mask_formula, "P_ij (=|!|>|<)* (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)"), ' will be applied'))
+                mask_formula = gsub("P_ij ", "allele_count_frac_ofHet_pAlt_temp[['P_ij']] ", mask_formula)
+              }else{
+                stop("Filter P_ij is been called but there are spelling issues in this part of the formula")
+              }
+            }
+            
+            if(grepl("H_ij ", mask_formula)){
+              
+              mask_filter = str_extract(mask_formula, "H_ij (=|!|>|<)+ (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)")
+              
+              if(!is.na(mask_filter)){
+                print(paste0('Filter ', str_extract(mask_formula, "H_ij (=|!|>|<)* (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)"), ' will be applied'))
+                mask_formula = gsub("H_ij ", "allele_count_frac_ofHet_pAlt_temp[['H_ij']] ", mask_formula)
+              }else{
+                stop("Filter H_ij is been called but there are spelling issues in this part of the formula")
+              }
+            }
+            
+            if(grepl("H_ijminor ", mask_formula)){
+              
+              mask_filter = str_extract(mask_formula, "H_ijminor (=|!|>|<)+ (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)")
+              
+              if(!is.na(mask_filter)){
+                print(paste0('Filter ', str_extract(mask_formula, "H_ijminor (=|!|>|<)* (\\d+\\.?\\d*|\\d*\\.?\\d+|TRUE|FALSE)"), ' will be applied'))
+                mask_formula = gsub("H_ijminor ", "allele_count_frac_ofHet_pAlt_temp[['H_ijminor']] ", mask_formula)
+              }else{
+                stop("Filter H_ijminor is been called but there are spelling issues in this part of the formula")
+              }
+            }
+            
+            mask_formula_check = str_split(mask_formula, "&|\\|")[[1]]
+            mask_formula_check  = mask_formula_check[!grepl("allele_count_frac_ofHet_pAlt_temp", mask_formula_check)]
+            
+            
+            if(length(mask_formula_check) > 0){
+              for(wrong_filter in mask_formula_check){
+                print(paste0("Spelling error with filter ", wrong_filter))
+              }
+              stop("Execution halted, revise mask_filter argument.\nPossible filters are:\nh_ij, h_ijminor, p_ij, P_ij, H_ij, H_ijminor, nVSITES_ij, dVSITES_ij, nSNPs_ij, dSNPs_ij, nINDELs_ij, dINDELs_ij, flanking_INDEL")
+            }
+            
+            
+            
+            for(mhap in 1:ncol(gt)){
+              temp_gts = gt[,mhap] # genotypes observed in that site
+              alleles = strsplit(alt[mhap], ',')[[1]] # alternative alleles observed in that site
+              
+              if(length(alleles) != 0){
+                
+                # Vector of presence or absence of each alternative allele
+                h_ij = t(sapply(alleles,
+                                function(allele){
+                                  P_ij = grepl(allele, temp_gts)
+                                  
+                                  H_ijminor = grepl(paste0('_',allele), temp_gts)
+                                  
+                                  # Samples where alternative alleles are present and the site is heterozygous
+                                  H_ij = (P_ij == 1 & HetPos[,mhap] == 1)    
+                                  
+                                  H_ijminor = (H_ijminor == 1 & HetPos[,mhap] == 1)
+                                  
+                                  # Number and Density of variant sites in the allele i of the mhap j
+                                  nVSITES_ij = length(str_extract_all(allele, '\\d+')[[1]])
+                                  dVSITES_ij = nVSITES_ij/mhaps[mhap,][['length']]
+                                  
+                                  VSITES_ij = unlist(strsplit(allele, '\\d+'))[-1]
+                                  
+                                  # Number and Density of SNPs and INDELs in the allele i of the mhap j
+                                  nSNPs_ij = sum(nchar(VSITES_ij) == 1)
+                                  nINDELs_ij = sum(nchar(VSITES_ij) != 1)
+                                  
+                                  dSNPs_ij = nSNPs_ij/mhaps[mhap,][['length']]
+                                  dINDELs_ij = nINDELs_ij/mhaps[mhap,][['length']]
+                                  
+                                  
+                                  # INDELs in flanking regions
+                                  
+                                  flanking_INDEL = as.integer(grepl(paste0(paste('(^1', mhaps[mhap,][['length']] + 1, sep = '|'),')I\\.[ATGC]+'), allele))
+                                  
+                                  if(flanking_INDEL == 1){
+                                    flanking_INDEL_pattern = str_extract_all(allele, paste0(paste('(^1', paste0('[ATGC]?', mhaps[mhap,][['length']] + 1), sep = '|'),')I\\.[ATGC]+\\d?'))[[1]]
+                                    
+                                    flanking_INDEL_replacement = gsub(paste0(paste('(^1', mhaps[mhap,][['length']] + 1, sep = '|'),')I\\.[ATGC]+'), '', flanking_INDEL_pattern)
+                                    
+                                    flanking_INDEL_replacement = ifelse(flanking_INDEL_replacement == '', '.', flanking_INDEL_replacement)
+                                  }else{
+                                    
+                                    flanking_INDEL_pattern = NA
+                                    
+                                    flanking_INDEL_replacement = NA
+                                  }
+                                  
+                                  
+                                  
+                                  c(sum(P_ij, na.rm = T), 
+                                    sum(H_ij, na.rm = T), 
+                                    sum(H_ijminor, na.rm = T),
+                                    sum(H_ij, na.rm = T)/sum(P_ij, na.rm = T),
+                                    ifelse(is.na(sum(H_ijminor, na.rm = T)/sum(H_ij, na.rm = T)), 
+                                           0,
+                                           sum(H_ijminor, na.rm = T)/sum(H_ij, na.rm = T)),
+                                    
+                                    nVSITES_ij,
+                                    dVSITES_ij,
+                                    
+                                    nSNPs_ij,
+                                    dSNPs_ij,
+                                    
+                                    nINDELs_ij,
+                                    dINDELs_ij,
+                                    flanking_INDEL,
+                                    paste(flanking_INDEL_pattern, collapse = '||'),
+                                    paste(flanking_INDEL_replacement, collapse = '||')
+                                    
+                                  )
+                                  
+                                }, simplify = T))
+                
+                
+            
+                
+                allele_count_frac_ofHet_pAlt_temp = as.data.frame(cbind(alleles, h_ij))
+                
+                names(allele_count_frac_ofHet_pAlt_temp) = c('Allele',
+                                                             'P_ij',
+                                                             'H_ij',
+                                                             'H_ijminor',
+                                                             'h_ij',
+                                                             'h_ijminor',
+                                                             'nVSITES_ij',
+                                                             'dVSITES_ij',
+                                                             'nSNPs_ij',
+                                                             'dSNPs_ij',
+                                                             'nINDELs_ij',
+                                                             'dINDELs_ij',
+                                                             'flanking_INDEL',
+                                                             'flanking_INDEL_pattern',
+                                                             'flanking_INDEL_replacement')
+                
+                allele_count_frac_ofHet_pAlt_temp[['P_ij']] = as.integer(allele_count_frac_ofHet_pAlt_temp[['P_ij']])
+                allele_count_frac_ofHet_pAlt_temp[['H_ij']] = as.integer(allele_count_frac_ofHet_pAlt_temp[['H_ij']])
+                allele_count_frac_ofHet_pAlt_temp[['H_ijminor']] = as.integer(allele_count_frac_ofHet_pAlt_temp[['H_ijminor']])
+                
+                allele_count_frac_ofHet_pAlt_temp[['h_ij']] = as.numeric(allele_count_frac_ofHet_pAlt_temp[['h_ij']])
+                allele_count_frac_ofHet_pAlt_temp[['h_ijminor']] = as.numeric(allele_count_frac_ofHet_pAlt_temp[['h_ijminor']])
+                
+                
+                allele_count_frac_ofHet_pAlt_temp[['nVSITES_ij']] = as.integer(allele_count_frac_ofHet_pAlt_temp[['nVSITES_ij']])
+                allele_count_frac_ofHet_pAlt_temp[['nSNPs_ij']] = as.integer(allele_count_frac_ofHet_pAlt_temp[['nSNPs_ij']])
+                allele_count_frac_ofHet_pAlt_temp[['nINDELs_ij']] = as.integer(allele_count_frac_ofHet_pAlt_temp[['nINDELs_ij']])
+                
+                allele_count_frac_ofHet_pAlt_temp[['dVSITES_ij']] = as.numeric(allele_count_frac_ofHet_pAlt_temp[['dVSITES_ij']])
+                allele_count_frac_ofHet_pAlt_temp[['dSNPs_ij']] = as.numeric(allele_count_frac_ofHet_pAlt_temp[['dSNPs_ij']])
+                
+                allele_count_frac_ofHet_pAlt_temp[['flanking_INDEL']] = as.logical(as.integer(allele_count_frac_ofHet_pAlt_temp[['flanking_INDEL']]))
+                
+                allele_count_frac_ofHet_pAlt_temp[['p_ij']] = allele_count_frac_ofHet_pAlt_temp[['P_ij']]/ncol(gt)
+                
+                allele_count_frac_ofHet_pAlt_temp[['MHap']] = colnames(gt)[mhap]
+                
+                
+                # Identify alleles below thresholds
+                
+                if(grepl('flanking_INDEL',mask_formula)){
+                  
+                  replaced_alleles = allele_count_frac_ofHet_pAlt_temp[
+                    eval(parse(text = mask_formula)),][['flanking_INDEL_pattern']]
+                  
+                  if(length(replaced_alleles) > 0){
+                    
+                    mask_formula2 = str_extract(mask_formula,
+                                               "allele_count_frac_ofHet_pAlt_temp\\[\\['flanking_INDEL'\\]\\] (=|!)+ (TRUE|FALSE)")
+                    
+                    replaced_alleles = allele_count_frac_ofHet_pAlt_temp[
+                      eval(parse(text = mask_formula2)),][['flanking_INDEL_pattern']]
+                    
+                    
+                    replacement_alleles = allele_count_frac_ofHet_pAlt_temp[
+                      eval(parse(text = mask_formula2)),][['flanking_INDEL_replacement']]
+                    
+                    
+                    for(replaced_allele in 1:length(replaced_alleles)){
+                      
+                      temp_replaced_allele = unlist(strsplit(replaced_alleles[replaced_allele], '\\|\\|'))
+                      temp_replacement_allele = unlist(strsplit(replacement_alleles[replaced_allele], '\\|\\|'))
+                      
+                      for(i in 1:length(temp_replaced_allele)){
+                        
+                        for(sample in 1:nrow(gt_masked)){
+                          
+                          replaced_pattern = temp_replaced_allele[i]
+                          
+                          if(grepl('[ATGC]', substr(replaced_pattern, nchar(replaced_pattern),nchar(replaced_pattern)))){
+                            
+                            replaced_pattern = paste0(replaced_pattern, ':')
+                            replacement_pattern = paste0(temp_replacement_allele[i], ':')
+                            
+                          }else{
+                            
+                            replacement_pattern = temp_replacement_allele[i]
+                            
+                          }
+                          
+                          # Mask alleles below threshold
+                          gt_masked[sample,mhap] = gsub(replaced_pattern, replacement_pattern, gt_masked[sample,mhap])
+                          
+                        }
+                        
+                      }
+                      
+                    }
+                    
+                    for(sample in 1:nrow(gt_masked)){
+                      
+                      sample_alleles = gsub(':.+','',str_split(gt_masked[sample, mhap], '_')[[1]])
+                      
+                      if(sum(!is.na(sample_alleles)) > 1){
+                        
+                        sample_allele_readdepth = gsub('.+:','',str_split(gt_masked[sample, mhap], '_')[[1]])
+                        
+                        sample_alleles = data.frame(sample_allele = sample_alleles,
+                                                    sample_allele_readdepth = as.integer(sample_allele_readdepth))
+                        
+                        sample_alleles %<>% summarise(sample_allele_readdepth = sum(sample_allele_readdepth),
+                                                      .by = sample_allele)
+                        
+                        sample_alleles %<>% arrange(desc(sample_allele_readdepth))
+                        
+                        gt_masked[sample, mhap] = paste(paste(sample_alleles$sample_allele, sample_alleles$sample_allele_readdepth, sep = ':'), collapse = '_')
+                        
+                      }
+                      
+                    }
+                    
+                  }
+                  
+                  
+                  
+                }else{
+                  
+                  removed_alleles = allele_count_frac_ofHet_pAlt_temp[
+                    eval(parse(text = mask_formula)),][['Allele']]
+                  
+                  
+                  if(length(removed_alleles) > 0){
+                    removed_pattern =paste('_?(', paste(removed_alleles, collapse = '|'), '):\\d+_?', sep = '')
+                    # Mask alleles below threshold
+                    gt_masked[,mhap] = gsub(removed_pattern, '', gt_masked[,mhap])
+                    
+                    gt_masked[gt_masked[,mhap] == '',mhap] = NA
+                    
+                  }
+                  
+                }
+                
+                
+              }
+              
+            }
+            
+            return(gt_masked)
+            
+          }
+)
+
+
+get_locus_diversity = function(locus, variance = TRUE){
+  
+  alleles = levels(as.factor(unlist(strsplit(gsub(":[0-9]+", "", locus), "_"))))
+  
+  if(length(alleles) > 0){
+    
+    n.all = length(alleles)
+    
+    n = sum(!is.na(unlist(strsplit(locus, "_"))))
+    
+    freq = sort(sapply(alleles, function(allele){
+      sum(grepl(paste("(^|_)", allele, ":", sep = ""), locus))/n
+    }), decreasing = T)
+    
+    sp2 <- sum(freq^2)
+    H <- n * (1 - sp2)/(n - 1)
+    na.e <- 1/(1-H)
+    if (variance) {
+      sp3 <- sum(freq^3)
+      var.H <- 2 * (2 * (n - 2) * (sp3 - sp2^2) + sp2 - sp2^2) / (n * (n - 1))
+      Nei.var.H <- (2*(n-1)/n^3)*((3-2*n)*(sp2^2)+2*(n-2)*sp3+sp2)
+      return(c(n.all = n.all, na.e = na.e, Hexp = H, var.Hexp = var.H, Nei.var.Hexp = Nei.var.H))
+    }
+    else return(c(n.all = n.all, na.e = na.e, Hexp = H))
+    
+  }else{
+    
+    if (variance) {
+      return(c(n.all = NA, na.e = NA, Hexp = NA, var.Hexp = NA, Nei.var.Hexp = NA))
+    }
+    else return(c(n.all = NA, na.e = NA, Hexp = NA))
+    
+  }
+  
+}
+
+
+
+get_loci_diversity = function(loci_abd_table = NULL, variance = TRUE){
+  
+  #source("fx_locus_diversity.R")
+  
+  loci_diversity = data.frame(t(sapply(colnames(loci_abd_table), function(locus) get_locus_diversity(loci_abd_table[,locus], variance = variance))))
+  
+  return(loci_diversity)
+  
+  
+}
+
+
+get_pop_diversity = function(ampseq_object, strata){
+  
+  # source("fx_loci_diversity.R")
+  
+  ampseq_loci_abd_table = ampseq_object@gt
+  metadata = ampseq_object@metadata
+  
+  mlg = as.factor(apply(gsub(":[0-9]+", "",ampseq_loci_abd_table[metadata[["coi"]] == 1, ]), 1, function(sample) paste(sample, collapse = "_")))
+  
+  n_mlg = nlevels(mlg) # Richness: number of different variants (species, genus, families, ASVs)
+  p = summary(mlg)/length(mlg) # Frequency of each variant
+  sp2 = sum(p^2)
+  D = length(mlg) * (1 - sp2)/(length(mlg) - 1) # Simpson: probability of choosing two different variants
+  S.e = 1/(1-D) # effective richness: The number of variants that explain the diversity of Simpson
+  H = -sum(p*log(p)) # Shannon
+  E = H/log(n_mlg) # Evenness: from 0 to 1
+  
+  loci_diversity = get_loci_diversity(ampseq_loci_abd_table, variance = F)
+  
+  pop_diversity = data.frame(pop = "Total",
+                             Richness = n_mlg,
+                             Effective.richness = S.e,
+                             Simpson = D,
+                             Shannon = H,
+                             Evenness = E,
+                             n.all = mean(loci_diversity$n.all),
+                             na.e = mean(loci_diversity$na.e),
+                             Hexp = mean(loci_diversity$Hexp)
+  )
+  
+  for(pop in levels(as.factor(metadata[[strata]]))){
+    
+    if(is.null(nrow(ampseq_loci_abd_table[metadata[[strata]] == pop & metadata[["coi"]] == 1, ]))){
+      
+      pop_diversity = rbind(pop_diversity,data.frame(pop = pop,
+                                                     Richness = 1,
+                                                     Effective.richness = 1,
+                                                     Simpson = 0,
+                                                     Shannon = -sum(1*log(1)),
+                                                     Evenness = -sum(1*log(1))/log(1),
+                                                     n.all = 1,
+                                                     na.e = 1,
+                                                     Hexp = 0))
+    }else{
+      mlg = as.factor(apply(gsub(":[0-9]+", "",ampseq_loci_abd_table[metadata[[strata]] == pop & metadata[["coi"]] == 1, ]), 1, function(sample) paste(sample, collapse = "_")))
+      n_mlg = nlevels(mlg) # Richness: number of different variants (species, genus, families, ASVs)
+      p = summary(mlg)/length(mlg)# Frequency of each variant
+      sp2 = sum(p^2)
+      D = length(mlg) * (1 - sp2)/(length(mlg) - 1) # Simpson: probability of choosing two different variants
+      S.e = 1/(1-D) # effective richness: The number of variants that explain the diversity of Simpson
+      H = -sum(p*log(p)) # Shannon
+      E = H/log(n_mlg) # Evenness: from 0 to 1
+      
+      loci_diversity = get_loci_diversity(loci_abd_table = ampseq_loci_abd_table[metadata[[strata]] == pop, ], variance = F)
+      
+      pop_diversity = rbind(pop_diversity,data.frame(pop = pop,
+                                                     Richness = n_mlg,
+                                                     Effective.richness = S.e,
+                                                     Simpson = D,
+                                                     Shannon = H,
+                                                     Evenness = E,
+                                                     n.all = mean(loci_diversity$n.all),
+                                                     na.e = mean(loci_diversity$na.e),
+                                                     Hexp = mean(loci_diversity$Hexp)))
+    }
+    
+  }
+  
+  
+  return(pop_diversity)
+  
+}
 

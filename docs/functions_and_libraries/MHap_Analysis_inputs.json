@@ -4,7 +4,7 @@
   "h_rt1": 00:30:00,
   "h_rt2": 02:00:00,
   "h_rt3": 01:00:00,
-  "nTasks": 50,
+  "nTasks": 1,
   
   "wd": "/Users/pam3650/Documents/Github/MHap-Analysis/docs/data/Pfal_example/",
   "fd": "/Users/pam3650/Documents/Github/MHap-Analysis/docs/functions_and_libraries/",
@@ -15,14 +15,18 @@
   "ampseq_jsonfile": NaN,
   "ampseq_excelfile": NaN,
   
-  "output": "MHap_test2",
+  "output": "MHap_test",
   
   "sample_id_pattern": "^ID",
   "markers": "markers.csv",
   "min_abd": 10,
   "min_ratio": 0.1,
   
-  "PerformanceReport": false,
+  "off_target_formula": "dVSITES_ij>=0.3",
+  "flanking_INDEL_formula": "flanking_INDEL==TRUE&h_ij>=0.66",
+  "PCR_errors_formula": "h_ij>=0.66&h_ijminor>=0.66",
+  
+  "PerformanceReport": true,
   
   "sample_ampl_rate": 0.75,
   "locus_ampl_rate": 0.75,
@@ -36,9 +40,8 @@
   
   "gene_names": "PfDHFR,PfMDR1,PfDHPS,PfKelch13,PF3D7_1447900",
   "gene_ids": "PF3D7_0417200,PF3D7_0523000,PF3D7_0810800,PF3D7_1343700,PF3D7_1447900",
-  
-  
-
+  "drugs": "Artemisinin,Chloroquine,Pyrimethamine,Sulfadoxine,Lumefantrine,Mefloquine",
+  "include_all_drug_markers": true,
 
   "metadata": "Pfal_metadata.csv", 
   "join_by": "Sample_id",
@@ -48,16 +51,18 @@
   "Latitude": "Latitude",
   "na_var_rm": true,
   "na_hap_rm": true,
-  "drugs": "Artemisinin,Chloroquine,Pyrimethamine,Sulfadoxine,Lumefantrine,Mefloquine",
-  "var_filter": "Subnational_level2;Municipality.1,Municipality.2,Municipality.3/Quarter_of_Collection;2021-Q1,2021-Q2,2021-Q3,2021-Q4,2022-Q1,2022-Q2",
-  "include_all_drug_markers": true,
   
-  "ibd_thres": "NaN",
+  "var_filter": "Subnational_level2;Municipality.1,Municipality.2,Municipality.3/Quarter_of_Collection;2021-Q1,2021-Q2,2021-Q3,2021-Q4,2022-Q1,2022-Q2",
+
+  
+  "ibd_thres": 0.99,
+  "pairwise_relatedness_table": "pairwise_relatedness.csv",
   "parallel": true,
   "ibd_ncol": 4,
   "pop_levels":null,
+  "nchunks": 500,
   
-  "nchunks": 500
+  "poly_quantile": 0.75
 }
 
 

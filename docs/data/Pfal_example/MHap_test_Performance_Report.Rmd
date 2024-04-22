@@ -1,0 +1,173 @@
+---
+title: '*MHap Analysis Report*: Performance'
+author: "Neafsey Lab"
+output:
+  html_document:
+    toc: yes
+    number_sections: no
+    toc_float: yes
+    code_folding: hide
+editor_options:
+  markdown:
+    wrap: 72
+  chunk_output_type: inline
+params:
+  RData_image: ""
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, include = TRUE)
+```
+
+```{r 'Molecular surveillance of drug resistance'}
+library(dplyr)
+library(magrittr)
+load(params$RData_image)
+
+```
+
+
+
+```{r, fig.width=7, fig.height=5, fig.cap = "**Figure 1:** Percentage of coverage"}
+plot_precentage_of_samples_over_min_abd
+```
+
+```{r, fig.width=10, fig.height=12, fig.cap = "**Figure 2:** Percentage of coverage per Run"}
+plot_precentage_of_samples_over_min_abd_byRun
+```
+
+```{r, fig.width=10, fig.height=12, fig.cap="**Figure 3:** Percentage of coverage per catagories in Variable1"}
+plot_precentage_of_samples_over_min_abd_byVariable1
+```
+
+
+```{r}
+
+print(paste0(length(n_off_target_alleles), ' allele(s) match(es) the criteria to define off-target products'))
+print(paste0(length(n_flanking_INDEL_alleles), ' allele(s) match(es) the criteria to identify products with flanking INDELs'))
+print(paste0(length(n_PCR_errors_alleles), ' allele(s) match(es) the criteria to identify PCR_errors'))
+```
+
+```{r, fig.width=6, fig.height=6, fig.cap="**Figure 4:** Off-target products"}
+
+if(length(n_off_target_alleles) > 0){
+  plot_off_target_stats
+}
+
+```
+
+
+```{r,}
+
+if(length(n_off_target_alleles) > 0){
+  off_target_stats%>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+}
+
+```
+
+
+```{r, fig.width=7, fig.height=7, fig.cap="**Figure 5:** Flanking INDELs"}
+
+if(length(n_flanking_INDEL_alleles) > 0){
+  plot_flanking_INDEL_stats
+}
+
+```
+
+
+```{r}
+
+if(length(n_flanking_INDEL_alleles) > 0){
+  flanking_INDEL_stats%>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+}
+
+```
+
+
+
+
+```{r, fig.width=7, fig.height=5, fig.cap="**Figure 5:** Flanking INDELs"}
+
+if(length(n_PCR_errors_alleles) > 0){
+  plot_PCR_errors_stats
+}
+
+```
+
+
+
+```{r}
+
+if(length(n_PCR_errors_alleles) > 0){
+  PCR_errors_stats%>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+}
+
+```
+
+
+```{r, fig.width=12, fig.height=20, fig.cap="**Figure 5:** Read Coverage per sample per locus"}
+
+ReadDepth_coverage$plot_read_depth_heatmap
+
+```
+
+
+```{r, fig.width=12, fig.height=20, fig.cap="**Figure 5:** Read Coverage per sample per locus by run"}
+
+ReadDepth_coverage_by_run$plot_read_depth_heatmap
+
+```
+
+
+```{r, fig.width=12, fig.height=10, fig.cap="**Figure 5:** Read Coverage of controls per locus by run"}
+
+ReadDepth_coverage_by_run_controls$plot_read_depth_heatmap
+
+```
+
+
+```{r, fig.width=7, fig.height=8, fig.cap="**Figure 5:** Locus amplification rate distribution"}
+
+all_loci_amplification_rate
+
+```
+
+```{r, fig.width=7, fig.height=8, fig.cap="**Figure 5:** Sample amplification rate distribution"}
+
+samples_amplification_rate
+
+```
+
+Cigar table without masking and filter
+```{r}
+cigar_table_unmasked_unfiltered %>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+```
+
+
+Masked and filtered cigar table without controls
+```{r}
+cigar_table_masked_filtered %>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+```
+
+Masked and filtered cigar table of controls
+```{r}
+cigar_table_controls_masked_filtered %>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(
+                  buttons = c('csv', 'excel')))
+```

@@ -1,0 +1,84 @@
+---
+title: "*MHap Analysis Report*: Drug Resistance Surveillance"
+author: "Neafsey Lab"
+output:
+  html_document:
+    toc: yes
+    number_sections: no
+    toc_float: yes
+    code_folding: hide
+editor_options:
+  markdown:
+    wrap: 72
+  chunk_output_type: inline
+params:
+  RData_image: ""
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, include = TRUE)
+```
+
+```{r 'Molecular surveillance of drug resistance'}
+library(dplyr)
+library(magrittr)
+load(params$RData_image)
+
+```
+
+The haplotype of each sample is stored in the table `aacigar_table`
+within the object `drug_resistant_haplotypes_plot`.
+
+```{r, fig.width=10, fig.height=10, fig.cap = "**Figure 1:** Frequency of haplotypes carrying mutations associated with resistance to Chloroquine, Lumefantrine...(panels). Dots represent study sites, color gradient represent the frequency and the size the logarithm of the sample size."}
+library(tmap)
+tmap_mode('view')
+drug_resistant_haplotypes_plot$i_drug_map
+```
+
+```{r, fig.width=10, fig.height=12, fig.cap = "**Figure 2:** Frequency of haplotypes carrying mutations associated with resistance to Chloroquine, Lumefantrine...(panels). y-axis shows the frequency in each population, x-axis shows the quarter of the year where the sample was collected, rows panels corresponds to the study areas, and column panels represents each Drug. Colors were assigned based on the possible phenotype, blue indicates sensitive, red indicates resistance, and gloden represent haplotypes carrying mutations respect to the reference strain but that haven't been associated with resistance."}
+
+drug_resistant_haplotypes_plot$drug_phenotyope_lineplot
+```
+
+```{r, fig.width=10, fig.height=12, fig.cap="**Figure 3:** Frequency of haplotypes carrying mutations associated with resistance to Chloroquine, Lumefantrine...(panels). y-axis shows the frequency in each population, x-axis shows the quarter of the year where the sample was collected, rows panels corresponds to the study areas, and column panels represents each Drug. Colors were assigned based on the possible phenotype, blue indicates sensitive, red indicates resistance, and gloden represent haplotypes carrying mutations respect to the reference strain but that haven't been associated with resistance."}
+drug_resistant_haplotypes_plot$drug_phenotype_barplot
+```
+
+```{r, fig.width=10, fig.height=12, fig.cap="**Figure 4:** Frequency of haplotypes of genes that carry mutations associated with resistance to Chloroquine, Lumefantrine...(panels). y-axis shows the frequency in each population, x-axis shows the quarter of the year where the sample was collected, rows panels corresponds to the study areas, and column panels represents each Drug. Colors were assigned based on the possible phenotype, blue indicates sensitive, red indicates resistance (and the intensity the number of mutations), and orange represent haplotypes carrying mutations respect to the reference strain but that haven't been associated with resistance."}
+drug_resistant_haplotypes_plot$haplotypes_freq_lineplot
+```
+
+```{r, fig.width=10, fig.height=12, fig.cap="**Figure 5:** Frequency of haplotypes of genes that carry mutations associated with resistance to Chloroquine, Lumefantrine...(panels). y-axis shows the frequency in each population, x-axis shows the quarter of the year where the sample was collected, rows panels corresponds to the study areas, and column panels represents each Drug. Colors were assigned based on the possible phenotype, blue indicates sensitive, red indicates resistance (and the intensity the number of mutations), and orange represent haplotypes carrying mutations respect to the reference strain but that haven't been associated with resistance."}
+
+
+drug_resistant_haplotypes_plot$haplotype_freq_barplot
+
+```
+
+```{r}
+drug_resistant_haplotypes_plot$genotype_phenotype_table %>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+```
+
+```{r}
+drug_resistant_haplotypes_plot$drug_phenotype_table %>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+```
+
+```{r}
+drug_resistant_haplotypes_plot$aa_mutations %>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+```
+
+```{r}
+drug_resistant_haplotypes_plot$dna_mutations %>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(
+                  buttons = c('csv', 'excel')))
+```
