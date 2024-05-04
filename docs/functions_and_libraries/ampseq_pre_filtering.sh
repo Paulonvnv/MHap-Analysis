@@ -49,7 +49,7 @@ then
 cigar_paths=${cigar_paths%\"}
 cigar_paths=${cigar_paths#\"}
 else
-cigar_paths="NaN"
+cigar_paths="null"
 fi
 
 echo "cigar_paths: "${cigar_paths}
@@ -61,7 +61,7 @@ then
 cigar_files=${cigar_files%\"}
 cigar_files=${cigar_files#\"}
 else
-cigar_files="NaN"
+cigar_files="null"
 fi
 
 echo "cigar_files: "${cigar_files}
@@ -73,7 +73,7 @@ then
 ampseq_jsonfile=${ampseq_jsonfile%\"}
 ampseq_jsonfile=${ampseq_jsonfile#\"}
 else
-ampseq_jsonfile="NaN"
+ampseq_jsonfile="null"
 fi
 
 echo "ampseq_jsonfile: "${ampseq_jsonfile}
@@ -86,7 +86,7 @@ then
 ampseq_excelfile=${ampseq_excelfile%\"}
 ampseq_excelfile=${ampseq_excelfile#\"}
 else
-ampseq_excelfile="NaN"
+ampseq_excelfile="null"
 fi
 
 echo "ampseq_excelfile: "${ampseq_excelfile}
@@ -119,7 +119,7 @@ then
 markers=${markers%\"}
 markers=${markers#\"}
 else
-markers="NaN"
+markers="null"
 fi
 
 echo "markers: "${markers}
@@ -226,7 +226,7 @@ then
 ref_gff=${ref_gff%\"}
 ref_gff=${ref_gff#\"}
 else
-ref_gff="NaN"
+ref_gff="null"
 fi
 
 echo "ref_gff: "${ref_gff}
@@ -238,7 +238,7 @@ then
 ref_fasta=${ref_fasta%\"}
 ref_fasta=${ref_fasta#\"}
 else
-ref_fasta="NaN"
+ref_fasta="null"
 fi
 
 echo "ref_fasta: "${ref_fasta}
@@ -250,10 +250,24 @@ then
 reference_alleles=${reference_alleles%\"}
 reference_alleles=${reference_alleles#\"}
 else
-reference_alleles="NaN"
+reference_alleles="null"
 fi
 
 echo "reference_alleles: "${reference_alleles}
+
+
+hap_color_palette=$(json_extract hap_color_palette "$(cat ${json})")
+
+if [[ ${hap_color_palette} != "" ]]
+then 
+hap_color_palette=${hap_color_palette%\"}
+hap_color_palette=${hap_color_palette#\"}
+else
+hap_color_palette="auto"
+fi
+
+echo "hap_color_palette: "${hap_color_palette}
+
 
 gene_names=$(json_extract gene_names "$(cat ${json})")
 
@@ -262,7 +276,7 @@ then
 gene_names=${gene_names%\"}
 gene_names=${gene_names#\"}
 else
-gene_names="NaN"
+gene_names="null"
 fi
 
 echo "gene_names: "${gene_names}
@@ -274,7 +288,7 @@ then
 gene_ids=${gene_ids%\"}
 gene_ids=${gene_ids#\"}
 else
-gene_ids="NaN"
+gene_ids="null"
 fi
 
 echo "gene_ids: "${gene_ids}
@@ -290,7 +304,7 @@ then
 metadata=${metadata%\"}
 metadata=${metadata#\"}
 else
-metadata="NaN"
+metadata="null"
 fi
 
 echo "metadata: "${metadata}
@@ -302,7 +316,7 @@ then
 join_by=${join_by%\"}
 join_by=${join_by#\"}
 else
-join_by="NaN"
+join_by="null"
 fi
 
 echo "join_by: "${join_by}
@@ -314,7 +328,7 @@ then
 Variable1=${Variable1%\"}
 Variable1=${Variable1#\"}
 else
-Variable1="NaN"
+Variable1="null"
 fi
 
 echo "Variable1: "${Variable1}
@@ -326,7 +340,7 @@ then
 Variable2=${Variable2%\"}
 Variable2=${Variable2#\"}
 else
-Variable2="NaN"
+Variable2="null"
 fi
 
 echo "Variable2: "${Variable2}
@@ -338,7 +352,7 @@ then
 Longitude=${Longitude%\"}
 Longitude=${Longitude#\"}
 else
-Longitude="NaN"
+Longitude="null"
 fi
 
 echo "Longitude: "${Longitude}
@@ -350,7 +364,7 @@ then
 Latitude=${Latitude%\"}
 Latitude=${Latitude#\"}
 else
-Latitude="NaN"
+Latitude="null"
 fi
 
 echo "Latitude: "${Latitude}
@@ -386,7 +400,7 @@ then
 drugs=${drugs%\"}
 drugs=${drugs#\"}
 else
-drugs="NaN"
+drugs="null"
 fi
 
 echo "drugs: "${drugs}
@@ -410,7 +424,7 @@ then
 include_all_drug_markers=${include_all_drug_markers%\"}
 include_all_drug_markers=${include_all_drug_markers#\"}
 else
-include_all_drug_markers="NaN"
+include_all_drug_markers="null"
 fi
 
 echo "include_all_drug_markers: "${include_all_drug_markers}
@@ -420,7 +434,7 @@ ibd_thres=$(json_extract ibd_thres "$(cat ${json})")
 
 if [[ ${ibd_thres} == "" ]]
 then 
-ibd_thres="NaN"
+ibd_thres="null"
 fi
 
 echo "ibd_thres: "${ibd_thres}
@@ -433,7 +447,7 @@ then
 pairwise_relatedness_table=${pairwise_relatedness_table%\"}
 pairwise_relatedness_table=${pairwise_relatedness_table#\"}
 else
-pairwise_relatedness_table="NaN"
+pairwise_relatedness_table="null"
 fi
 
 echo "pairwise_relatedness_table: "${pairwise_relatedness_table}
@@ -491,7 +505,7 @@ poly_quantile=$(json_extract poly_quantile "$(cat ${json})")
 
 if [[ ${poly_quantile} == "" ]]
 then 
-poly_quantile="NaN"
+poly_quantile="null"
 fi
 
 echo "poly_quantile: "${poly_quantile}
@@ -523,6 +537,7 @@ Rscript ${fd}/MHap_Analysis_pipeline.R \
   -gff ${ref_gff} \
   -fasta ${ref_fasta} \
   -reference_alleles ${reference_alleles} \
+  -hap_color_palette ${hap_color_palette} \
   -gene_names ${gene_names} \
   -gene_ids ${gene_ids} \
   -drugs ${drugs} \

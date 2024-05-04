@@ -1,16 +1,16 @@
 
-# if(!require(adegenet)){
-#   options(
-#     repos = c(
-#       zkamvar = "https://zkamvar.r-universe.dev",
-#       CRAN = "https://cloud.r-project.org"
-#     )
-#   )
-#   install.packages("adegenet")
-#   library(adegenet)
-# }else{
-#   library(adegenet)
-# }
+if(!require(adegenet)){
+  options(
+    repos = c(
+      zkamvar = "https://zkamvar.r-universe.dev",
+      CRAN = "https://cloud.r-project.org"
+    )
+  )
+  install.packages("adegenet")
+  library(adegenet)
+}else{
+  library(adegenet)
+}
 
 if(!require(ade4)){
   install.packages("ade4")
@@ -19,12 +19,12 @@ if(!require(ade4)){
   library(ade4)
 }
 
-# if(!require(poppr)){
-#   install.packages("poppr")
-#   library(poppr)
-# }else{
-#   library(poppr)
-# }
+if(!require(poppr)){
+  install.packages("poppr")
+  library(poppr)
+}else{
+  library(poppr)
+}
 
 if(!require(dplyr)){
   install.packages("dplyr")
@@ -83,12 +83,12 @@ if(!require(ape)){
   library(ape)
 }
 
-# if(!require(pegas)){
-#   install.packages("pegas")
-#   library(pegas)
-# }else{
-#   library(pegas)
-# }
+if(!require(pegas)){
+  install.packages("pegas")
+  library(pegas)
+}else{
+  library(pegas)
+}
 
 if(!require(RColorBrewer)){
   install.packages("RColorBrewer")
@@ -156,10 +156,10 @@ if(!require(stringr)){
   library(stringr)
 }
 
-# if(!require(XLConnect)){
-#   install.packages('XLConnect')
-#   library(XLConnect)
-# }
+if(!require(XLConnect)){
+  install.packages('XLConnect')
+  library(XLConnect)
+}
 
 
 if(!require(tmap)){

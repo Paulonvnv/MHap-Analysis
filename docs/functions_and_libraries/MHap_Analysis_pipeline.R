@@ -10,22 +10,22 @@ parser = ArgumentParser()
 parser$add_argument("-wd", "--wd", 
                     help="Path to input to files and output files")
 
-parser$add_argument("-fd", "--fd", default = 'NaN',
+parser$add_argument("-fd", "--fd", default = 'null',
                     help="Path to function files")
 
-parser$add_argument("-rd", "--rd", default = 'NaN',
+parser$add_argument("-rd", "--rd", default = 'null',
                     help="Path to reference files")
 
-parser$add_argument("-cigar_paths", "--cigar_paths",  default = 'NaN',
+parser$add_argument("-cigar_paths", "--cigar_paths",  default = 'null',
                     help="name of the cigar file")
 
-parser$add_argument("-cigar_files", "--cigar_files",  default = 'NaN',
+parser$add_argument("-cigar_files", "--cigar_files",  default = 'null',
                     help="name of the cigar file")
 
-parser$add_argument("-ampseqj", "--ampseq_jsonfile",  default = 'NaN',
+parser$add_argument("-ampseqj", "--ampseq_jsonfile",  default = 'null',
                     help="name of the cigar file in json format")
 
-parser$add_argument("-ampseqe", "--ampseq_excelfile",  default = 'NaN',
+parser$add_argument("-ampseqe", "--ampseq_excelfile",  default = 'null',
                     help="name of the cigar file in excel format")
 
 parser$add_argument("-o", "--out",
@@ -34,13 +34,13 @@ parser$add_argument("-o", "--out",
 parser$add_argument("-sample_id_pattern", "--sample_id_pattern", default = ".",
                     help="")
 
-parser$add_argument("-markers", "--markers", default = "NaN",
+parser$add_argument("-markers", "--markers", default = "null",
                     help="")
 
-parser$add_argument("-min_abd", "--min_abd", default = 'NaN',
+parser$add_argument("-min_abd", "--min_abd", default = 'null',
                     help="")
 
-parser$add_argument("-min_ratio", "--min_ratio", default = 'NaN',
+parser$add_argument("-min_ratio", "--min_ratio", default = 'null',
                     help="")
 
 parser$add_argument("-PerformanceReport", "--PerformanceReport", default = FALSE,
@@ -55,20 +55,22 @@ parser$add_argument("-Variants_of_Interest_Report", "--Variants_of_Interest_Repo
                     help="")
 
 
-parser$add_argument("-gff", "--ref_gff", default = 'NaN',
+parser$add_argument("-gff", "--ref_gff", default = 'null',
                     help="name of .gff file containing coordinates of genomic regions")
 
-parser$add_argument("-fasta", "--ref_fasta", default = 'NaN',
+parser$add_argument("-fasta", "--ref_fasta", default = 'null',
                     help="name of .gff file containing coordinates of genomic regions")
 
-parser$add_argument("-reference_alleles", "--reference_alleles", default = 'NaN',
+parser$add_argument("-reference_alleles", "--reference_alleles", default = 'null',
                     help="name of .csv file containing sensitive alleles respect to a drug treatment")
 
+parser$add_argument("-hap_color_palette", "--hap_color_palette", default = 'auto',
+                    help="Character indicating how colors will be assigned to haplotypes in drug plots. If 'auto' (defualt), the red scales will be applied based on the presence of mutations associated with resistance, instead if 'random', a random palette will be generated")
 
-parser$add_argument("-gene_names", "--gene_names", default = 'NaN',
+parser$add_argument("-gene_names", "--gene_names", default = 'null',
                     help="gene name on the markers csv file")
 
-parser$add_argument("-gene_ids", "--gene_ids", default = 'NaN',
+parser$add_argument("-gene_ids", "--gene_ids", default = 'null',
                     help="gene ids on the .gff file")
 
 parser$add_argument("-off_target_formula", "--off_target_formula", default = "dVSITES_ij>=0.3",
@@ -80,43 +82,43 @@ parser$add_argument("-flanking_INDEL_formula", "--flanking_INDEL_formula", defau
 parser$add_argument("-PCR_errors_formula", "--PCR_errors_formula", default = "h_ij>=0.66&h_ijminor>=0.66",
                     help="max density of variant sites per amplicon")
 
-parser$add_argument("-samprate", "--sample_ampl_rate", default = 'NaN',
+parser$add_argument("-samprate", "--sample_ampl_rate", default = 'null',
                     help="Minimun proportion of amplified loci by sample")
 
-parser$add_argument("-lamprate", "--locus_ampl_rate", default = 'NaN',
+parser$add_argument("-lamprate", "--locus_ampl_rate", default = 'null',
                     help="Minimun proportion of amplified samples by locus")
 
 parser$add_argument("-t", "--nTasks", default = 1,
                     help="Number of Tasks arrays to split the convertion of the vcf to the rGenome format")
 
-parser$add_argument("-tid", "--Task_id", default = 'NaN',
+parser$add_argument("-tid", "--Task_id", default = 'null',
                     help="Tasks ID")
 
-parser$add_argument("-ibd", "--ibd_thres", default = 'NaN',
+parser$add_argument("-ibd", "--ibd_thres", default = 'null',
                     help="Minimum IBD to define highly related samples")
 
 parser$add_argument("-nchunks", "--nchunks", default = 500,
                     help="")
 
-parser$add_argument("-pairwise_relatedness_table", "--pairwise_relatedness_table", default = 'NaN',
+parser$add_argument("-pairwise_relatedness_table", "--pairwise_relatedness_table", default = 'null',
                     help="string with the file name of the pairwise_relatedness_table")
 
-parser$add_argument("-metadata", "--metadata", default = 'NaN',
+parser$add_argument("-metadata", "--metadata", default = 'null',
                     help="string with the file name of the metadata, Sample ID's should be labeled as Sample_id")
 
-parser$add_argument("-join_by", "--join_by", default = 'NaN',
+parser$add_argument("-join_by", "--join_by", default = 'null',
                     help="string that indicates the variable where Sample ID's are stored. Just if  Sample ID's are not labeled as Sample_id")
 
-parser$add_argument("-Var1", "--Variable1", default = 'NaN',
+parser$add_argument("-Var1", "--Variable1", default = 'null',
                     help="name of .bed file containing core genomic regions to keep from the VCF file")
 
-parser$add_argument("-Var2", "--Variable2", default = 'NaN',
+parser$add_argument("-Var2", "--Variable2", default = 'null',
                     help="name of .bed file containing core genomic regions to keep from the VCF file")
 
-parser$add_argument("-Longitude", "--Longitude", default = 'NaN',
+parser$add_argument("-Longitude", "--Longitude", default = 'null',
                     help="name of .bed file containing core genomic regions to keep from the VCF file")
 
-parser$add_argument("-Latitude", "--Latitude", default = 'NaN',
+parser$add_argument("-Latitude", "--Latitude", default = 'null',
                     help="name of .bed file containing core genomic regions to keep from the VCF file")
 
 parser$add_argument("-na_var_rm", "--na_var_rm", default = FALSE,
@@ -125,10 +127,10 @@ parser$add_argument("-na_var_rm", "--na_var_rm", default = FALSE,
 parser$add_argument("-na_hap_rm", "--na_hap_rm", default = FALSE,
                     help="name of .bed file containing no core genomic regions to exclude from the VCF file")
 
-parser$add_argument("-drugs", "--drugs", default = 'NaN',
+parser$add_argument("-drugs", "--drugs", default = 'null',
                     help="")
 
-parser$add_argument("-var_filter", "--var_filter", default = NULL,
+parser$add_argument("-var_filter", "--var_filter", default = 'null',
                     help="")
 
 parser$add_argument("-include_all_drug_markers", "--include_all_drug_markers", default = FALSE,
@@ -143,10 +145,10 @@ parser$add_argument("-ibd_step", "--ibd_step",
 parser$add_argument("-ibd_ncol", "--ibd_ncol", default = 4,
                     help="name of .bed file containing no core genomic regions to exclude from the VCF file")
 
-parser$add_argument("-pop_levels", "--pop_levels", default = NULL,
+parser$add_argument("-pop_levels", "--pop_levels", default = 'null',
                     help="name of .bed file containing no core genomic regions to exclude from the VCF file")
 
-parser$add_argument("-poly_quantile", "--poly_quantile", default = 'NaN',
+parser$add_argument("-poly_quantile", "--poly_quantile", default = 'null',
                     help="Quantile to define polyclonal samples")
 
 # Defining and checking variables ----
@@ -170,22 +172,22 @@ print(paste0('rd: ', rd))
 
 # Starting vcf file
 cigar_paths = args$cigar_paths
-cigar_paths = ifelse(cigar_paths == 'NaN', NA, file.path(wd, cigar_paths))
+cigar_paths = if(cigar_paths == 'null'){NULL}else{file.path(wd, cigar_paths)}
 print(paste0('cigar_paths: ', cigar_paths))
 
 # Starting vcf file
 cigar_files = args$cigar_files
-cigar_files = ifelse(cigar_files == 'NaN', NA, file.path(wd, cigar_files))
+cigar_files = if(cigar_files == 'null'){NULL}else{file.path(wd, cigar_files)}
 print(paste0('cigar_files: ', cigar_files))
 
 # Starting vcf file
 ampseq_jsonfile = args$ampseq_jsonfile
-ampseq_jsonfile = ifelse(ampseq_jsonfile == 'NaN', NA, file.path(wd, ampseq_jsonfile))
+ampseq_jsonfile = if(ampseq_jsonfile == 'null'){NULL}else{file.path(wd, ampseq_jsonfile)}
 print(paste0('ampseq_jsonfile: ', ampseq_jsonfile))
 
 # Starting vcf file
 ampseq_excelfile = args$ampseq_excelfile
-ampseq_excelfile = ifelse(ampseq_excelfile == 'NaN', NA, file.path(wd, args$ampseq_excelfile))
+ampseq_excelfile = if(ampseq_excelfile == 'null'){NULL}else{file.path(wd, args$ampseq_excelfile)}
 print(paste0('ampseq_excelfile: ', ampseq_excelfile))
 
 # Pattern to differentiate between samples of interest and controls
@@ -194,7 +196,7 @@ print(paste0('sample_id_pattern: ', sample_id_pattern))
 
 # csv table with markers information
 markers = args$markers
-markers = ifelse(markers == 'NaN', NA, file.path(rd, markers))
+markers = if(markers == 'null'){NULL}else{file.path(rd, markers)}
 print(paste0('markers: ', markers))
 
 # Minimum abundance to call an allele
@@ -369,22 +371,24 @@ print(paste0('Variants_of_Interest_Report: ', Variants_of_Interest_Report))
 # Reference gff and fasta files, require to translate DNA cigar formats to aminoacid sequences
 
 ref_gff = args$ref_gff
-ref_gff = ifelse(ref_gff == 'NaN', NA, file.path(rd, ref_gff))
+ref_gff = if(ref_gff == 'null'){NULL}else{file.path(rd, ref_gff)}
 print(paste0('ref_gff: ', ref_gff))
 
 ref_fasta = args$ref_fasta
-ref_fasta = ifelse(ref_fasta == 'NaN', NA, file.path(rd, ref_fasta))
+ref_fasta = if(ref_fasta == 'null'){NULL}else{file.path(rd, ref_fasta)}
 print(paste0('ref_fasta: ', ref_fasta))
 
 reference_alleles = args$reference_alleles
-reference_alleles = ifelse(reference_alleles == 'NaN', NA, file.path(rd, reference_alleles))
+reference_alleles = if(reference_alleles == 'null'){NULL}else{file.path(rd, reference_alleles)}
 print(paste0('reference_alleles: ', reference_alleles))
 
+hap_color_palette = args$hap_color_palette
+print(paste0('hap_color_palette: ', hap_color_palette))
 
 # gene_names
 gene_names = args$gene_names
-if(gene_names == 'NaN'){
-  gene_names = NA
+if(gene_names == 'null'){
+  gene_names = NULL
 }else{
   gene_names = strsplit(gene_names, ',')[[1]]
 }
@@ -393,8 +397,8 @@ print(gene_names)
 
 # gene_ids
 gene_ids = args$gene_ids
-if(gene_ids == 'NaN'){
-  gene_ids = NA
+if(gene_ids == 'null'){
+  gene_ids = NULL
 }else{
   gene_ids = strsplit(gene_ids, ',')[[1]]
 }
@@ -403,30 +407,30 @@ print(gene_ids)
 
 # metadata
 metadata_file = as.character(args$metadata)
-metadata_file = ifelse(metadata_file == 'NaN', NA, file.path(wd, metadata_file))
+metadata_file = if(metadata_file == 'null'){NULL}else{file.path(wd, metadata_file)}
 print(paste0('metadata: ', metadata_file))
 
 # join metadata by
 join_by = as.character(args$join_by)
-join_by = ifelse(join_by == 'NaN', NA, join_by)
+join_by = if(join_by == 'null'){NULL}else{join_by}
 print(paste0('join_by: ', join_by))
 
 # pop
 Variable1 = args$Variable1
-Variable1 = ifelse(Variable1 == 'NaN', NA, Variable1)
+Variable1 = if(Variable1 == 'null'){NULL}else{Variable1}
 print(paste0('Variable1: ', Variable1))
 
 # temporal_population
 Variable2 = args$Variable2
-Variable2 = ifelse(Variable2 == 'NaN', NA, Variable2)
+Variable2 = if(Variable2 == 'null'){NULL}else{Variable2}
 print(paste0('Variable2: ', Variable2))
 
 Longitude = args$Longitude
-Longitude = ifelse(Longitude == 'NaN', NA, Longitude)
+Longitude = if(Longitude == 'null'){NULL}else{Longitude}
 print(paste0('Longitude: ', Longitude))
 
 Latitude = args$Latitude
-Latitude = ifelse(Latitude == 'NaN', NA, Latitude)
+Latitude = if(Latitude == 'null'){NULL}else{Latitude}
 print(paste0('Latitude: ', Latitude))
 
 na_var_rm = as.logical(args$na_var_rm)
@@ -435,8 +439,8 @@ print(paste0('na_hap_rm: ', na_hap_rm))
 
 
 drugs = args$drugs
-if(drugs == 'NaN'){
-  drugs = NA
+if(drugs == 'null'){
+  drugs = NULL
 }else{
   drugs = strsplit(drugs, ',')[[1]]
 }
@@ -460,13 +464,13 @@ print(paste0('include_all_drug_markers: ', include_all_drug_markers))
 # ibd_thres
 
 ibd_thres = args$ibd_thres
-ibd_thres = ifelse(ibd_thres == 'NaN', NA, as.numeric(ibd_thres))
+ibd_thres = if(ibd_thres == 'null'){NULL}else{as.numeric(ibd_thres)}
 print(paste0('ibd_thres: ', ibd_thres))
 
 
 # pairwise_relatedness_table
 pairwise_relatedness_table = as.character(args$pairwise_relatedness_table)
-pairwise_relatedness_table = ifelse(pairwise_relatedness_table == 'NaN', NA, file.path(wd, pairwise_relatedness_table))
+pairwise_relatedness_table = if(pairwise_relatedness_table == 'null'){NULL}else{file.path(wd, pairwise_relatedness_table)}
 print(paste0('pairwise_relatedness_table: ', pairwise_relatedness_table))
 
 # parallel
@@ -501,7 +505,7 @@ print(paste0('pop_levels: ', pop_levels))
 # poly_quantile
 
 poly_quantile = args$poly_quantile
-poly_quantile = ifelse(poly_quantile == 'NaN', NA, as.numeric(poly_quantile))
+poly_quantile = if(poly_quantile == 'null'){NULL}else{as.numeric(poly_quantile)}
 print(paste0('poly_quantile: ', poly_quantile))
 
 
@@ -510,8 +514,8 @@ output = args$out
 print(paste0('output: ', output))
 
 if(file.exists(file.path(wd, paste0(output, '.xlsx')))){
-  cigar_paths = NA
-  cigar_files = NA
+  cigar_paths = NULL
+  cigar_files = NULL
   ampseq_excelfile = file.path(wd, paste0(output, '.xlsx'))
 }
 
@@ -528,12 +532,12 @@ source(file.path(fd,'amplseq_functions.R'))
 
 print("starting to upload genotypic data")
 
-if(!is.na(cigar_paths)|!is.na(cigar_files)){
-  if(!is.na(cigar_paths)){
+if(!is.null(cigar_paths)|!is.null(cigar_files)){
+  if(!is.null(cigar_paths)){
     
     print("Uploading genotipic data in cigar format from multiple paths")
     cigar_object = read_cigar_tables(paths = cigar_paths, sample_id_pattern = sample_id_pattern)
-  }else if(!is.na(cigar_files)){
+  }else if(!is.null(cigar_files)){
     
     if(as.logical(file.info(cigar_files)['isdir'])){
       print("Uploading genotipic data in cigar format from multiple csv files from a single path")
@@ -555,11 +559,11 @@ if(!is.na(cigar_paths)|!is.na(cigar_files)){
     ampseq_object = cigar2ampseq(cigar_object, markers = markers, min_abd = min_abd, min_ratio = min_ratio, remove_controls = T)
   }
   
-  }else if(!is.na(ampseq_jsonfile)){
+  }else if(!is.null(ampseq_jsonfile)){
     print("Uploading genotipic data in ampseq format from json file")
   # In development
   
-  }else if(!is.na(ampseq_excelfile)){
+  }else if(!is.null(ampseq_excelfile)){
     print("Uploading genotipic data in ampseq format from excel file")
   ampseq_object = read_ampseq(file = ampseq_excelfile, format = 'excel')
   
@@ -573,7 +577,7 @@ if(PerformanceReport){
   
   # add metadata 
   
-  if(!is.na(metadata_file)){
+  if(!is.null(metadata_file)){
     # Upload metadata from an external source
     external_metadata = read.csv(metadata_file)
     
@@ -651,9 +655,9 @@ if(PerformanceReport){
     theme_bw() +
     labs(x = '% of amplified loci (amplification rate)', y = '% of Samples', color = 'Min Coverage')
   
-  ### Overall sample performance by different coverage per run----
+  ### Overall sample performance by different coverage per Run----
   
-  ReadDepth_coverage = get_ReadDepth_coverage(ampseq_object_abd1, variable = 'run')
+  ReadDepth_coverage = get_ReadDepth_coverage(ampseq_object_abd1, variable = 'Run')
   
   sample_performance = ReadDepth_coverage$plot_read_depth_heatmap$data %>%
     mutate(Read_depth = case_when(
@@ -666,7 +670,7 @@ if(PerformanceReport){
               amplified_amplicons20 = sum(Read_depth >= 20)/nrow(ampseq_object_abd1@markers),
               amplified_amplicons50 = sum(Read_depth >= 50)/nrow(ampseq_object_abd1@markers),
               amplified_amplicons100 = sum(Read_depth >= 100)/nrow(ampseq_object_abd1@markers),
-              run = unique(var),
+              Run = unique(var),
               .by = Sample_id) %>%
     pivot_longer(cols = starts_with('amplified_amplicons'), values_to = 'AmpRate', names_to = 'Threshold') %>%
     mutate(Threshold = as.integer(gsub('amplified_amplicons', '', Threshold)))
@@ -680,10 +684,10 @@ if(PerformanceReport){
                                    !is.na(Read_depth) ~ Read_depth
                                  )) %>%
                                  summarise(AmpRate = sum(Read_depth >= min_abd)/nrow(ampseq_object_abd1@markers),
-                                           run = unique(var),
+                                           Run = unique(var),
                                            .by = Sample_id) %>%
                                  mutate(Threshold = min_abd) %>%
-                                 select(Sample_id, run, Threshold, AmpRate))
+                                 select(Sample_id, Run, Threshold, AmpRate))
     
   }
   
@@ -708,7 +712,7 @@ if(PerformanceReport){
               AmpRate90 = round(100*sum(AmpRate >= .90)/n(), 1),
               AmpRate95 = round(100*sum(AmpRate >= .95)/n(), 1),
               AmpRate100 = round(100*sum(AmpRate >= 1)/n(), 1),
-              .by = c(Threshold, run)
+              .by = c(Threshold, Run)
     ) %>%
     pivot_longer(cols = paste0('AmpRate', seq(5, 100, 5)),
                  values_to = 'Percentage',
@@ -717,14 +721,14 @@ if(PerformanceReport){
     ggplot(aes(x = AmpRate, y = Percentage, color = as.factor(Threshold), group = as.factor(Threshold))) +
     geom_line() +
     geom_vline(xintercept = 100*sample_ampl_rate, linetype = 2) +
-    facet_wrap(run~., ncol = 3)+
+    facet_wrap(Run~., ncol = 3)+
     theme_bw() +
     labs(x = '% of amplified loci (amplification rate)', y = '% of Samples', color = 'Min Coverage')
   
   
   ### Overall sample performance by different coverage per Variable1----
   
-  if(!is.na(Variable1)){
+  if(!is.null(Variable1)){
     
     ReadDepth_coverage = get_ReadDepth_coverage(ampseq_object_abd1, variable = Variable1)
     
@@ -1613,7 +1617,7 @@ if(length(n_PCR_errors_alleles) > 0){
 
 
 
-if(!is.na(metadata_file)){
+if(!is.null(metadata_file)){
   # Merge the external metadata with our ampseq_object
   
   external_metadata = read.csv(metadata_file)
@@ -1632,7 +1636,7 @@ if(PerformanceReport == TRUE){
   
   # Read Depth coverage by the whole dataset or by Variable1
   
-  if(is.na(Variable1)){
+  if(is.null(Variable1)){
     ReadDepth_coverage = get_ReadDepth_coverage(ampseq_object, variable = NULL)
   }else{
     ReadDepth_coverage = get_ReadDepth_coverage(ampseq_object, variable = Variable1)
@@ -1640,13 +1644,13 @@ if(PerformanceReport == TRUE){
   
   # Read Depth coverage by the whole dataset or by Run
   
-  ReadDepth_coverage_by_run = get_ReadDepth_coverage(ampseq_object, variable = "run")
+  ReadDepth_coverage_by_run = get_ReadDepth_coverage(ampseq_object, variable = "Run")
   
   # Read Depth coverage by the whole dataset or by Run for controls
   
   ampseq_object_controls = filter_samples(ampseq_object, v = ampseq_object@metadata$typeofSamp == 'Controls')
   
-  ReadDepth_coverage_by_run_controls = get_ReadDepth_coverage(ampseq_object_controls, variable = "run")
+  ReadDepth_coverage_by_run_controls = get_ReadDepth_coverage(ampseq_object_controls, variable = "Run")
   
 }
 
@@ -1662,8 +1666,19 @@ if(!is.null(var_filter)){
   filters = strsplit(var_filter,';')
   for(temp_filter in 1:length(filters)){
     
-    ampseq_object = filter_samples(ampseq_object,
-                                   ampseq_object@metadata[[filters[[temp_filter]][1]]] %in% strsplit(filters[[temp_filter]][2],',')[[1]])
+    if(toupper(filters[[temp_filter]][2]) == 'KEEP'){
+      
+      ampseq_object = filter_samples(ampseq_object,
+                                     ampseq_object@metadata[[filters[[temp_filter]][1]]] %in% strsplit(filters[[temp_filter]][3],',')[[1]])
+      
+    }else if(toupper(filters[[temp_filter]][2]) == 'REMOVE'){
+  
+      ampseq_object = filter_samples(ampseq_object,
+                                     !(ampseq_object@metadata[[filters[[temp_filter]][1]]] %in% strsplit(filters[[temp_filter]][3],',')[[1]]))
+      
+    }
+    
+    
   }
 }
 
@@ -1671,9 +1686,9 @@ if(!is.null(var_filter)){
 
 print('Measuring amplification rate by locus')
 
-if(!is.na(locus_ampl_rate)){
+if(!is.null(locus_ampl_rate)){
   
-  if(!is.na(Variable1)){
+  if(!is.null(Variable1)){
     ampseq_object = locus_amplification_rate(ampseq_object, threshold = locus_ampl_rate, strata = Variable1)
   }else{
     ampseq_object = locus_amplification_rate(ampseq_object, threshold = locus_ampl_rate)
@@ -1681,7 +1696,7 @@ if(!is.na(locus_ampl_rate)){
   
 }else{
   
-  if(!is.na(Variable1)){
+  if(!is.null(Variable1)){
     ampseq_object = locus_amplification_rate(ampseq_object, threshold = 0.65, strata = Variable1)
   }else{
     ampseq_object = locus_amplification_rate(ampseq_object, threshold = 0.65) 
@@ -1692,8 +1707,8 @@ if(!is.na(locus_ampl_rate)){
 
 print("measuring amplification rate by sample")
 
-if(!is.na(sample_ampl_rate)){
-  if(!is.na(Variable1)){
+if(!is.null(sample_ampl_rate)){
+  if(!is.null(Variable1)){
     ampseq_object = sample_amplification_rate(ampseq_object, threshold = sample_ampl_rate, strata = Variable1)
   }else{
     ampseq_object = sample_amplification_rate(ampseq_object, threshold = sample_ampl_rate)  
@@ -1701,7 +1716,7 @@ if(!is.na(sample_ampl_rate)){
   
 }else{
   
-  if(!is.na(Variable1)){
+  if(!is.null(Variable1)){
     ampseq_object = sample_amplification_rate(ampseq_object, threshold = 0.80, strata = Variable1)
   }else{
     ampseq_object = sample_amplification_rate(ampseq_object, threshold = 0.80)  
@@ -1772,7 +1787,7 @@ if(PerformanceReport == TRUE){
 
 
 # if data was imported as cigar tables and no additional steps were provided
-# if(!is.na(cigar_paths)|!is.na(cigar_files) & is.na(ibd_thres)){
+# if(!is.null(cigar_paths)|!is.null(cigar_files) & is.null(ibd_thres)){
 #   
 #   # save data in excel format
 #   # write_ampseq(ampseq_object = ampseq_object_filtered,
@@ -1787,18 +1802,18 @@ if(PerformanceReport == TRUE){
 # ampseq_object_filtered = ampseq_object
 # 
 # # if locus_ampl_rate was provided
-# if(!is.na(locus_ampl_rate) & "loci_performance" %in% slotNames(ampseq_object_filtered)){
+# if(!is.null(locus_ampl_rate) & "loci_performance" %in% slotNames(ampseq_object_filtered)){
 #   ampseq_object_filtered = locus_amplification_rate(ampseq_object_filtered, threshold = locus_ampl_rate)
 # }
 # 
 # # if sample_ampl_rate was provided
-# if(!is.na(sample_ampl_rate) & "sample_ampl_rate" %in% colnames(ampseq_object_filtered@metadata)){
+# if(!is.null(sample_ampl_rate) & "sample_ampl_rate" %in% colnames(ampseq_object_filtered@metadata)){
 #   ampseq_object_filtered = sample_amplification_rate(ampseq_object_filtered, threshold = sample_ampl_rate)
 # }
 # 
 # # add metadata 
 # 
-# if(!is.na(metadata)){
+# if(!is.null(metadata)){
 #   # Upload metadata from an external source
 #   print("Uploading metadata")
 #   metadata = read.csv(metadata)
@@ -1825,7 +1840,7 @@ if(PerformanceReport == TRUE){
 # }
 # 
 # # if data was imported as cigar tables and no additional steps were provided
-# if(!is.na(cigar_paths)|!is.na(cigar_files) & is.na(ibd_thres) & !Drug_Surveillance_Report & !Variants_of_Interest_Report & !file.exists(file.path(wd, paste0(output, '.xlsx')))){
+# if(!is.null(cigar_paths)|!is.null(cigar_files) & is.null(ibd_thres) & !Drug_Surveillance_Report & !Variants_of_Interest_Report & !file.exists(file.path(wd, paste0(output, '.xlsx')))){
 #   
 #   # save data in excel format
 #   # write_ampseq(ampseq_object = ampseq_object_filtered,
@@ -1844,11 +1859,11 @@ if(Drug_Surveillance_Report){
   
   variables = 'Sample_id'
   
-  if(!is.na(Variable1)){
+  if(!is.null(Variable1)){
     variables = c(variables, Variable1)
   }
   
-  if(!is.na(Variable2)){
+  if(!is.null(Variable2)){
     variables = c(variables, Variable2)
   }
   
@@ -1874,7 +1889,6 @@ if(Drug_Surveillance_Report){
   }
   
   
-  
   drug_resistant_haplotypes_plot = drug_resistant_haplotypes(ampseq_object = ampseq_drug,
                                                              reference_alleles = reference_alleles,
                                                              gene_names = gene_names,
@@ -1887,13 +1901,14 @@ if(Drug_Surveillance_Report){
                                                              na.var.rm = na_var_rm,
                                                              na.hap.rm = na_hap_rm,
                                                              drugs = drugs,
-                                                             filters = NULL)
+                                                             filters = NULL,
+                                                             hap_color_palette = hap_color_palette)
   
   print('Generation of plots and tables for DRS report done')
   
   imagename = file.path(wd,paste0(output, '_DRS_Report.RData'))
   
-  save(file = imagename, list = c('drug_resistant_haplotypes_plot'))
+  save(file = imagename, list = c('drug_resistant_haplotypes_plot', 'Longitude', 'Latitude'))
   
   system(paste0('cp ', file.path(fd, 'MHap_Analysis_DRS_Report_Template.Rmd'), ' ', file.path(wd, paste0(output, '_DRS_Report.Rmd'))))
   
@@ -1914,11 +1929,11 @@ if(Variants_of_Interest_Report){
   
   variables = 'Sample_id'
   
-  if(!is.na(Variable1)){
+  if(!is.null(Variable1)){
     variables = c(variables, Variable1)
   }
   
-  if(!is.na(Variable2)){
+  if(!is.null(Variable2)){
     variables = c(variables, Variable2)
   }
   
@@ -1943,12 +1958,12 @@ if(Variants_of_Interest_Report){
 
 # Genetic Relatedness ----
 
-if(!is.na(ibd_thres)){
+if(!is.null(ibd_thres)){
   
   # call hmmIBD and PCA functions from Rcpp
   sourceCpp(file.path(fd,'hmmloglikelihood.cpp'))
   
-  if(nTasks > 1 & !is.na(nTasks)){
+  if(nTasks > 1 & !is.null(nTasks)){
     
     if(ibd_step == 'pairwise'){
       
@@ -2016,7 +2031,7 @@ if(!is.na(ibd_thres)){
         pop_levels = NULL)
       
       
-      if(!is.na(Variable2)){
+      if(!is.null(Variable2)){
         plot_frac_highly_related_overtime_between = plot_frac_highly_related_over_time(
           pairwise_relatedness = pairwise_relatedness,
           metadata = ampseq_object@metadata,
@@ -2105,7 +2120,7 @@ if(!is.na(ibd_thres)){
         pop_levels = NULL)
       
       
-      if(!is.na(Variable2)){
+      if(!is.null(Variable2)){
         plot_frac_highly_related_overtime_within = plot_frac_highly_related_over_time(
           pairwise_relatedness = pairwise_relatedness,
           metadata = ampseq_object@metadata,
@@ -2142,9 +2157,9 @@ if(!is.na(ibd_thres)){
       
     }
     
-  }else if(nTasks == 1 | is.na(nTasks)){
+  }else if(nTasks == 1 | is.null(nTasks)){
     
-    if(is.na(pairwise_relatedness_table)){
+    if(is.null(pairwise_relatedness_table)){
       pairwise_relatedness = NULL
       
       for(w in 1:nChunks){
@@ -2186,7 +2201,7 @@ if(!is.na(ibd_thres)){
       pop_levels = NULL)
     
     
-    if(!is.na(Variable2)){
+    if(!is.null(Variable2)){
       plot_frac_highly_related_overtime_between = plot_frac_highly_related_over_time(
         pairwise_relatedness = pairwise_relatedness,
         metadata = ampseq_object@metadata,
@@ -2275,7 +2290,7 @@ if(!is.na(ibd_thres)){
       pop_levels = NULL)
     
     
-    if(!is.na(Variable2)){
+    if(!is.null(Variable2)){
       plot_frac_highly_related_overtime_within = plot_frac_highly_related_over_time(
         pairwise_relatedness = pairwise_relatedness,
         metadata = ampseq_object@metadata,
@@ -2319,10 +2334,13 @@ if(!is.na(ibd_thres)){
 
 # COI----
 
-if(!is.na(poly_quantile)){
+if(!is.null(poly_quantile)){
   
+  print('Starting COI report')
   
-  if(!is.na(Variable1)){
+  if(!is.null(Variable1)){
+    
+    print('Calculate COI metrics by Variable1')
     
     poly_by_Var1 = get_polygenomic(ampseq_object = ampseq_object, 
                                    strata = Variable1,
@@ -2349,6 +2367,8 @@ if(!is.na(poly_quantile)){
     
   }else{
     
+    print('Calculate COI metrics by the overall population')
+    
     poly_total = get_polygenomic(ampseq_object = ampseq_object, 
                                    strata = NULL,
                                    update_popsummary = FALSE,
@@ -2360,7 +2380,9 @@ if(!is.na(poly_quantile)){
   
   
   
-  if(!is.na(Variable1) & !is.na(Variable2)){
+  if(!is.null(Variable1) & !is.null(Variable2)){
+    
+    print('Calculate COI metrics by Variable1 and Varibale2')
     
     ampseq_object@metadata[['Var1_Var2']] = paste(ampseq_object@metadata[[Variable1]], ampseq_object@metadata[[Variable2]], sep = '_')
     

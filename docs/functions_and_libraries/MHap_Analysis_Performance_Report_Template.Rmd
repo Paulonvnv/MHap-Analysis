@@ -26,7 +26,13 @@ load(params$RData_image)
 
 ```
 
+# Amplification success of the Samples
 
+-   Amplification success was **measured** by *Plamoudium* **hello**
+
+    $$
+    Hex = \frac{1}{2}
+    $$
 
 ```{r, fig.width=7, fig.height=5, fig.cap = "**Figure 1:** Percentage of coverage"}
 plot_precentage_of_samples_over_min_abd
@@ -39,7 +45,6 @@ plot_precentage_of_samples_over_min_abd_byRun
 ```{r, fig.width=10, fig.height=12, fig.cap="**Figure 3:** Percentage of coverage per catagories in Variable1"}
 plot_precentage_of_samples_over_min_abd_byVariable1
 ```
-
 
 ```{r}
 
@@ -56,7 +61,6 @@ if(length(n_off_target_alleles) > 0){
 
 ```
 
-
 ```{r,}
 
 if(length(n_off_target_alleles) > 0){
@@ -68,7 +72,6 @@ if(length(n_off_target_alleles) > 0){
 
 ```
 
-
 ```{r, fig.width=7, fig.height=7, fig.cap="**Figure 5:** Flanking INDELs"}
 
 if(length(n_flanking_INDEL_alleles) > 0){
@@ -76,7 +79,6 @@ if(length(n_flanking_INDEL_alleles) > 0){
 }
 
 ```
-
 
 ```{r}
 
@@ -89,9 +91,6 @@ if(length(n_flanking_INDEL_alleles) > 0){
 
 ```
 
-
-
-
 ```{r, fig.width=7, fig.height=5, fig.cap="**Figure 5:** Flanking INDELs"}
 
 if(length(n_PCR_errors_alleles) > 0){
@@ -99,8 +98,6 @@ if(length(n_PCR_errors_alleles) > 0){
 }
 
 ```
-
-
 
 ```{r}
 
@@ -113,13 +110,11 @@ if(length(n_PCR_errors_alleles) > 0){
 
 ```
 
-
 ```{r, fig.width=12, fig.height=20, fig.cap="**Figure 5:** Read Coverage per sample per locus"}
 
 ReadDepth_coverage$plot_read_depth_heatmap
 
 ```
-
 
 ```{r, fig.width=12, fig.height=20, fig.cap="**Figure 5:** Read Coverage per sample per locus by run"}
 
@@ -127,13 +122,11 @@ ReadDepth_coverage_by_run$plot_read_depth_heatmap
 
 ```
 
-
 ```{r, fig.width=12, fig.height=10, fig.cap="**Figure 5:** Read Coverage of controls per locus by run"}
 
 ReadDepth_coverage_by_run_controls$plot_read_depth_heatmap
 
 ```
-
 
 ```{r, fig.width=7, fig.height=8, fig.cap="**Figure 5:** Locus amplification rate distribution"}
 
@@ -148,6 +141,7 @@ samples_amplification_rate
 ```
 
 Cigar table without masking and filter
+
 ```{r}
 cigar_table_unmasked_unfiltered %>%
   DT::datatable(extensions = 'Buttons',
@@ -155,8 +149,8 @@ cigar_table_unmasked_unfiltered %>%
                   buttons = c('csv', 'excel')))
 ```
 
-
 Masked and filtered cigar table without controls
+
 ```{r}
 cigar_table_masked_filtered %>%
   DT::datatable(extensions = 'Buttons',
@@ -165,6 +159,7 @@ cigar_table_masked_filtered %>%
 ```
 
 Masked and filtered cigar table of controls
+
 ```{r}
 cigar_table_controls_masked_filtered %>%
   DT::datatable(extensions = 'Buttons',

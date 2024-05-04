@@ -30,9 +30,13 @@ The haplotype of each sample is stored in the table `aacigar_table`
 within the object `drug_resistant_haplotypes_plot`.
 
 ```{r, fig.width=10, fig.height=10, fig.cap = "**Figure 1:** Frequency of haplotypes carrying mutations associated with resistance to Chloroquine, Lumefantrine...(panels). Dots represent study sites, color gradient represent the frequency and the size the logarithm of the sample size."}
-library(tmap)
-tmap_mode('view')
-drug_resistant_haplotypes_plot$i_drug_map
+
+if(!is.null(Longitude) & !is.null(Latitude)){
+  library(tmap)
+  tmap_mode('view')
+  drug_resistant_haplotypes_plot$i_drug_map  
+}
+
 ```
 
 ```{r, fig.width=10, fig.height=12, fig.cap = "**Figure 2:** Frequency of haplotypes carrying mutations associated with resistance to Chloroquine, Lumefantrine...(panels). y-axis shows the frequency in each population, x-axis shows the quarter of the year where the sample was collected, rows panels corresponds to the study areas, and column panels represents each Drug. Colors were assigned based on the possible phenotype, blue indicates sensitive, red indicates resistance, and gloden represent haplotypes carrying mutations respect to the reference strain but that haven't been associated with resistance."}

@@ -29,26 +29,26 @@ read_cigar_tables = function(paths = NULL, files = NULL, sample_id_pattern = '.'
   metadata = NULL
   
   if(!is.null(paths)&is.null(files)){
-    for(run in list.files(paths)){
+    for(Run in list.files(paths)){
       
-      if(file.exists(file.path(paths, run, "dada2/run_dada2/CIGARVariants.out.tsv"))){
-        cigar_run = read.table(file.path(paths, run, "dada2/run_dada2/CIGARVariants.out.tsv"), header = T, check.names = FALSE
+      if(file.exists(file.path(paths, Run, "dada2/run_dada2/CIGARVariants.out.tsv"))){
+        cigar_run = read.table(file.path(paths, Run, "dada2/run_dada2/CIGARVariants.out.tsv"), header = T, check.names = FALSE
                                )
-      }else if(file.exists(file.path(paths, run, "dada2/run_dada2/CIGARVariants_Bfilter.out.tsv"))){
-        cigar_run = read.table(file.path(paths, run, "dada2/run_dada2/CIGARVariants_Bfilter.out.tsv"), header = T, check.names = FALSE
+      }else if(file.exists(file.path(paths, Run, "dada2/run_dada2/CIGARVariants_Bfilter.out.tsv"))){
+        cigar_run = read.table(file.path(paths, Run, "dada2/run_dada2/CIGARVariants_Bfilter.out.tsv"), header = T, check.names = FALSE
                                )
       }else{
-        print(paste0('Cigar file ', file.path(paths, run, "dada2/run_dada2/CIGARVariants_Bfilter.out.tsv"), ' not found'))
+        print(paste0('Cigar file ', file.path(paths, Run, "dada2/run_dada2/CIGARVariants_Bfilter.out.tsv"), ' not found'))
       }
       #samples = gsub('_S\\d+$','', cigar_run[,1])
       samples = cigar_run[,1]
-      samples[!grepl(sample_id_pattern,samples)] = paste(samples[!grepl(sample_id_pattern,samples)], run, sep = "_")
+      samples[!grepl(sample_id_pattern,samples)] = paste(samples[!grepl(sample_id_pattern,samples)], Run, sep = "_")
       cigar_run = cigar_run[, -1]
       cigar_run = apply(cigar_run, 2, function(x) as.integer(x))
-      rownames(cigar_run) = paste(1:length(samples), run, samples, sep = '/')
-      cigar_tables[[run]] = cigar_run
+      rownames(cigar_run) = paste(1:length(samples), Run, samples, sep = '/')
+      cigar_tables[[Run]] = cigar_run
       
-      rm(list = c("run", "cigar_run", "samples"))
+      rm(list = c("Run", "cigar_run", "samples"))
     }
   }else if(is.null(paths)&!is.null(files)){
     for(file in files){
@@ -70,12 +70,12 @@ read_cigar_tables = function(paths = NULL, files = NULL, sample_id_pattern = '.'
   
   cigar_table = NULL
   
-  for(run in names(cigar_tables)){
-    temp_cigar_table = data.frame(Sample_id = rownames(cigar_tables[[run]]), cigar_tables[[run]])
-    names(temp_cigar_table) = c("Sample_id", colnames(cigar_tables[[run]]))
+  for(Run in names(cigar_tables)){
+    temp_cigar_table = data.frame(Sample_id = rownames(cigar_tables[[Run]]), cigar_tables[[Run]])
+    names(temp_cigar_table) = c("Sample_id", colnames(cigar_tables[[Run]]))
     temp_cigar_table %<>% pivot_longer(cols = all_of(names(temp_cigar_table)[-1]), names_to = "alleles", values_to = "counts")
     cigar_table = rbind(cigar_table, temp_cigar_table)
-    rm(run)
+    rm(Run)
   }
   
   cigar_table %<>% pivot_wider(names_from = "alleles", values_from = "counts")
@@ -105,21 +105,21 @@ read_cigar_tables = function(paths = NULL, files = NULL, sample_id_pattern = '.'
   
   if(!is.null(paths)){
     
-    metadata[['run']] = gsub('/.+$', '',
+    metadata[['Run']] = gsub('/.+$', '',
                              gsub("^\\d+/",
                                   "",
                                   cigar_table[['Sample_id']]))
     
   }else if(!is.null(files) & length(files) > 1){
     
-    metadata[['run']] = gsub('^/|_CIGARVariants',
+    metadata[['Run']] = gsub('^/|_CIGARVariants',
                              '',
                              str_extract(cigar_table[['Sample_id']], 
                                          pattern = '/\\w+_CIGARVariants'))
     
   }else if(!is.null(files) & length(files) == 1){
     
-    metadata[['run']] = 'Run1'
+    metadata[['Run']] = 'Run1'
     
   }
   
@@ -1149,7 +1149,13 @@ haplotypes_respect_to_reference = function(ampseq_object,
     for(gene in 1:length(gene_names)){
       
       if(length(gene_names) > 1){
-        gene_aa = moi_loci_aa_table[,grepl(gene_names[gene], colnames(moi_loci_aa_table))]  
+        gene_aa = moi_loci_aa_table[,grepl(gene_names[gene], colnames(moi_loci_aa_table))]
+        
+        # gene_aa = matrix(moi_loci_aa_table[,grepl(gene_names[gene], colnames(moi_loci_aa_table))], 
+        #                  ncol = sum(grepl(gene_names[gene], colnames(moi_loci_aa_table))),
+        #                  dimnames = list(rownames(moi_loci_aa_table),
+        #                                  colnames(moi_loci_aa_table)[grepl(gene_names[gene], colnames(moi_loci_aa_table))]))
+        
       }else{
         gene_aa = matrix(moi_loci_aa_table[,grepl(gene_names[gene], colnames(moi_loci_aa_table))],
                          ncol = 1,
@@ -1182,10 +1188,16 @@ haplotypes_respect_to_reference = function(ampseq_object,
       for(amplicon in amplicons){
         
         # get all observed polymorphic positions in the population sorted
-        positions = stringr::str_extract(unique(gene_aa[,amplicon]), '\\d+')
+        
+        #positions = stringr::str_extract(unique(gene_aa[,amplicon]), '\\d+')
+        positions = unlist(stringr::str_extract(gene_aa[,amplicon], '\\d+'))
         positions = positions[!is.na(positions)]
-        positions = unique(positions)
-        positions = sort(positions)
+        if(sum(positions != "p.(=)") > 0){
+          positions = unique(positions)
+          positions = sort(positions)
+        }else{
+          positions = NULL
+        }
         
         # for each sample
         for(sample in 1:nrow(gene_aa)){
@@ -1550,7 +1562,8 @@ drug_resistant_haplotypes = function(ampseq_object,
                                      filters = c('Population;Buenaventura,Quibdo,Guapi',
                                                  'quarter_of_collection;2020-Q4,2021-Q1,2021-Q2,2021-Q3,2021-Q4'),
                                      na.var.rm = FALSE,
-                                     na.hap.rm = TRUE){
+                                     na.hap.rm = TRUE,
+                                     hap_color_palette = 'random'){
   
   
   # Call reference alleles
@@ -2320,66 +2333,138 @@ drug_resistant_haplotypes = function(ampseq_object,
       genotype_phenotype_match[genotype_phenotype_match$Genotype == haplotype, ][['Phenotype']]
   }
   
-  print('Assigning colors to haplotypes based on their phenotype')
-  blue = brewer.pal(9, 'Blues')[7]
-  reds = brewer.pal(9, 'Reds')[3:8]
-  orange = brewer.pal(9, 'YlOrRd')[4]
-  
-  genotype_phenotype_match$color_pal = sapply(genotype_phenotype_match$Phenotype, function(Phenotype){
+  if(hap_color_palette == 'auto'){
     
-    if(grepl('Delayed clearance', Phenotype)){
-      reds[1]
-    }else if(grepl('Linked', Phenotype)){
-      reds[1]
-    }else if(grepl('resistance', Phenotype) & 
-             sum(as.integer(unlist(str_extract_all(unlist(str_extract_all(Phenotype, '\\d+ ([A-z]| )+ resistance')), '\\d+')))) == 1){
-      reds[2]
-    }else if(grepl('resistance', Phenotype) & 
-             sum(as.integer(unlist(str_extract_all(unlist(str_extract_all(Phenotype, '\\d+ ([A-z]| )+ resistance')), '\\d+')))) == 2){
-      reds[3]
-    }else if(grepl('resistance', Phenotype) & 
-             sum(as.integer(unlist(str_extract_all(unlist(str_extract_all(Phenotype, '\\d+ ([A-z]| )+ resistance')), '\\d+')))) == 3){
-      reds[5]
-    }else if(grepl('resistance', Phenotype) & 
-             sum(as.integer(unlist(str_extract_all(unlist(str_extract_all(Phenotype, '\\d+ ([A-z]| )+ resistance')), '\\d+')))) >= 4){
-      reds[6]
-    }else if(grepl('Sensitive', Phenotype)){
-      blue
-    }else if(grepl('polymorphism', Phenotype) &
-             !grepl('resistance', Phenotype)){
-      orange
-    }else if(grepl('variant unreported', Phenotype) & !grepl('resistance', Phenotype)){
-      'gold3'
-    }else if(grepl("^Amplicon.+amplify$", Phenotype)){
-      'gray70'
-    }else if(grepl('Gene .+ did not amplify', Phenotype)){
-      'gray30'
+    print('Assigning colors to haplotypes based on their phenotype')
+    blue = brewer.pal(9, 'Blues')[7]
+    reds = brewer.pal(9, 'Reds')[3:8]
+    orange = brewer.pal(9, 'YlOrRd')[4]
+    
+    genotype_phenotype_match$color_pal = sapply(genotype_phenotype_match$Phenotype, function(Phenotype){
+      
+      if(grepl('Delayed clearance', Phenotype)){
+        reds[1]
+      }else if(grepl('Linked', Phenotype)){
+        reds[1]
+      }else if(grepl('resistance', Phenotype) & 
+               sum(as.integer(unlist(str_extract_all(unlist(str_extract_all(Phenotype, '\\d+ ([A-z]| )+ resistance')), '\\d+')))) == 1){
+        reds[2]
+      }else if(grepl('resistance', Phenotype) & 
+               sum(as.integer(unlist(str_extract_all(unlist(str_extract_all(Phenotype, '\\d+ ([A-z]| )+ resistance')), '\\d+')))) == 2){
+        reds[3]
+      }else if(grepl('resistance', Phenotype) & 
+               sum(as.integer(unlist(str_extract_all(unlist(str_extract_all(Phenotype, '\\d+ ([A-z]| )+ resistance')), '\\d+')))) == 3){
+        reds[5]
+      }else if(grepl('resistance', Phenotype) & 
+               sum(as.integer(unlist(str_extract_all(unlist(str_extract_all(Phenotype, '\\d+ ([A-z]| )+ resistance')), '\\d+')))) >= 4){
+        reds[6]
+      }else if(grepl('Sensitive', Phenotype)){
+        blue
+      }else if(grepl('polymorphism', Phenotype) &
+               !grepl('resistance', Phenotype)){
+        'gold3'
+      }else if(grepl('variant unreported', Phenotype) & !grepl('resistance', Phenotype)){
+        orange
+      }else if(grepl("^Amplicon.+amplify$", Phenotype)){
+        'gray70'
+      }else if(grepl('Gene .+ did not amplify', Phenotype)){
+        'gray30'
+      }
+      
+    }, simplify = T)
+    
+    
+    genotype_phenotype_match$transparency = sapply(genotype_phenotype_match$Phenotype, function(Phenotype){
+      transparency = 0.5 + 0.1*length(unlist(str_extract_all(Phenotype, '(variant unreported|polymorphism in gene)')))
+      
+      if(transparency > 1){
+        
+        transparency = 1
+        
+      }
+      
+      return(transparency)
+      
+    }, simplify = T)
+    
+    # Sort haplotypes based on gene and phenotype
+    
+    genotype_phenotype_match_sorted = NULL
+    
+    for(gene in unique(genotype_phenotype_match$Gene)){
+      
+      for(color_pal in c(reds[6:1], orange, 'gold3', blue, 'gray70','gray30')){
+        
+        genotype_phenotype_match_sorted = rbind(genotype_phenotype_match_sorted,
+                                                genotype_phenotype_match[genotype_phenotype_match$Gene == gene &
+                                                                           genotype_phenotype_match$color_pal == color_pal,])
+        
+      }
+      
     }
     
-  }, simplify = T)
-  
-  
-  genotype_phenotype_match$transparency = sapply(genotype_phenotype_match$Phenotype, function(Phenotype){
-    1 - 0.15*length(unlist(str_extract_all(Phenotype, '(variant unreported|polymorphism in gene)')))
-  }, simplify = T)
-  
-  
-  
-  # Sort haplotypes based on gene and phenotype
-  
-  genotype_phenotype_match_sorted = NULL
-  
-  for(gene in unique(genotype_phenotype_match$Gene)){
+  }else if(hap_color_palette == 'random'){
     
-    for(color_pal in c(reds[4:1], 'gold3', orange, blue, 'gray70','gray30')){
+    qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+    col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
+    #pie(rep(1,n), col=sample(col_vector, n))
+    
+    
+    genotype_phenotype_match$haplo_order = sapply(genotype_phenotype_match$Phenotype, function(Phenotype){
       
-      genotype_phenotype_match_sorted = rbind(genotype_phenotype_match_sorted,
-                                genotype_phenotype_match[genotype_phenotype_match$Gene == gene &
-                                 genotype_phenotype_match$color_pal == color_pal,])
+      if(grepl('Delayed clearance', Phenotype)){
+        5
+      }else if(grepl('Linked', Phenotype)){
+        5
+      }else if(grepl('resistance', Phenotype) & 
+               sum(as.integer(unlist(str_extract_all(unlist(str_extract_all(Phenotype, '\\d+ ([A-z]| )+ resistance')), '\\d+')))) == 1){
+        4
+      }else if(grepl('resistance', Phenotype) & 
+               sum(as.integer(unlist(str_extract_all(unlist(str_extract_all(Phenotype, '\\d+ ([A-z]| )+ resistance')), '\\d+')))) == 2){
+        3
+      }else if(grepl('resistance', Phenotype) & 
+               sum(as.integer(unlist(str_extract_all(unlist(str_extract_all(Phenotype, '\\d+ ([A-z]| )+ resistance')), '\\d+')))) == 3){
+        2
+      }else if(grepl('resistance', Phenotype) & 
+               sum(as.integer(unlist(str_extract_all(unlist(str_extract_all(Phenotype, '\\d+ ([A-z]| )+ resistance')), '\\d+')))) >= 4){
+        1
+      }else if(grepl('Sensitive', Phenotype)){
+        8
+      }else if(grepl('polymorphism', Phenotype) &
+               !grepl('resistance', Phenotype)){
+        7
+      }else if(grepl('variant unreported', Phenotype) & !grepl('resistance', Phenotype)){
+        6
+      }else if(grepl("^Amplicon.+amplify$", Phenotype)){
+        9
+      }else if(grepl('Gene .+ did not amplify', Phenotype)){
+        10
+      }
+      
+    }, simplify = T)
+    
+    genotype_phenotype_match$color_pal = sample(col_vector, nrow(genotype_phenotype_match))
+    
+    genotype_phenotype_match$transparency = 1
+    
+    genotype_phenotype_match_sorted = NULL
+    
+    for(gene in unique(genotype_phenotype_match$Gene)){
+      
+      for(position in sort(unique(genotype_phenotype_match$haplo_order))){
+        
+        genotype_phenotype_match_sorted = rbind(genotype_phenotype_match_sorted,
+                                                genotype_phenotype_match[genotype_phenotype_match$Gene == gene &
+                                                                           genotype_phenotype_match$haplo_order == position,])
+        
+      }
       
     }
+    
+    genotype_phenotype_match_sorted$haplo_order = NULL
     
   }
+  
   
   genotype_phenotype_match_sorted$Gene_name = NA
   
@@ -2877,7 +2962,78 @@ get_Fws = function(ampseq_object = NULL){
 
 # get_polygenomic----
 
-get_polygenomic = function(ampseq_object, strata = NULL, update_popsummary = T, na.rm = FALSE, filters = NULL, poly_quantile = .75){
+get_polygenomic = function(ampseq_object, strata = NULL, update_popsummary = T, na.rm = FALSE, filters = NULL, poly_quantile = .75, poly_formula = "NHetLoci >= 1 & Fws < 1"){
+  
+  
+  if(grepl("(NHetLoci|Frac_HetLoci|max_nAlleles|Fws)(<|>|!|=)+", poly_formula)){
+    stop("All mathematical and logical operators must be separated by blank spaces in mask_formula")
+  }
+  
+  # modify poly_formula
+  
+  
+  if(grepl("NHetLoci ", poly_formula)){
+    
+    mask_filter = str_extract(poly_formula, "NHetLoci (=|!|>|<)+ (\\d+\\.?\\d*|\\d*\\.?\\d+|FracHetLoci_quantile|Fws_quantile)")
+    
+    if(!is.na(mask_filter)){
+      print(paste0('Filter ', str_extract(poly_formula, "NHetLoci (=|!|>|<)* (\\d+\\.?\\d*|\\d*\\.?\\d+|FracHetLoci_quantile|Fws_quantile)"), ' will be applied'))
+      poly_formula = gsub("NHetLoci ", "polygenomic[['NHetLoci']] ", poly_formula)
+    }else{
+      stop("Filter NHetLoci is been called but there are spelling issues in this part of the formula")
+    }
+  }
+  
+  
+  if(grepl("Frac_HetLoci ", poly_formula)){
+    
+    mask_filter = str_extract(poly_formula, "Frac_HetLoci (=|!|>|<)+ (\\d+\\.?\\d*|\\d*\\.?\\d+|FracHetLoci_quantile|Fws_quantile)")
+    
+    if(!is.na(mask_filter)){
+      print(paste0('Filter ', str_extract(poly_formula, "Frac_HetLoci (=|!|>|<)* (\\d+\\.?\\d*|\\d*\\.?\\d+|FracHetLoci_quantile|Fws_quantile)"), ' will be applied'))
+      poly_formula = gsub("Frac_HetLoci ", "polygenomic[['Frac_HetLoci']] ", poly_formula)
+    }else{
+      stop("Filter Frac_HetLoci is been called but there are spelling issues in this part of the formula")
+    }
+  }
+  
+  
+  if(grepl("max_nAlleles ", poly_formula)){
+    
+    mask_filter = str_extract(poly_formula, "max_nAlleles (=|!|>|<)+ (\\d+\\.?\\d*|\\d*\\.?\\d+|FracHetLoci_quantile|Fws_quantile)")
+    
+    if(!is.na(mask_filter)){
+      print(paste0('Filter ', str_extract(poly_formula, "max_nAlleles (=|!|>|<)* (\\d+\\.?\\d*|\\d*\\.?\\d+|FracHetLoci_quantile|Fws_quantile)"), ' will be applied'))
+      poly_formula = gsub("max_nAlleles ", "polygenomic[['max_nAlleles']] ", poly_formula)
+    }else{
+      stop("Filter max_nAlleles is been called but there are spelling issues in this part of the formula")
+    }
+  }
+  
+  
+  if(grepl("Fws ", poly_formula)){
+    
+    mask_filter = str_extract(poly_formula, "Fws (=|!|>|<)+ (\\d+\\.?\\d*|\\d*\\.?\\d+|FracHetLoci_quantile|Fws_quantile)")
+    
+    if(!is.na(mask_filter)){
+      print(paste0('Filter ', str_extract(poly_formula, "Fws (=|!|>|<)* (\\d+\\.?\\d*|\\d*\\.?\\d+|FracHetLoci_quantile|Fws_quantile)"), ' will be applied'))
+      poly_formula = gsub("Fws ", "polygenomic[['Fws']] ", poly_formula)
+    }else{
+      stop("Filter Fws is been called but there are spelling issues in this part of the formula")
+    }
+  }
+  
+  
+  mask_formula_check = str_split(poly_formula, "&|\\|")[[1]]
+  mask_formula_check  = mask_formula_check[!grepl("polygenomic", mask_formula_check)]
+  
+  
+  if(length(mask_formula_check) > 0){
+    for(wrong_filter in mask_formula_check){
+      print(paste0("Spelling error with filter ", wrong_filter))
+    }
+    stop("Execution halted, revise mask_filter argument.\nPossible filters are:\nNHetLoci, Frac_HetLoci, max_nAlleles, Fws")
+  }
   
   library(Hmisc)
   
@@ -2904,8 +3060,8 @@ get_polygenomic = function(ampseq_object, strata = NULL, update_popsummary = T, 
   polygenomic = NULL
   
   for(sample in rownames(gt)){
-    polygenomic = rbind(polygenomic, data.frame(NPolyLoci = sum(grepl("_",gt[sample, ])),
-                                                Frac_PolyLoci = sum(grepl("_",gt[sample, ]))/sum(!is.na(gt[sample, ])),
+    polygenomic = rbind(polygenomic, data.frame(NHetLoci = sum(grepl("_",gt[sample, ])),
+                                                Frac_HetLoci = sum(grepl("_",gt[sample, ]))/sum(!is.na(gt[sample, ])),
                                                 Polyloci = paste(names(gt[sample, ])[which(grepl("_",gt[sample, ]))], collapse = "/"),
                                                 alleles_at_loci = paste(gt[sample, ][which(grepl("_",gt[sample, ]))], collapse = "/"),
                                                 nalleles_per_loci = paste(
@@ -2926,20 +3082,20 @@ get_polygenomic = function(ampseq_object, strata = NULL, update_popsummary = T, 
   polygenomic[['Fws']] = get_Fws(ampseq_object)
   
   
-  fracHet_quantile = quantile(polygenomic$Frac_PolyLoci, poly_quantile, na.rm = T)
+  FracHetLoci_quantile = quantile(polygenomic$Frac_HetLoci, poly_quantile, na.rm = T)
   Fws_quantile = quantile(polygenomic$Fws, probs = 1 - poly_quantile, na.rm = T)
-
-  
 
   plot_fracHet_vs_Fws = ggdraw()+
     draw_plot(polygenomic %>%
-                ggplot(aes(x = Frac_PolyLoci, y = Fws,
+                ggplot(aes(x = Frac_HetLoci, y = Fws,
                            color = as.character(max_nAlleles)
                 ))+
                 geom_point(alpha = .5)+
-                geom_vline(xintercept = fracHet_quantile, linetype = 2)+
+                geom_vline(xintercept = FracHetLoci_quantile, linetype = 2)+
                 geom_hline(yintercept = Fws_quantile, linetype = 2)+
                 scale_color_viridis_d()+
+                #scale_x_continuous(limits = c(-0.05,1.05))+
+                #scale_y_continuous(limits = c(-0.05,1.05))+
                 labs(color = 'max_nAlleles')+
                 theme_bw()+
                 theme(axis.title = element_blank(),
@@ -2951,9 +3107,10 @@ get_polygenomic = function(ampseq_object, strata = NULL, update_popsummary = T, 
               height = .7
               )+
     draw_plot(polygenomic %>%
-                ggplot(aes(x = Frac_PolyLoci))+
-                geom_histogram()+
-                geom_vline(xintercept = c(fracHet_quantile), linetype = 2)+
+                ggplot(aes(x = Frac_HetLoci))+
+                geom_histogram(binwidth = .01)+
+                geom_vline(xintercept = c(FracHetLoci_quantile), linetype = 2)+
+                #scale_x_continuous(limits = c(-0.05,1.05))+
                 theme_bw(),
               x = .225,
               width = .775,
@@ -2961,8 +3118,9 @@ get_polygenomic = function(ampseq_object, strata = NULL, update_popsummary = T, 
               height = .3)+
     draw_plot(polygenomic %>%
                 ggplot(aes(x = Fws))+
-                geom_histogram()+
+                geom_histogram(binwidth = .01)+
                 geom_vline(xintercept = c(Fws_quantile), linetype = 2)+
+                #scale_x_continuous(limits = c(-0.05,1.05))+
                 theme_bw()+
                 coord_flip(),
               x = 0,
@@ -2971,14 +3129,13 @@ get_polygenomic = function(ampseq_object, strata = NULL, update_popsummary = T, 
               height = .75)
   
   
-  polygenomic %<>% mutate(Clonality = 
-                            case_when(
-                              Frac_PolyLoci > fracHet_quantile &
-                                Fws < Fws_quantile ~ 'Polyclonal',
-                              !(Frac_PolyLoci > fracHet_quantile &
-                                Fws < Fws_quantile) ~ 'Monoclonal'
-                            ))
   
+  
+  polyclonals = which(eval(parse(text = poly_formula)))
+  
+  polygenomic$Clonality = NA
+  polygenomic[polyclonals,][['Clonality']] = 'Polyclonal'
+  polygenomic[-1*polyclonals,][['Clonality']] = 'Monoclonal'
   
   pop_summary = data.frame(
     pop = "Total",
@@ -4283,7 +4440,7 @@ setMethod("frac_ofHet_pAlt_byAllele", signature(obj = "ampseq"),
                                   
                                   # INDELs in flanking regions
                                   
-                                  flanking_INDEL = grepl(paste0(paste('(^1', mhaps[mhap,][['length']] + 1, sep = '|'),')I\\.[ATGC]+') ,allele)
+                                  flanking_INDEL = grepl(paste0(paste('(^1', mhaps[mhap,][['length']] + 1, sep = '|'),')(I|D)(=|\\.)[ATGC]+') ,allele)
                                   
                                   c(sum(P_ij, na.rm = T), 
                                     sum(H_ij, na.rm = T), 
@@ -4605,12 +4762,12 @@ setMethod("mask_alt_alleles", signature(obj = "ampseq"),
                                   
                                   # INDELs in flanking regions
                                   
-                                  flanking_INDEL = as.integer(grepl(paste0(paste('(^1', mhaps[mhap,][['length']] + 1, sep = '|'),')I\\.[ATGC]+'), allele))
+                                  flanking_INDEL = as.integer(grepl(paste0(paste('(^1', mhaps[mhap,][['length']] + 1, sep = '|'),')(I|D)(=|\\.)[ATGC]+') ,allele))
                                   
                                   if(flanking_INDEL == 1){
-                                    flanking_INDEL_pattern = str_extract_all(allele, paste0(paste('(^1', paste0('[ATGC]?', mhaps[mhap,][['length']] + 1), sep = '|'),')I\\.[ATGC]+\\d?'))[[1]]
+                                    flanking_INDEL_pattern = str_extract_all(allele, paste0(paste('(^1', paste0('[ATGC]?', mhaps[mhap,][['length']] + 1), sep = '|'),')(I|D)(=|\\.)[ATGC]+\\d?'))[[1]]
                                     
-                                    flanking_INDEL_replacement = gsub(paste0(paste('(^1', mhaps[mhap,][['length']] + 1, sep = '|'),')I\\.[ATGC]+'), '', flanking_INDEL_pattern)
+                                    flanking_INDEL_replacement = gsub(paste0(paste('(^1', mhaps[mhap,][['length']] + 1, sep = '|'),')(I|D)(=|\\.)[ATGC]+'), '', flanking_INDEL_pattern)
                                     
                                     flanking_INDEL_replacement = ifelse(flanking_INDEL_replacement == '', '.', flanking_INDEL_replacement)
                                   }else{
