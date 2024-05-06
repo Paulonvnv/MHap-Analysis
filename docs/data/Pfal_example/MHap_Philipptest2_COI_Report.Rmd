@@ -1,0 +1,135 @@
+---
+title: "*MHap Analysis Report*: Complexity of infections (COI)"
+author: "Neafsey Lab"
+output:
+  html_document:
+    toc: yes
+    number_sections: no
+    toc_float: yes
+    code_folding: hide
+editor_options:
+  markdown:
+    wrap: 72
+  chunk_output_type: inline
+params:
+  RData_image: ""
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, include = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(magrittr)
+load(params$RData_image)
+
+```
+
+
+
+```{r, fig.width=6, fig.height=6, fig.cap = "**Figure 1:** Distribution of fraction of heterozygous loci by sample (fracHet), Within host divergence (Fws), and the maximum number of alleles found in a sample in a locus"}
+
+if(is.na(Variable1)){
+  
+  poly_total$plot_fracHet_vs_Fws
+  
+}else{
+  
+  poly_by_Var1$plot_fracHet_vs_Fws
+  
+}
+
+```
+
+### COI metrics by sample
+
+```{r}
+
+if(is.na(Variable1)){
+  
+  poly_total$coi_bySample %>% DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+  
+}else{
+  
+  poly_by_Var1$coi_bySample %>% DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+  
+}
+```
+
+### COI metrics by locus
+
+```{r}
+
+if(is.na(Variable1)){
+  
+  poly_total$coi_byLoci %>% DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+  
+}else{
+  
+  poly_by_Var1$coi_byLoci %>% DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+  
+}
+```
+
+### Proportion of polyclonal infections by Variable1
+
+```{r}
+
+if(is.na(Variable1)){
+  
+  poly_total$pop_summary %>% DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+  
+}else{
+  
+  poly_by_Var1$pop_summary %>% DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+  
+}
+```
+
+### Proportion of polyclonal infections by Variable1
+
+```{r, fig.width=10, fig.height=6, fig.cap="**Figure 3:** IBD PCA"}
+if(!is.na(Variable1)){
+  
+  plot_poly_by_pop
+}
+
+```
+
+### Proportion of polyclonal infections by Variable1 and Variable2
+
+```{r, fig.width=10, fig.height=12, fig.cap="**Figure 4:** IBD network"}
+if(!is.na(Variable1) & !is.na(Variable2)){
+  
+  poly_by_Var1_Var2$pop_summary %>% DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+}
+```
+
+### Proportion of polyclonal infections by Variable1 and Variable2
+
+```{r}
+
+if(!is.na(Variable1) & !is.na(Variable2)){
+  
+  plot_poly_by_Var1_Var2
+}
+
+```
+
+
+

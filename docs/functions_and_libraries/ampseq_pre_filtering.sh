@@ -1,6 +1,6 @@
 #!/bin/bash
 #source /broad/software/scripts/useuse
-#use R-4.1
+#use R-4.4
 
 function json_extract() {
   # Citation: https://stackoverflow.com/questions/1955505/parsing-json-with-unix-tools
@@ -163,7 +163,7 @@ echo "flanking_INDEL_formula: "${flanking_INDEL_formula}
 PCR_errors_formula=$(json_extract PCR_errors_formula "$(cat ${json})")
 if [[ ${PCR_errors_formula} == "" ]]
 then 
-PCR_errors_formula="h_ij>= 0.66&h_ijminor>=0.66"
+PCR_errors_formula="h_ij>=0.66&h_ijminor>=0.66"
 fi
 echo "PCR_errors_formula: "${PCR_errors_formula}
 
@@ -292,9 +292,6 @@ gene_ids="null"
 fi
 
 echo "gene_ids: "${gene_ids}
-
-
-
 
 
 metadata=$(json_extract metadata "$(cat ${json})")
@@ -511,6 +508,14 @@ fi
 echo "poly_quantile: "${poly_quantile}
 
 
+poly_formula=$(json_extract poly_formula "$(cat ${json})")
+if [[ ${poly_formula} == "" ]]
+then 
+poly_formula="NHetLoci>=1&Fws<1"
+fi
+echo "poly_formula: "${poly_formula}
+
+
 # Run pre-filtering
 
 Rscript ${fd}/MHap_Analysis_pipeline.R \
@@ -559,4 +564,5 @@ Rscript ${fd}/MHap_Analysis_pipeline.R \
   -ibd_ncol ${ibd_ncol} \
   -pop_levels ${pop_levels} \
   -nchunks ${nchunks} \
-  -poly_quantile ${poly_quantile}
+  -poly_quantile ${poly_quantile} \
+  -poly_formula ${poly_formula}

@@ -53,17 +53,18 @@
   "na_var_rm": true,
   "na_hap_rm": true,
   
-  "var_filter": "Subnational_level2;Remove;Municipality.4,Municipality.5/Quarter_of_Collection;Keep;2021-Q1,2021-Q2,2021-Q3,2021-Q4,2022-Q1,2022-Q2/Run;Remove;run8",
+  "var_filter": "Subnational_level2;Remove;Municipality.4,Municipality.5/Quarter_of_Collection;Keep;2021-Q1,2021-Q2,2021-Q3,2021-Q4,2022-Q1,2022-Q2",
 
   
-  "ibd_thres": null,
+  "ibd_thres": 0.99,
   "pairwise_relatedness_table": "pairwise_relatedness.csv",
   "parallel": true,
   "ibd_ncol": 4,
-  "pop_levels":null,
+  "pop_levels": null,
   "nchunks": 500,
   
-  "poly_quantile": null
+  "poly_quantile": 0.75,
+  "poly_formula": "NHetLoci>=1&Fws<1",
 }
 
 

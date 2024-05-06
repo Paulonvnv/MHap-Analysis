@@ -151,6 +151,9 @@ parser$add_argument("-pop_levels", "--pop_levels", default = 'null',
 parser$add_argument("-poly_quantile", "--poly_quantile", default = 'null',
                     help="Quantile to define polyclonal samples")
 
+parser$add_argument("-poly_formula", "--poly_formula", default = "NHetLoci>=1&Fws<1",
+                    help="max density of variant sites per amplicon")
+
 # Defining and checking variables ----
 
 print("starting to parse variables")
@@ -509,6 +512,52 @@ poly_quantile = if(poly_quantile == 'null'){NULL}else{as.numeric(poly_quantile)}
 print(paste0('poly_quantile: ', poly_quantile))
 
 
+# poly_formula filter
+poly_formula = as.character(args$poly_formula)
+poly_formula = gsub('"',"",poly_formula)
+
+poly_formula = gsub('&'," & ",poly_formula, ignore.case = TRUE)
+poly_formula = gsub('\\|'," \\| ",poly_formula, ignore.case = TRUE)
+
+if(grepl("\\w>\\d",poly_formula)){
+  patterns = str_extract_all(poly_formula, "\\w>\\d")[[1]]
+  
+  for(pattern in patterns){
+    
+    replacement = gsub('>',' > ',pattern)
+    poly_formula = gsub(pattern,
+                              replacement,
+                        poly_formula, ignore.case = TRUE)
+  }
+  
+}
+
+if(grepl("\\w<\\d",poly_formula)){
+  patterns = str_extract_all(poly_formula, "\\w<\\d")[[1]]
+  
+  for(pattern in patterns){
+    
+    replacement = gsub('<',' < ',pattern)
+    poly_formula = gsub(pattern,
+                              replacement,
+                        poly_formula, ignore.case = TRUE)
+  }
+  
+}
+
+poly_formula = gsub('>='," >= ", poly_formula, ignore.case = TRUE)
+poly_formula = gsub('<='," <= ", poly_formula, ignore.case = TRUE)
+poly_formula = gsub('=='," == ", poly_formula, ignore.case = TRUE)
+poly_formula = gsub('!='," != ", poly_formula, ignore.case = TRUE)
+
+poly_formula = gsub('\\+'," \\+ ", poly_formula, ignore.case = TRUE)
+poly_formula = gsub('-'," - ", poly_formula, ignore.case = TRUE)
+poly_formula = gsub('\\*'," \\* ", poly_formula, ignore.case = TRUE)
+poly_formula = gsub('/'," / ", poly_formula, ignore.case = TRUE)
+
+
+print(paste0('poly_formula: ', poly_formula))
+
 # output pattern
 output = args$out
 print(paste0('output: ', output))
@@ -527,6 +576,11 @@ print("All variables checked")
 print("Loading libraies and functions")
 source(file.path(fd,'amplseq_required_libraries.R'))
 source(file.path(fd,'amplseq_functions.R'))
+
+# Defining a random color palette for all plots with multiple categorical variables----
+
+qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
 
 # Upload Cigar object and convert to ampseq object----
 
@@ -1677,8 +1731,6 @@ if(!is.null(var_filter)){
                                      !(ampseq_object@metadata[[filters[[temp_filter]][1]]] %in% strsplit(filters[[temp_filter]][3],',')[[1]]))
       
     }
-    
-    
   }
 }
 
@@ -1874,9 +1926,9 @@ if(Drug_Surveillance_Report){
     ampseq_drug = ampseq_object
     
     ampseq_drug@gt = cbind(ampseq_drug@gt,
-                                       ampseq_drug@discarded_loci$gt[rownames(ampseq_drug@discarded_loci$gt) %in%
-                                                                                   rownames(ampseq_drug@gt),
-                                                                                 grepl(paste0(gene_names, collapse = '|'),colnames(ampseq_drug@discarded_loci$gt))]
+                           ampseq_drug@discarded_loci$gt[rownames(ampseq_drug@discarded_loci$gt) %in%
+                                                           rownames(ampseq_drug@gt),
+                                                         grepl(paste0(gene_names, collapse = '|'),colnames(ampseq_drug@discarded_loci$gt))]
     )
     
     ampseq_drug@markers = rbind(ampseq_drug@markers,
@@ -2014,9 +2066,9 @@ if(!is.null(ibd_thres)){
         pairwise_relatedness = pairwise_relatedness,
         metadata = ampseq_object@metadata,
         Population = Variable1,
-        fill_color = rep('gray50', 10),
+        fill_color = rep('gray50', length(unique(ampseq_object@metadata[[Variable1]]))*(length(unique(ampseq_object@metadata[[Variable1]]))-1)/2),
         type_pop_comparison = 'between',
-        ncol = 3,
+        ncol = 4,
         pop_levels = NULL
       )
       
@@ -2025,7 +2077,7 @@ if(!is.null(ibd_thres)){
         pairwise_relatedness = pairwise_relatedness,
         metadata = ampseq_object@metadata,
         Population = Variable1,
-        fill_color = rep('gray50', 10),
+        fill_color = rep('gray50', length(unique(ampseq_object@metadata[[Variable1]]))*(length(unique(ampseq_object@metadata[[Variable1]]))-1)/2),
         threshold = ibd_thres,
         type_pop_comparison = 'between',
         pop_levels = NULL)
@@ -2036,10 +2088,10 @@ if(!is.null(ibd_thres)){
           pairwise_relatedness = pairwise_relatedness,
           metadata = ampseq_object@metadata,
           Population = c(Variable1, Variable2),
-          fill_color = rep('gray50', 10),
+          fill_color = rep('gray50', length(unique(ampseq_object@metadata[[Variable1]]))*(length(unique(ampseq_object@metadata[[Variable1]]))-1)/2),
           threshold = ibd_thres,
           type_pop_comparison = 'between',
-          ncol = 3,
+          ncol = 4,
           pop_levels = NULL)
       }
       
@@ -2053,12 +2105,13 @@ if(!is.null(ibd_thres)){
       
       names(evectors_IBD$eigenvector)[3] = 'Variable1'
       
+      # Define seed for the assignment of colors
+      set.seed(1)
+      
       IBD_PCA = evectors_IBD$eigenvector %>% ggplot(aes(x = PC1, y = PC2, color = Variable1))+
         geom_point(alpha = .7, size = 2) +
         stat_ellipse(level = .6)+
-        scale_color_manual(values = 
-                             brewer.pal(n = nlevels(as.factor(ampseq_object@metadata[[Variable1]])), 
-                                        name = 'Accent'))+
+        scale_color_manual(values = sample(col_vector, nlevels(as.factor(ampseq_object@metadata[[Variable1]]))))+
         theme_bw()+
         labs(x = paste0('1st PC (', round(evectors_IBD$contrib[1],1), '%)'),
              y = paste0('2nd PC (', round(evectors_IBD$contrib[2],1), '%)'),
@@ -2103,9 +2156,9 @@ if(!is.null(ibd_thres)){
         pairwise_relatedness = pairwise_relatedness,
         metadata = ampseq_object@metadata,
         Population = Variable1,
-        fill_color = rep('gray50', 10),
+        fill_color = rep('gray50', length(unique(ampseq_object@metadata[[Variable1]]))),
         type_pop_comparison = 'within',
-        ncol = 3,
+        ncol = 4,
         pop_levels = NULL
       )
       
@@ -2114,7 +2167,7 @@ if(!is.null(ibd_thres)){
         pairwise_relatedness = pairwise_relatedness,
         metadata = ampseq_object@metadata,
         Population = Variable1,
-        fill_color = rep('gray50', 10),
+        fill_color = rep('gray50', length(unique(ampseq_object@metadata[[Variable1]]))),
         threshold = ibd_thres,
         type_pop_comparison = 'within',
         pop_levels = NULL)
@@ -2125,10 +2178,10 @@ if(!is.null(ibd_thres)){
           pairwise_relatedness = pairwise_relatedness,
           metadata = ampseq_object@metadata,
           Population = c(Variable1, Variable2),
-          fill_color = rep('gray50', 10),
+          fill_color = rep('gray50', length(unique(ampseq_object@metadata[[Variable1]]))),
           threshold = ibd_thres,
           type_pop_comparison = 'within',
-          ncol = ibd_ncol,
+          ncol = 4,
           pop_levels = NULL)
       }
       
@@ -2184,9 +2237,9 @@ if(!is.null(ibd_thres)){
       pairwise_relatedness = pairwise_relatedness,
       metadata = ampseq_object@metadata,
       Population = Variable1,
-      fill_color = rep('gray50', 10),
+      fill_color = rep('gray50', length(unique(ampseq_object@metadata[[Variable1]]))*(length(unique(ampseq_object@metadata[[Variable1]]))-1)/2),
       type_pop_comparison = 'between',
-      ncol = 3,
+      ncol = 4,
       pop_levels = NULL
     )
     
@@ -2195,7 +2248,7 @@ if(!is.null(ibd_thres)){
       pairwise_relatedness = pairwise_relatedness,
       metadata = ampseq_object@metadata,
       Population = Variable1,
-      fill_color = rep('gray50', 10),
+      fill_color = rep('gray50', length(unique(ampseq_object@metadata[[Variable1]]))*(length(unique(ampseq_object@metadata[[Variable1]]))-1)/2),
       threshold = ibd_thres,
       type_pop_comparison = 'between',
       pop_levels = NULL)
@@ -2206,10 +2259,10 @@ if(!is.null(ibd_thres)){
         pairwise_relatedness = pairwise_relatedness,
         metadata = ampseq_object@metadata,
         Population = c(Variable1, Variable2),
-        fill_color = rep('gray50', 10),
+        fill_color = rep('gray50', length(unique(ampseq_object@metadata[[Variable1]]))*(length(unique(ampseq_object@metadata[[Variable1]]))-1)/2),
         threshold = ibd_thres,
         type_pop_comparison = 'between',
-        ncol = 3,
+        ncol = 4,
         pop_levels = NULL)
     }
     
@@ -2222,13 +2275,13 @@ if(!is.null(ibd_thres)){
                                 Pop = Variable1, q = 2)
     
     names(evectors_IBD$eigenvector)[3] = 'Variable1'
+    
+    set.seed(1)
 
     IBD_PCA = evectors_IBD$eigenvector %>% ggplot(aes(x = PC1, y = PC2, color = Variable1))+
       geom_point(alpha = .7, size = 2) +
       stat_ellipse(level = .6)+
-      scale_color_manual(values = 
-                           brewer.pal(n = nlevels(as.factor(ampseq_object@metadata[[Variable1]])), 
-                                      name = 'Accent'))+
+      scale_color_manual(values = sample(col_vector, nlevels(as.factor(ampseq_object@metadata[[Variable1]]))))+
       theme_bw()+
       labs(x = paste0('1st PC (', round(evectors_IBD$contrib[1],1), '%)'),
            y = paste0('2nd PC (', round(evectors_IBD$contrib[2],1), '%)'),
@@ -2273,9 +2326,9 @@ if(!is.null(ibd_thres)){
       pairwise_relatedness = pairwise_relatedness,
       metadata = ampseq_object@metadata,
       Population = Variable1,
-      fill_color = rep('gray50', 10),
+      fill_color = rep('gray50', length(unique(ampseq_object@metadata[[Variable1]]))),
       type_pop_comparison = 'within',
-      ncol = 3,
+      ncol = 4,
       pop_levels = NULL
     )
     
@@ -2284,7 +2337,7 @@ if(!is.null(ibd_thres)){
       pairwise_relatedness = pairwise_relatedness,
       metadata = ampseq_object@metadata,
       Population = Variable1,
-      fill_color = rep('gray50', 10),
+      fill_color = rep('gray50', length(unique(ampseq_object@metadata[[Variable1]]))),
       threshold = ibd_thres,
       type_pop_comparison = 'within',
       pop_levels = NULL)
@@ -2295,10 +2348,10 @@ if(!is.null(ibd_thres)){
         pairwise_relatedness = pairwise_relatedness,
         metadata = ampseq_object@metadata,
         Population = c(Variable1, Variable2),
-        fill_color = rep('gray50', 10),
+        fill_color = rep('gray50', length(unique(ampseq_object@metadata[[Variable1]]))),
         threshold = ibd_thres,
         type_pop_comparison = 'within',
-        ncol = ibd_ncol,
+        ncol = 4,
         pop_levels = NULL)
     }
     
@@ -2324,19 +2377,19 @@ if(!is.null(ibd_thres)){
     
     print("Leaving render script")
     
-    
-    
   }
-  
-
 }
 
 
 # COI----
 
-if(!is.null(poly_quantile)){
+if(!is.null(poly_formula)){
   
   print('Starting COI report')
+  
+  if(is.null(poly_quantile)){
+    poly_quantile = 0.75
+  }
   
   if(!is.null(Variable1)){
     
@@ -2347,7 +2400,10 @@ if(!is.null(poly_quantile)){
                                    update_popsummary = FALSE,
                                    na.rm = na_var_rm,
                                    filters = NULL,
-                                   poly_quantile = poly_quantile)
+                                   poly_quantile = poly_quantile,
+                                   poly_formula = poly_formula)
+    
+    set.seed(1)
     
     plot_poly_by_pop = poly_by_Var1$pop_summary %>% 
       ggplot(aes(x = factor(pop, 
@@ -2360,7 +2416,7 @@ if(!is.null(poly_quantile)){
       theme_bw() +
       labs(title = "Frequency of polyclonal infections",
            y = "Frecquency") +
-      scale_fill_manual(values = c(brewer.pal(length(poly_by_Var1$pop_summary$pop) - 1, 'Accent'), "gray30"))+
+      scale_fill_manual(values = c(sample(col_vector, nlevels(as.factor(ampseq_object@metadata[[Variable1]]))), "gray30"))+
       theme(axis.text = element_text(size = 12),
             axis.title = element_blank(),
             legend.position = "none")
@@ -2370,11 +2426,12 @@ if(!is.null(poly_quantile)){
     print('Calculate COI metrics by the overall population')
     
     poly_total = get_polygenomic(ampseq_object = ampseq_object, 
-                                   strata = NULL,
-                                   update_popsummary = FALSE,
-                                   na.rm = na_var_rm,
-                                   filters = NULL,
-                                   poly_quantile = poly_quantile)
+                                 strata = NULL,
+                                 update_popsummary = FALSE,
+                                 na.rm = na_var_rm,
+                                 filters = NULL,
+                                 poly_quantile = poly_quantile,
+                                 poly_formula = poly_formula)
     
   }
   
@@ -2384,20 +2441,24 @@ if(!is.null(poly_quantile)){
     
     print('Calculate COI metrics by Variable1 and Varibale2')
     
-    ampseq_object@metadata[['Var1_Var2']] = paste(ampseq_object@metadata[[Variable1]], ampseq_object@metadata[[Variable2]], sep = '_')
+    ampseq_object@metadata[['Var1_Var2']] = paste(ampseq_object@metadata[[Variable1]], ampseq_object@metadata[[Variable2]], sep = '::')
     
     poly_by_Var1_Var2 = get_polygenomic(ampseq_object = ampseq_object,
                                         strata = "Var1_Var2",
                                         update_popsummary = F,
                                         na.rm = TRUE,
-                                        filters = NULL)
+                                        filters = NULL,
+                                        poly_quantile = poly_quantile, 
+                                        poly_formula = poly_formula
+                                        )
     
+    set.seed(1)
     
     plot_poly_by_Var1_Var2 = poly_by_Var1_Var2$pop_summary %>%
       filter(pop != 'Total')%>%
       mutate(
-        Variable1 = stringr::str_split(pop, '_', simplify = TRUE)[,1],
-        Variable2 = stringr::str_split(pop, '_', simplify = TRUE)[,2],
+        Variable1 = stringr::str_split(pop, '::', simplify = TRUE)[,1],
+        Variable2 = stringr::str_split(pop, '::', simplify = TRUE)[,2],
         prop_poly_lower = case_when(
           prop_poly == 0 ~ 0,
           prop_poly != 0 ~ prop_poly_lower),
@@ -2414,7 +2475,7 @@ if(!is.null(poly_quantile)){
       geom_errorbar(width = .2)+
       facet_wrap(~Variable1, ncol = 5)+
       theme_bw()+
-      scale_fill_brewer(palette = 'Accent')+
+      scale_fill_manual(values = sample(col_vector, nlevels(as.factor(ampseq_object@metadata[[Variable1]]))))+
       labs(title = 'Temporal change of the proportion of polyclonal infections',
            y = "Polyclonal infections",
            x = Variable2)+

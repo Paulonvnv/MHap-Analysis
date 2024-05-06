@@ -71,13 +71,19 @@ IBD_PCA
 ```
 
 ```{r, fig.width=10, fig.height=12, fig.cap="**Figure 4:** IBD network"}
+
+qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
+
+set.seed(1)
+
 plot_network(pairwise_relatedness,
                                threshold = ibd_thres,
                                metadata = ampseq_object@metadata, 
                                sample_id = 'Sample_id', 
                                group_by = Variable1, 
                                levels = levels(as.factor(ampseq_object@metadata[[Variable1]])),
-                               colors = brewer.pal(n = nlevels(as.factor(ampseq_object@metadata[[Variable1]])), name = 'Accent')
+                               colors = sample(col_vector, nlevels(as.factor(ampseq_object@metadata[[Variable1]])))
                               )
 ```
 

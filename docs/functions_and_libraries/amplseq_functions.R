@@ -1149,12 +1149,13 @@ haplotypes_respect_to_reference = function(ampseq_object,
     for(gene in 1:length(gene_names)){
       
       if(length(gene_names) > 1){
-        gene_aa = moi_loci_aa_table[,grepl(gene_names[gene], colnames(moi_loci_aa_table))]
         
-        # gene_aa = matrix(moi_loci_aa_table[,grepl(gene_names[gene], colnames(moi_loci_aa_table))], 
-        #                  ncol = sum(grepl(gene_names[gene], colnames(moi_loci_aa_table))),
-        #                  dimnames = list(rownames(moi_loci_aa_table),
-        #                                  colnames(moi_loci_aa_table)[grepl(gene_names[gene], colnames(moi_loci_aa_table))]))
+        #gene_aa = moi_loci_aa_table[,grepl(gene_names[gene], colnames(moi_loci_aa_table))]
+        
+        gene_aa = matrix(moi_loci_aa_table[,grepl(gene_names[gene], colnames(moi_loci_aa_table))],
+                         ncol = sum(grepl(gene_names[gene], colnames(moi_loci_aa_table))),
+                         dimnames = list(rownames(moi_loci_aa_table),
+                                         colnames(moi_loci_aa_table)[grepl(gene_names[gene], colnames(moi_loci_aa_table))]))
         
       }else{
         gene_aa = matrix(moi_loci_aa_table[,grepl(gene_names[gene], colnames(moi_loci_aa_table))],
@@ -3841,10 +3842,10 @@ plot_frac_highly_related_over_time = function(pairwise_relatedness = pairwise_re
   
   # Giving wraning message, otherwise it is faster
   # pairwise_relatedness_l %<>% mutate(
-  #   Population_Yi = metadata[grep(Yi, metadata[['samples']]),][[Population[1]]],
-  #   Population_Yj = metadata[grep(Yj, metadata[['samples']]),][[Population[1]]],
-  #   Date_Yi = metadata[grep(Yi, metadata[['samples']]),][[Population[2]]],
-  #   Date_Yj = metadata[grep(Yj, metadata[['samples']]),][[Population[2]]])
+  #   Population_Yi = metadata[grepl(Yi, metadata[['samples']]),][[Population[1]]],
+  #   Population_Yj = metadata[grepl(Yj, metadata[['samples']]),][[Population[1]]],
+  #   Date_Yi = metadata[grepl(Yi, metadata[['samples']]),][[Population[2]]],
+  #   Date_Yj = metadata[grepl(Yj, metadata[['samples']]),][[Population[2]]])
   
   pairwise_relatedness_l = merge(pairwise_relatedness_l, metadata[,c('Sample_id', Population[1])], by.x = 'Yi', by.y = 'Sample_id', all.x = TRUE)
   
@@ -3873,7 +3874,62 @@ plot_frac_highly_related_over_time = function(pairwise_relatedness = pairwise_re
                                      Pop_Date_Yj = paste(Population_Yj, Date_Yj, sep = "_"))
   
   
-  plot_IBD_correlation_matrix = pairwise_relatedness_l %>%
+  pairwise_relatedness_l_sorted = NULL
+  
+  comparisons = cbind(rbind(
+    sort(unique(c(unique(pairwise_relatedness_l$Pop_Date_Yi), unique(pairwise_relatedness_l$Pop_Date_Yj)))),
+    sort(unique(c(unique(pairwise_relatedness_l$Pop_Date_Yi), unique(pairwise_relatedness_l$Pop_Date_Yj))))),
+    combn(sort(unique(c(unique(pairwise_relatedness_l$Pop_Date_Yi), unique(pairwise_relatedness_l$Pop_Date_Yj)))), 2))
+
+  
+  
+  for(comparison in 1:ncol(comparisons)){
+    Pop_Date_Yi = comparisons[,comparison][1]
+    Pop_Date_Yj = comparisons[,comparison][2]
+    if(Pop_Date_Yi == Pop_Date_Yj){
+      
+      pairwise_relatedness_l_sorted = rbind(
+        pairwise_relatedness_l_sorted,
+        pairwise_relatedness_l[pairwise_relatedness_l[['Pop_Date_Yi']] == Pop_Date_Yi &
+                               pairwise_relatedness_l[['Pop_Date_Yj']] == Pop_Date_Yj, ])
+      
+    }else{
+      
+      temp1 = pairwise_relatedness_l[pairwise_relatedness_l[['Pop_Date_Yi']] == Pop_Date_Yi &
+                                       pairwise_relatedness_l[['Pop_Date_Yj']] == Pop_Date_Yj, ]
+      
+      temp2 = pairwise_relatedness_l[pairwise_relatedness_l[['Pop_Date_Yi']] == Pop_Date_Yj &
+                                       pairwise_relatedness_l[['Pop_Date_Yj']] == Pop_Date_Yi, ]
+      
+      Yi = temp2[['Yj']]
+      Population_Yi = temp2[['Population_Yj']]
+      Date_Yi = temp2[['Date_Yj']]
+      Pop_Date_Yi = temp2[['Pop_Date_Yj']]
+      
+      Yj = temp2[['Yi']]
+      Population_Yj = temp2[['Population_Yi']]
+      Date_Yj = temp2[['Date_Yi']]
+      Pop_Date_Yj = temp2[['Pop_Date_Yi']]
+      
+      temp2[['Yi']] = Yi
+      temp2[['Population_Yi']] = Population_Yi
+      temp2[['Date_Yi']] = Date_Yi
+      temp2[['Pop_Date_Yi']] = Pop_Date_Yi
+      
+      temp2[['Yj']] = Yj
+      temp2[['Population_Yj']] = Population_Yj
+      temp2[['Date_Yj']] = Date_Yj
+      temp2[['Pop_Date_Yj']] = Pop_Date_Yj
+      
+      pairwise_relatedness_l_sorted = rbind(pairwise_relatedness_l_sorted,
+                                            temp1,
+                                            temp2)
+      
+    }
+    
+  }
+    
+  plot_IBD_correlation_matrix = pairwise_relatedness_l_sorted %>%
     group_by(Pop_Date_Yi, Pop_Date_Yj) %>% 
     dplyr::summarise(freq = sum(rhat >= threshold),
                      n = n()) %>%
@@ -3901,7 +3957,7 @@ plot_frac_highly_related_over_time = function(pairwise_relatedness = pairwise_re
           strip.text = element_text(size = 12))
   
   
-  pairwise_relatedness_l %<>% mutate(Pop_comparison = case_when(
+  pairwise_relatedness_l_sorted %<>% mutate(Pop_comparison = case_when(
     Population_Yi < Population_Yj ~ paste(Population_Yi, Population_Yj, sep = '_vs_'),
     Population_Yi > Population_Yj ~ paste(Population_Yj, Population_Yi, sep = '_vs_'),
     Population_Yi == Population_Yj ~ Population_Yi),
@@ -3914,22 +3970,22 @@ plot_frac_highly_related_over_time = function(pairwise_relatedness = pairwise_re
   )
   
   if(!is.null(pop_levels)){
-    pairwise_relatedness_l$Pop_comparison = factor(pairwise_relatedness_l$Pop_comparison,
+    pairwise_relatedness_l_sorted$Pop_comparison = factor(pairwise_relatedness_l_sorted$Pop_comparison,
                                                    levels = pop_levels)
     
   }else{
-    pairwise_relatedness_l$Pop_comparison = factor(pairwise_relatedness_l$Pop_comparison,
-                                                   levels = c(sort(unique(pairwise_relatedness_l$Pop_comparison)[!grepl("_vs_", unique(pairwise_relatedness_l$Pop_comparison))]),
-                                                              sort(unique(pairwise_relatedness_l$Pop_comparison)[grepl("_vs_", unique(pairwise_relatedness_l$Pop_comparison))])))
+    pairwise_relatedness_l_sorted$Pop_comparison = factor(pairwise_relatedness_l_sorted$Pop_comparison,
+                                                   levels = c(sort(unique(pairwise_relatedness_l_sorted$Pop_comparison)[!grepl("_vs_", unique(pairwise_relatedness_l_sorted$Pop_comparison))]),
+                                                              sort(unique(pairwise_relatedness_l_sorted$Pop_comparison)[grepl("_vs_", unique(pairwise_relatedness_l_sorted$Pop_comparison))])))
   }
   
     
-  pairwise_relatedness_l$Type_Pop_comparison = factor(pairwise_relatedness_l$Type_Pop_comparison, levels =
+  pairwise_relatedness_l_sorted$Type_Pop_comparison = factor(pairwise_relatedness_l_sorted$Type_Pop_comparison, levels =
                                                         c('Within', 'Between'))
   
-  pairwise_relatedness_l %<>% filter(Date_comparison == 'Within')
+  pairwise_relatedness_l_sorted %<>% filter(Date_comparison == 'Within')
   
-  frac_highly_related = pairwise_relatedness_l %>%
+  frac_highly_related = pairwise_relatedness_l_sorted %>%
     group_by(Pop_comparison, Date_Yi, Type_Pop_comparison) %>% 
     dplyr::summarise(freq = sum(rhat >= threshold),
                      n = n()) %>% group_by(Pop_comparison, Date_Yi, Type_Pop_comparison)%>%
