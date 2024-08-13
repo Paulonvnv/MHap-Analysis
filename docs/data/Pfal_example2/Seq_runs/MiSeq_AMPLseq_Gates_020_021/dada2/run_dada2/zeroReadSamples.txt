@@ -1,0 +1,5 @@
+x
+1	SP0126288263_S126_prim_1.fq.gz
+2	sWGA-neg2_S32_prim_1.fq.gz
+3	SP0126288224_S71_prim_1.fq.gz
+4	SP0112286077_S44_prim_1.fq.gz

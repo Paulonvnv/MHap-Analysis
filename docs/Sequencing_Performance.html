@@ -1,0 +1,1495 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Neafsey Lab" />
+
+
+<title>Performance of amplicon sequencing data</title>
+
+<script src="site_libs/header-attrs-2.26/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.13.2/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<script src="site_libs/navigation-1.1/codefolding.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+<style type="text/css">
+.code-folding-btn { margin-bottom: 4px; }
+</style>
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">MHap-Analysis</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li>
+  <a href="MHap_Analysis_pipeline.html">MHap-Analysis pipeline</a>
+</li>
+<li>
+  <a href="Sequencing_Performance.html">Performance of amplicon sequencing data</a>
+</li>
+<li>
+  <a href="Drug_resistance_surveillance.html">Drug Resistance Surveillance</a>
+</li>
+<li>
+  <a href="Complexity_of_infection.html">Complexity of infection (COI)</a>
+</li>
+<li>
+  <a href="PopStructure_and_Connectivity.html">PopStructure and Connectivity</a>
+</li>
+<li>
+  <a href="IBD_and_Tranmission.html">Genetic Relatedness (IBD) and Tranmission</a>
+</li>
+<li>
+  <a href="MHapPfalciparum.html">MHap-Pfalciparum example</a>
+</li>
+<li>
+  <a href="MHapPvivax.html">MHap-Pvivax example</a>
+</li>
+<li>
+  <a href="Intro_to_R.html">Intro to R</a>
+</li>
+<li>
+  <a href="basic_bash.html">Basic bash</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+<div class="btn-group pull-right float-right">
+<button type="button" class="btn btn-default btn-xs btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+<ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
+<li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
+<li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+</ul>
+</div>
+
+
+
+<h1 class="title toc-ignore">Performance of amplicon sequencing
+data</h1>
+<h4 class="author">Neafsey Lab</h4>
+
+</div>
+
+
+<div id="content" class="section level1">
+<h1>Content</h1>
+<ol style="list-style-type: decimal">
+<li>Importing and handling tables in CIGAR format in R environment.</li>
+<li>Preliminary sequencing yield by Run and Variable1.</li>
+<li>Identification of potential genotyping errors.</li>
+<li>Read depth yield per sample and locus.</li>
+<li>Retention of loci and samples for subsequent analysis.</li>
+</ol>
+<p>This tutorial is based on the output of the Dada2-based denoising
+pipeline. The main output (the cigar table) of the denoising pipeline
+has the following structure:</p>
+<p><span class="math inline">\(\begin{array}{c|c:c:c:c:c:c}
+\text{sampleID}&amp;Gene_1,Allele_1&amp;Gene_1,Allele_2&amp;...&amp;Gene_1,Allele_k&amp;...
+&amp; Gene_m, Allele_{k_m}\\ \hline ID_1 &amp; \text{Read counts}
+&amp;&amp;&amp; \\ \hdashline ... &amp;&amp;&amp;&amp;\\ \hdashline ID_n
+&amp;&amp;&amp;&amp; \end{array}\)</span></p>
+<p>Where the <span class="math inline">\(Allele\)</span> is coded in
+Pseudo-CIGAR format, typing “.” for the reference allele, <span
+class="math inline">\([0-9]*[A,T,C,G]\)</span> for each point mutation
+observed, and <span
+class="math inline">\([0-9]*[D,I]=[A,T,C,G]*\)</span> for indels
+(Insertions and Deletions). The numbers before the letters denotes the
+position in the amplicon where the polymorphism is located.</p>
+<p>Documentation of the denoising pipeline can be found in the
+repository <a
+href="https://github.com/broadinstitute/malaria-amplicon-pipeline">malaria-amplicon-pipeline</a>,
+and the steps used to generate the inputs files for the current tutorial
+are in <a
+href="https://paulonvnv.github.io/MHap-Analysis/MHap_Analysis_pipeline.html">Intro
+to MHap-Analysis pipeline</a></p>
+<div id="importing-and-handling-tables-in-cigar-format-in-r-environment"
+class="section level2">
+<h2>Importing and handling tables in CIGAR format in R environment</h2>
+<p>Our first step will be to call all required packages and functions in
+the R environment:</p>
+<pre class="r"><code>source(&#39;/Users/pam3650/Documents/Github/MHap-Analysis/docs/functions_and_libraries/amplseq_required_libraries.R&#39;)
+source(&#39;~/Documents/Github/MHap-Analysis/docs/functions_and_libraries/amplseq_functions.R&#39;)</code></pre>
+<p>In the previous section the Pseudo-CIGAR tables were stored in the
+computer using the following path structure:</p>
+<p><code>"STUDYNAME/RUNNAME/dada2/run_dada2/CIGARVariants.out.tsv"</code></p>
+<p>As this structure is maintained across different sequencing runs, we
+have created a function called <code>read_cigar_tables</code> that at
+least only requires two arguments: <code>paths</code> (name of the
+folder of the study or the <code>STUDYNAME</code>), and
+<code>sample_id_pattern</code> (a pattern string in the IDs of the
+samples that differentiate them from controls). In case you don’t want
+to differentiate samples from controls, set this argument equals to
+<code>"."</code>. For this particular example, the path will be
+<code>"data/sequencing_data/"</code> , while the pattern will be
+<code>"."</code>. In case all <code>".tvs"</code> files are stored in
+one folder, you can use the argument
+<code>cigar_files = list_of_files</code> instead of the argument
+<code>paths</code>, where <code>list_of_files</code> is a vector with
+the names of all files we want to read.</p>
+<pre class="r"><code>cigar_object = read_cigar_tables(paths = &quot;~/Documents/Github/MHap-Analysis/docs/data/Pviv_example&quot;, sample_id_pattern = &quot;.&quot;)</code></pre>
+<pre><code>## [1] &quot;Cigar file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/potential_markers.csv/dada2/run_dada2/CIGARVariants_Bfilter.out.tsv not found&quot;
+## [1] &quot;asv2cigar file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/potential_markers.csv/dada2/run_dada2/ASVTable.txt not found&quot;
+## [1] &quot;asv_table file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/potential_markers.csv/dada2/run_dada2/ASVTable.txt not found&quot;
+## [1] &quot;asv_seqs file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/potential_markers.csv/dada2/run_dada2/ASVSeqs.fasta not found&quot;
+## [1] &quot;asv_seqs file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/potential_markers.csv/dada2/run_dada2/zeroReadSamples.txt not found&quot;
+## [1] &quot;Cigar file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered/dada2/run_dada2/CIGARVariants_Bfilter.out.tsv not found&quot;
+## [1] &quot;asv2cigar file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered/dada2/run_dada2/ASVTable.txt not found&quot;
+## [1] &quot;asv_table file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered/dada2/run_dada2/ASVTable.txt not found&quot;
+## [1] &quot;asv_seqs file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered/dada2/run_dada2/ASVSeqs.fasta not found&quot;
+## [1] &quot;asv_seqs file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered/dada2/run_dada2/zeroReadSamples.txt not found&quot;
+## [1] &quot;Cigar file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered.xlsx/dada2/run_dada2/CIGARVariants_Bfilter.out.tsv not found&quot;
+## [1] &quot;asv2cigar file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered.xlsx/dada2/run_dada2/ASVTable.txt not found&quot;
+## [1] &quot;asv_table file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered.xlsx/dada2/run_dada2/ASVTable.txt not found&quot;
+## [1] &quot;asv_seqs file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered.xlsx/dada2/run_dada2/ASVSeqs.fasta not found&quot;
+## [1] &quot;asv_seqs file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered.xlsx/dada2/run_dada2/zeroReadSamples.txt not found&quot;
+## [1] &quot;Cigar file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered2/dada2/run_dada2/CIGARVariants_Bfilter.out.tsv not found&quot;
+## [1] &quot;asv2cigar file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered2/dada2/run_dada2/ASVTable.txt not found&quot;
+## [1] &quot;asv_table file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered2/dada2/run_dada2/ASVTable.txt not found&quot;
+## [1] &quot;asv_seqs file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered2/dada2/run_dada2/ASVSeqs.fasta not found&quot;
+## [1] &quot;asv_seqs file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered2/dada2/run_dada2/zeroReadSamples.txt not found&quot;
+## [1] &quot;Cigar file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered2.xlsx/dada2/run_dada2/CIGARVariants_Bfilter.out.tsv not found&quot;
+## [1] &quot;asv2cigar file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered2.xlsx/dada2/run_dada2/ASVTable.txt not found&quot;
+## [1] &quot;asv_table file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered2.xlsx/dada2/run_dada2/ASVTable.txt not found&quot;
+## [1] &quot;asv_seqs file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered2.xlsx/dada2/run_dada2/ASVSeqs.fasta not found&quot;
+## [1] &quot;asv_seqs file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered2.xlsx/dada2/run_dada2/zeroReadSamples.txt not found&quot;
+## [1] &quot;Cigar file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3/dada2/run_dada2/CIGARVariants_Bfilter.out.tsv not found&quot;
+## [1] &quot;asv2cigar file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3/dada2/run_dada2/ASVTable.txt not found&quot;
+## [1] &quot;asv_table file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3/dada2/run_dada2/ASVTable.txt not found&quot;
+## [1] &quot;asv_seqs file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3/dada2/run_dada2/ASVSeqs.fasta not found&quot;
+## [1] &quot;asv_seqs file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3/dada2/run_dada2/zeroReadSamples.txt not found&quot;
+## [1] &quot;Cigar file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3 (1).xlsx/dada2/run_dada2/CIGARVariants_Bfilter.out.tsv not found&quot;
+## [1] &quot;asv2cigar file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3 (1).xlsx/dada2/run_dada2/ASVTable.txt not found&quot;
+## [1] &quot;asv_table file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3 (1).xlsx/dada2/run_dada2/ASVTable.txt not found&quot;
+## [1] &quot;asv_seqs file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3 (1).xlsx/dada2/run_dada2/ASVSeqs.fasta not found&quot;
+## [1] &quot;asv_seqs file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3 (1).xlsx/dada2/run_dada2/zeroReadSamples.txt not found&quot;
+## [1] &quot;Cigar file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3.xlsx/dada2/run_dada2/CIGARVariants_Bfilter.out.tsv not found&quot;
+## [1] &quot;asv2cigar file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3.xlsx/dada2/run_dada2/ASVTable.txt not found&quot;
+## [1] &quot;asv_table file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3.xlsx/dada2/run_dada2/ASVTable.txt not found&quot;
+## [1] &quot;asv_seqs file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3.xlsx/dada2/run_dada2/ASVSeqs.fasta not found&quot;
+## [1] &quot;asv_seqs file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3.xlsx/dada2/run_dada2/zeroReadSamples.txt not found&quot;</code></pre>
+<p>Use the function <code>slotNames</code> to visualize the slots that
+the <code>cigar_object</code> has:</p>
+<pre class="r"><code>slotNames(cigar_object)</code></pre>
+<pre><code>## [1] &quot;cigar_table&quot; &quot;metadata&quot;    &quot;asv_table&quot;   &quot;asv_seqs&quot;</code></pre>
+<p>This function generates a S4 cigar object containing three
+data.frames and one list:</p>
+<ol style="list-style-type: decimal">
+<li><p><code>cigar_table</code>, where genotyping information is stored
+in cigar format;</p></li>
+<li><p><code>metadata</code> table with 4 variables (columns),
+<strong>a)</strong> <code>Sample_id</code> which contains samples Id’s;
+<strong>b)</strong> <code>run</code> which contains the run number (or
+the name of the folter where the fastq’s for that run wehere stored),
+information that is useful for comparing performance across batches of
+samples; <strong>c)</strong> <code>order_in_plate</code>, useful to
+identify rare amplifications patterns in the plate; and
+<strong>d)</strong> <code>typeofSamp</code> which differentiates between
+controls and samples of interest.</p></li>
+<li><p><code>asv_table</code> that contains summary metrics of each
+<code>asv</code> and the corresponding
+<code>cigar string</code>.</p></li>
+<li><p><code>asv_seqs</code> which is the nucleotide sequence of each
+<code>asv</code>.</p></li>
+</ol>
+<p>To view these slots use <code>View(cigar_table@cigar_table)</code> in
+the console.</p>
+<p><strong>NOTE:</strong> If there are duplicated samples, only the
+replicated with the highest read depth across all loci will be kept.</p>
+</div>
+<div id="adding-metadata" class="section level2">
+<h2>Adding Metadata</h2>
+<p>Metadata would come from different sources, sometimes the sample ID
+incorporates metadata in their coding system, other times metadata can
+be stored in a different table, having one column specifying the sample
+ID.</p>
+<p>Inspect the metadata slot and check if the IDs tell you something
+about the procidence of the samples</p>
+<pre class="r"><code>View(cigar_object@metadata)</code></pre>
+<p>Samples that starts with SP comes from Colombia, samples that starts
+with G are fom Guyana, samples that starts with PF or contains GZ are
+from Honduras, and samples that starts with HRP are from Venezuela.</p>
+<p>We can use the function <code>mutate</code> and a regular expression
+pattern in <code>grepl</code> to adding the country from where the
+sample was collected to the metadata. Also update the column typeofSamp,
+to be able to distinguish between samples of interest and controls</p>
+<pre class="r"><code>cigar_object@metadata %&lt;&gt;% mutate(
+  typeofSamp = case_when(
+    grepl(&#39;(^SP|^G|^PF|-GZ|^HRP)&#39;, Sample_id) ~ typeofSamp,
+    !grepl(&#39;(^SP|^G|^PF|-GZ|^HRP)&#39;, Sample_id) ~ &#39;Controls&#39;
+  ),
+  Country = case_when(
+    grepl(&#39;^SP&#39;, Sample_id) ~ &#39;Colombia&#39;,
+    grepl(&#39;^G&#39;, Sample_id) ~ &#39;Guyana&#39;,
+    grepl(&#39;(^PF|-GZ)&#39;, Sample_id) ~ &#39;Honduras&#39;,
+    grepl(&#39;^HRP&#39;, Sample_id) ~ &#39;Venezuela&#39;,
+    .default = &#39;Controls&#39;
+  )
+)</code></pre>
+<p>Use View again to visualize those changes.</p>
+<p>The cigar_table is in wide format, and the alleles corresponding to
+the sample target are not in consecutive order. Because of that e are
+going to convert our cigar_table to a more manageable (easy to read for
+the user) format called ampseq format, where amplicons or genes are
+going to be in columns, samples in rows, and the allele in cigar format
+is going to be in each cell of the matrix together with the read count
+of that allele in the sample.</p>
+<p><span class="math inline">\(\begin{array}{c|c:c:c:c}
+\text{sampleID}&amp;Gene_1&amp;Gene_2&amp;...&amp; Gene_m\\ \hline ID_1
+&amp; Allele_{i_{i \in Alleles_{Gene_1}}}\text{:Read count}
+&amp;&amp;&amp; \\ \hdashline ... &amp;&amp;&amp;&amp;\\ \hdashline ID_n
+&amp;&amp;&amp;&amp; \end{array}\)</span></p>
+<p>For that purpose we are going to use the function
+<code>cigar2ampseq</code>. This function requires 4 arguments. First a
+<code>cigar_object</code> (containing the cigar_table and the metadata).
+Then <code>markers</code>, which is a table with the set of markers and
+their names (in a column named <code>amplicon</code>). This argument is
+optional, and in case is <code>NULL</code>, the name of the amplicons
+will be extracted from the columns in the <code>cigar_object</code>, but
+information regarding chormosome location (information required to
+estimate relatedness under the hmmIBD algorithm) and length of the
+amplicon will be missing. The next arguments are <code>min_abd</code>
+and <code>min_ratio</code>, which are the minimum abundance (minimum
+read count) required to call an allele and the minimum ratio between the
+minor and major alleles in a polyclonal sample. By default these two
+arguments are 10 and 0.1 respectively. The last argument is
+<code>remove_controls</code>, by default is <code>FALSE</code>, but if
+change to <code>TRUE</code> the information of the controls will be
+stored in a separated slot. Thus, this function automatically
+differentiate between controls and samples of interest, and its output
+is a <code>ampseq_object</code> S4 list with 11 slots: <code>gt</code>
+where the genotypic information of the samples of interest is stored in
+a <code>ampseq</code> format; the <code>asv_table</code> with summary
+metrics and the cigar strings for each asv (allele); the
+<code>asv_seqs</code> list that store the nucleotide sequence of each
+asv, the <code>metadata</code> of the samples of interest;
+<code>controls</code> with all the information of the controls;
+<code>markers</code> containing the information of the markers such as
+the chromosome location; and other empty slots required for the next
+steps such as <code>loci_performance</code> and
+<code>pop_summary</code>.</p>
+<p>For the next steps we are going to convert the cigar_object into an
+ampseq_object in two different ways:</p>
+<ol style="list-style-type: decimal">
+<li>Keeping controls and all asvs observed in the data set.</li>
+<li>Removing controls and asvs with less than 5 reads of support.</li>
+</ol>
+<p>But first lest upload the information of the markers into the R
+environment:</p>
+<pre class="r"><code>markers = read.csv(&#39;~/Documents/Github/MHap-Analysis/docs/reference/Pviv_P01/PvGTSeq271_markersTable.csv&#39;)</code></pre>
+<p>Inspect the table using View() in the console.</p>
+<pre class="r"><code>ampseq_object_abd1 = cigar2ampseq(cigar_object, markers = markers, min_abd = 1, min_ratio = 0.001, remove_controls = F)
+ampseq_object = cigar2ampseq(cigar_object, markers = markers, min_abd = 5, min_ratio = 0.1, remove_controls = T)</code></pre>
+<p>The table of the markers contains a list of 271 amplicons, however
+the samples were sequenced using only 249. Filter the ampseq objects
+using the function filter_loci</p>
+<pre class="r"><code>ampseq_object_abd1 = filter_loci(ampseq_object_abd1,
+                                 v = grepl(&#39;249&#39;, ampseq_object_abd1@markers$Set))
+
+ampseq_object = filter_loci(ampseq_object,
+                                 v = grepl(&#39;249&#39;, ampseq_object_abd1@markers$Set))</code></pre>
+</div>
+<div id="preliminary-sequencing-yield-by-run-and-country"
+class="section level2">
+<h2>Preliminary sequencing yield by Run and Country</h2>
+<p>Sample success is defined as the percentage of samples which amplify
+a specific percentage of loci given the allele detection coverage
+threshold or number of paired reads that support the allele or ASV in a
+sample. Here we are going to show 6 different coverage thresholds: 1, 5,
+10, 20, 50, and 100 paired reads.</p>
+<div id="overall-sequencing-yield" class="section level3">
+<h3>Overall sequencing yield</h3>
+<p>Measure the read coverage by using the function
+get_ReadDepth_coverage:</p>
+<pre class="r"><code>ReadDepth_coverage = get_ReadDepth_coverage(ampseq_object_abd1, variable = NULL)</code></pre>
+<p>For each sample, calculates how many loci has a read depth equals or
+greater than 1, 5, 10, 20, 50, or 100:</p>
+<pre class="r"><code>sample_performance = ReadDepth_coverage$plot_read_depth_heatmap$data %&gt;%
+    mutate(Read_depth = case_when(
+      is.na(Read_depth) ~ 0,
+      !is.na(Read_depth) ~ Read_depth
+    )) %&gt;%
+    summarise(amplified_amplicons1 = sum(Read_depth &gt;= 1)/nrow(ampseq_object_abd1@markers),
+              amplified_amplicons5 = sum(Read_depth &gt;= 5)/nrow(ampseq_object_abd1@markers),
+              amplified_amplicons10 = sum(Read_depth &gt;= 10)/nrow(ampseq_object_abd1@markers),
+              amplified_amplicons20 = sum(Read_depth &gt;= 20)/nrow(ampseq_object_abd1@markers),
+              amplified_amplicons50 = sum(Read_depth &gt;= 50)/nrow(ampseq_object_abd1@markers),
+              amplified_amplicons100 = sum(Read_depth &gt;= 100)/nrow(ampseq_object_abd1@markers),
+              .by = Sample_id) %&gt;%
+    pivot_longer(cols = starts_with(&#39;amplified_amplicons&#39;), values_to = &#39;AmpRate&#39;, names_to = &#39;Threshold&#39;) %&gt;%
+    mutate(Threshold = as.integer(gsub(&#39;amplified_amplicons&#39;, &#39;&#39;, Threshold)))</code></pre>
+<p>Generate a plot showing the percentage of loci (amplicon or marker)
+which contains alleles that pass the thresholds in the x-axis, and the
+percentage of samples which amplify a specific percentage of loci given
+the allele detection thresholds in the y-axis. Include a vertical line
+that indicates samples that has amplify at least 50% of the loci with
+the especific read depth coverage.</p>
+<pre class="r"><code>plot_precentage_of_samples_over_min_abd = sample_performance %&gt;%
+    summarise(AmpRate5 = round(100*sum(AmpRate &gt;= .05)/n(), 1),
+              AmpRate10 = round(100*sum(AmpRate &gt;= .10)/n(), 1),
+              AmpRate15 = round(100*sum(AmpRate &gt;= .15)/n(), 1),
+              AmpRate20 = round(100*sum(AmpRate &gt;= .20)/n(), 1),
+              AmpRate25 = round(100*sum(AmpRate &gt;= .25)/n(), 1),
+              AmpRate30 = round(100*sum(AmpRate &gt;= .30)/n(), 1),
+              AmpRate35 = round(100*sum(AmpRate &gt;= .35)/n(), 1),
+              AmpRate40 = round(100*sum(AmpRate &gt;= .40)/n(), 1),
+              AmpRate45 = round(100*sum(AmpRate &gt;= .45)/n(), 1),
+              AmpRate50 = round(100*sum(AmpRate &gt;= .50)/n(), 1),
+              AmpRate55 = round(100*sum(AmpRate &gt;= .55)/n(), 1),
+              AmpRate60 = round(100*sum(AmpRate &gt;= .60)/n(), 1),
+              AmpRate65 = round(100*sum(AmpRate &gt;= .65)/n(), 1),
+              AmpRate70 = round(100*sum(AmpRate &gt;= .70)/n(), 1),
+              AmpRate75 = round(100*sum(AmpRate &gt;= .75)/n(), 1),
+              AmpRate80 = round(100*sum(AmpRate &gt;= .80)/n(), 1),
+              AmpRate85 = round(100*sum(AmpRate &gt;= .85)/n(), 1),
+              AmpRate90 = round(100*sum(AmpRate &gt;= .90)/n(), 1),
+              AmpRate95 = round(100*sum(AmpRate &gt;= .95)/n(), 1),
+              AmpRate100 = round(100*sum(AmpRate &gt;= 1)/n(), 1),
+              .by = c(Threshold)
+    ) %&gt;%
+    pivot_longer(cols = paste0(&#39;AmpRate&#39;, seq(5, 100, 5)),
+                 values_to = &#39;Percentage&#39;,
+                 names_to = &#39;AmpRate&#39;) %&gt;%
+    mutate(AmpRate = as.numeric(gsub(&#39;AmpRate&#39;,&#39;&#39;, AmpRate)))%&gt;%
+    ggplot(aes(x = AmpRate, y = Percentage, color = as.factor(Threshold), group = as.factor(Threshold))) +
+    geom_line() +
+    geom_vline(xintercept = 50, linetype = 2) +
+    theme_bw() +
+    labs(x = &#39;% of amplified loci (amplification rate)&#39;, y = &#39;% of Samples&#39;, color = &#39;Min Coverage&#39;)</code></pre>
+<pre class="r"><code>plot_precentage_of_samples_over_min_abd</code></pre>
+<div class="figure">
+<img src="Sequencing_Performance_files/figure-html/unnamed-chunk-9-1.png" alt="**Figure 1:** Sample success rate based on different thresholds of minimum read depth coverage per allele (ASV or amplicon sequence variant observed in the sample). x-axis represents the percentage of loci (amplicon or marker) which contains alleles that pass the threshold. y-axis represents the percentage of samples which amplify a specific percentage of loci given the allele detection threshold mentioned above. The plot represents all analyzed samples (no subsetting based on run and additional variables)." width="672" />
+<p class="caption">
+<strong>Figure 1:</strong> Sample success rate based on different
+thresholds of minimum read depth coverage per allele (ASV or amplicon
+sequence variant observed in the sample). x-axis represents the
+percentage of loci (amplicon or marker) which contains alleles that pass
+the threshold. y-axis represents the percentage of samples which amplify
+a specific percentage of loci given the allele detection threshold
+mentioned above. The plot represents all analyzed samples (no subsetting
+based on run and additional variables).
+</p>
+</div>
+<p>Let’s check the performance by sequencing run</p>
+<pre class="r"><code>ReadDepth_coverage = get_ReadDepth_coverage(ampseq_object_abd1, variable = &#39;Run&#39;)
+  
+sample_performance = ReadDepth_coverage$plot_read_depth_heatmap$data %&gt;%
+    mutate(Read_depth = case_when(
+      is.na(Read_depth) ~ 0,
+      !is.na(Read_depth) ~ Read_depth
+    )) %&gt;%
+    summarise(amplified_amplicons1 = sum(Read_depth &gt;= 1)/nrow(ampseq_object_abd1@markers),
+              amplified_amplicons5 = sum(Read_depth &gt;= 5)/nrow(ampseq_object_abd1@markers),
+              amplified_amplicons10 = sum(Read_depth &gt;= 10)/nrow(ampseq_object_abd1@markers),
+              amplified_amplicons20 = sum(Read_depth &gt;= 20)/nrow(ampseq_object_abd1@markers),
+              amplified_amplicons50 = sum(Read_depth &gt;= 50)/nrow(ampseq_object_abd1@markers),
+              amplified_amplicons100 = sum(Read_depth &gt;= 100)/nrow(ampseq_object_abd1@markers),
+              Run = unique(var),
+              .by = Sample_id) %&gt;%
+    pivot_longer(cols = starts_with(&#39;amplified_amplicons&#39;), values_to = &#39;AmpRate&#39;, names_to = &#39;Threshold&#39;) %&gt;%
+    mutate(Threshold = as.integer(gsub(&#39;amplified_amplicons&#39;, &#39;&#39;, Threshold)))
+
+plot_precentage_of_samples_over_min_abd_byRun = sample_performance %&gt;%
+    summarise(AmpRate5 = round(100*sum(AmpRate &gt;= .05)/n(), 1),
+              AmpRate10 = round(100*sum(AmpRate &gt;= .10)/n(), 1),
+              AmpRate15 = round(100*sum(AmpRate &gt;= .15)/n(), 1),
+              AmpRate20 = round(100*sum(AmpRate &gt;= .20)/n(), 1),
+              AmpRate25 = round(100*sum(AmpRate &gt;= .25)/n(), 1),
+              AmpRate30 = round(100*sum(AmpRate &gt;= .30)/n(), 1),
+              AmpRate35 = round(100*sum(AmpRate &gt;= .35)/n(), 1),
+              AmpRate40 = round(100*sum(AmpRate &gt;= .40)/n(), 1),
+              AmpRate45 = round(100*sum(AmpRate &gt;= .45)/n(), 1),
+              AmpRate50 = round(100*sum(AmpRate &gt;= .50)/n(), 1),
+              AmpRate55 = round(100*sum(AmpRate &gt;= .55)/n(), 1),
+              AmpRate60 = round(100*sum(AmpRate &gt;= .60)/n(), 1),
+              AmpRate65 = round(100*sum(AmpRate &gt;= .65)/n(), 1),
+              AmpRate70 = round(100*sum(AmpRate &gt;= .70)/n(), 1),
+              AmpRate75 = round(100*sum(AmpRate &gt;= .75)/n(), 1),
+              AmpRate80 = round(100*sum(AmpRate &gt;= .80)/n(), 1),
+              AmpRate85 = round(100*sum(AmpRate &gt;= .85)/n(), 1),
+              AmpRate90 = round(100*sum(AmpRate &gt;= .90)/n(), 1),
+              AmpRate95 = round(100*sum(AmpRate &gt;= .95)/n(), 1),
+              AmpRate100 = round(100*sum(AmpRate &gt;= 1)/n(), 1),
+              .by = c(Threshold, Run)
+    ) %&gt;%
+    pivot_longer(cols = paste0(&#39;AmpRate&#39;, seq(5, 100, 5)),
+                 values_to = &#39;Percentage&#39;,
+                 names_to = &#39;AmpRate&#39;) %&gt;%
+    mutate(AmpRate = as.numeric(gsub(&#39;AmpRate&#39;,&#39;&#39;, AmpRate)))%&gt;%
+    ggplot(aes(x = AmpRate, y = Percentage, color = as.factor(Threshold), group = as.factor(Threshold))) +
+    geom_line() +
+    geom_vline(xintercept = 50, linetype = 2) +
+    facet_wrap(Run~., ncol = 3)+
+    theme_bw() +
+    labs(x = &#39;% of amplified loci (amplification rate)&#39;, y = &#39;% of Samples&#39;, color = &#39;Min Coverage&#39;)</code></pre>
+<pre class="r"><code>plot_precentage_of_samples_over_min_abd_byRun</code></pre>
+<div class="figure">
+<img src="Sequencing_Performance_files/figure-html/unnamed-chunk-12-1.png" alt="**Figure 2:** Sample success rate by Sequencing Run based on different thresholds of minimum read depth coverage per allele (ASV or amplicon sequence variant observed in the sample). x-axis represents the percentage of loci (amplicon or marker) which contains alleles that pass the threshold. y-axis represents the percentage of samples which amplify a specific percentage of loci given the allele detection threshold mentioned above." width="960" />
+<p class="caption">
+<strong>Figure 2:</strong> Sample success rate by Sequencing Run based
+on different thresholds of minimum read depth coverage per allele (ASV
+or amplicon sequence variant observed in the sample). x-axis represents
+the percentage of loci (amplicon or marker) which contains alleles that
+pass the threshold. y-axis represents the percentage of samples which
+amplify a specific percentage of loci given the allele detection
+threshold mentioned above.
+</p>
+</div>
+<p>Let’s do it by Country</p>
+<pre class="r"><code>ReadDepth_coverage = get_ReadDepth_coverage(ampseq_object_abd1, variable = &#39;Country&#39;)
+
+sample_performance = ReadDepth_coverage$plot_read_depth_heatmap$data %&gt;%
+      filter(!is.na(var))%&gt;%
+      mutate(Read_depth = case_when(
+        is.na(Read_depth) ~ 0,
+        !is.na(Read_depth) ~ Read_depth
+      )) %&gt;%
+      summarise(amplified_amplicons1 = sum(Read_depth &gt;= 1)/nrow(ampseq_object_abd1@markers),
+                amplified_amplicons5 = sum(Read_depth &gt;= 5)/nrow(ampseq_object_abd1@markers),
+                amplified_amplicons10 = sum(Read_depth &gt;= 10)/nrow(ampseq_object_abd1@markers),
+                amplified_amplicons20 = sum(Read_depth &gt;= 20)/nrow(ampseq_object_abd1@markers),
+                amplified_amplicons50 = sum(Read_depth &gt;= 50)/nrow(ampseq_object_abd1@markers),
+                amplified_amplicons100 = sum(Read_depth &gt;= 100)/nrow(ampseq_object_abd1@markers),
+                Country = unique(var),
+                .by = Sample_id) %&gt;%
+      pivot_longer(cols = starts_with(&#39;amplified_amplicons&#39;), values_to = &#39;AmpRate&#39;, names_to = &#39;Threshold&#39;) %&gt;%
+      mutate(Threshold = as.integer(gsub(&#39;amplified_amplicons&#39;, &#39;&#39;, Threshold)))
+
+plot_precentage_of_samples_over_min_abd_byCountry = sample_performance %&gt;%
+      summarise(AmpRate5 = round(100*sum(AmpRate &gt;= .05)/n(), 1),
+                AmpRate10 = round(100*sum(AmpRate &gt;= .10)/n(), 1),
+                AmpRate15 = round(100*sum(AmpRate &gt;= .15)/n(), 1),
+                AmpRate20 = round(100*sum(AmpRate &gt;= .20)/n(), 1),
+                AmpRate25 = round(100*sum(AmpRate &gt;= .25)/n(), 1),
+                AmpRate30 = round(100*sum(AmpRate &gt;= .30)/n(), 1),
+                AmpRate35 = round(100*sum(AmpRate &gt;= .35)/n(), 1),
+                AmpRate40 = round(100*sum(AmpRate &gt;= .40)/n(), 1),
+                AmpRate45 = round(100*sum(AmpRate &gt;= .45)/n(), 1),
+                AmpRate50 = round(100*sum(AmpRate &gt;= .50)/n(), 1),
+                AmpRate55 = round(100*sum(AmpRate &gt;= .55)/n(), 1),
+                AmpRate60 = round(100*sum(AmpRate &gt;= .60)/n(), 1),
+                AmpRate65 = round(100*sum(AmpRate &gt;= .65)/n(), 1),
+                AmpRate70 = round(100*sum(AmpRate &gt;= .70)/n(), 1),
+                AmpRate75 = round(100*sum(AmpRate &gt;= .75)/n(), 1),
+                AmpRate80 = round(100*sum(AmpRate &gt;= .80)/n(), 1),
+                AmpRate85 = round(100*sum(AmpRate &gt;= .85)/n(), 1),
+                AmpRate90 = round(100*sum(AmpRate &gt;= .90)/n(), 1),
+                AmpRate95 = round(100*sum(AmpRate &gt;= .95)/n(), 1),
+                AmpRate100 = round(100*sum(AmpRate &gt;= 1)/n(), 1),
+                .by = c(Threshold, Country)
+      ) %&gt;%
+      pivot_longer(cols = paste0(&#39;AmpRate&#39;, seq(5, 100, 5)),
+                   values_to = &#39;Percentage&#39;,
+                   names_to = &#39;AmpRate&#39;) %&gt;%
+      mutate(AmpRate = as.numeric(gsub(&#39;AmpRate&#39;,&#39;&#39;, AmpRate)))%&gt;%
+      ggplot(aes(x = AmpRate, y = Percentage, color = as.factor(Threshold), group = as.factor(Threshold))) +
+      geom_line() +
+      geom_vline(xintercept = 50, linetype = 2) +
+      facet_wrap(Country~., ncol = 3)+
+      theme_bw() +
+      labs(x = &#39;% of amplified loci (amplification rate)&#39;, y = &#39;% of Samples&#39;, color = &#39;Min Coverage&#39;)</code></pre>
+<pre class="r"><code>plot_precentage_of_samples_over_min_abd_byCountry</code></pre>
+<div class="figure">
+<img src="Sequencing_Performance_files/figure-html/unnamed-chunk-15-1.png" alt="**Figure 3:** Sample success rate by Sequencing Run based on different thresholds of minimum read depth coverage per allele (ASV or amplicon sequence variant observed in the sample). x-axis represents the percentage of loci (amplicon or marker) which contains alleles that pass the threshold. y-axis represents the percentage of samples which amplify a specific percentage of loci given the allele detection threshold mentioned above." width="960" />
+<p class="caption">
+<strong>Figure 3:</strong> Sample success rate by Sequencing Run based
+on different thresholds of minimum read depth coverage per allele (ASV
+or amplicon sequence variant observed in the sample). x-axis represents
+the percentage of loci (amplicon or marker) which contains alleles that
+pass the threshold. y-axis represents the percentage of samples which
+amplify a specific percentage of loci given the allele detection
+threshold mentioned above.
+</p>
+</div>
+</div>
+</div>
+<div id="identifying-likely-genotyping-errors" class="section level2">
+<h2>Identifying likely genotyping errors</h2>
+<p>After the denoising process of the fastq files, the cigar table might
+contains some artefacts that affect downstream analysis. These artifacts
+include systematic PCR errors (off-target products and stutters in
+INDELs) as well as stochastic PCR errors. All these artifacts coexist
+with the true allele within the sample, causing the observation of two
+or more alleles (the true allele plus the artifacts) in the particular
+loci of the sample where the error has occurred, the increment of the
+heterozygousity of the loci (if the error is systematic), and the
+increment of polyclonal infections in the population.</p>
+<p>However, when analyzing a population we do not expect all samples to
+be polyclonal, and it should not be possible to find a locus that is
+heterozygous for all samples. Moreover, loci with alternative alleles
+only present in heterozygous samples should be rare as they are the
+result of <em>“de-novo”</em> mutations, and the frequency of
+heterozygous samples for that loci should be low because samples comes
+from different regions and we do not expect a wide geographic
+distribution of that genotype (This might not be true if only one
+population is been analyzed).</p>
+<p>Here the identification and removal of likely genotyping errors is
+done in three sequential steps: 1) Removal of off-target products, 2)
+masking of INDELs present in flanking regions of the ASV, 3) and removal
+of stochastic PCR errors (alleles mainly present as minor alleles).</p>
+<p>The identification of all these likely genotyping errors is based on
+the following parameters:</p>
+<ol style="list-style-type: decimal">
+<li><p>dVSITES_ij: Density of variant sites (SNPs and INDELs) in the
+allele (ASV) <span class="math inline">\(j\)</span> of the locus <span
+class="math inline">\(i\)</span>.</p></li>
+<li><p>P_ij (<span class="math inline">\(P_{i,j}\)</span>): The total
+number of samples that amplified each alternative allele <span
+class="math inline">\(j\)</span> in locus <span
+class="math inline">\(i\)</span>.</p></li>
+<li><p>H_ij (<span class="math inline">\(H_{i,j}\)</span>): Number of
+heterozygous samples in the locus <span class="math inline">\(i\)</span>
+that carry the alternative allele <span
+class="math inline">\(j\)</span>.</p></li>
+<li><p>H_ijminor (<span class="math inline">\(H_{i,jminor}\)</span>):
+Number of heterozygous samples in the locus <span
+class="math inline">\(i\)</span> where the alternative allele <span
+class="math inline">\(j\)</span> is the minor Allele (the allele with
+the lower read counts).</p></li>
+<li><p>h_ij (<span
+class="math inline">\(h_{i,j}=H_{i,j}/P_{i,j}\)</span>): ratio of
+heterozygous samples in the locus that carry the alternative allele of
+interest respect to the total number of samples that amplified
+alternative allele.</p></li>
+<li><p>h_ijminor (<span
+class="math inline">\(h_{i,jminor}=H_{i,jminor}/H_{i,j}\)</span>): ratio
+of heterozygous samples where the alternative allele is the minor Allele
+respect to the total number of heterozygous samples in the locus that
+carry the alternative allele.</p></li>
+<li><p>p_ij (<span class="math inline">\(p_{i,j}\)</span>): population
+prevalence of the alternative allele <span
+class="math inline">\(j\)</span> in locus <span
+class="math inline">\(i\)</span>.</p></li>
+<li><p>flanking_INDEL: Boolean that specify if there are INDELs in the
+flanking region of the ASV.</p></li>
+<li><p>SNV_in_homopolymer: Boolean that specify if there are SNVs in an
+homopolymer region. By default and homopolymer is defined as a region of
+a single nucleotide repeated 5 times in tandem.</p></li>
+<li><p>INDEL_in_homopolymer: Boolean that specify if there are SNVs in
+an homopolymer region. By default and homopolymer is defined as a region
+of a single nucleotide repeated 5 times in tandem.</p></li>
+</ol>
+<p>One of the consequences of the geontyping erros, is the increment of
+heterozygousity in the loci where those errors occurs. Lets check the
+distribution of the observed heterozygosity by locus, and the
+distribution of other metrics of the alternative alleles.</p>
+<pre class="r"><code>ref_fasta = &#39;~/Documents/Github/MHap-Analysis/docs/reference/Pviv_P01/PvGTSeq271_refseqs.fasta&#39;
+
+Alt_ASVs_stats = 
+  get_ASVs_attributes(ampseq_object, 
+                      ref_fasta = ref_fasta)
+
+h_ij_thres = 0.5
+h_ijminor_thres = 0.5
+Hetob_j_thres = 0.05
+
+
+plot_Hetob_j = Alt_ASVs_stats %&gt;%
+  ggplot(aes(x= Hetob_j)) + 
+    geom_vline(xintercept = Hetob_j_thres,
+               linetype = 2) +
+    geom_histogram(binwidth = 0.01) + 
+    theme_bw()
+
+plot_h_ij = Alt_ASVs_stats %&gt;%
+  ggplot(aes(x= h_ij)) + 
+    geom_vline(xintercept = h_ij_thres,
+               linetype = 2) +
+    geom_histogram(binwidth = 0.01) + 
+    theme_bw()
+
+plot_h_ijminor = Alt_ASVs_stats %&gt;%
+  ggplot(aes(x= h_ijminor)) + 
+    geom_vline(xintercept = h_ijminor_thres,
+               linetype = 2) +
+    geom_histogram(binwidth = 0.01) + 
+    theme_bw()
+
+Alt_ASVs_metrics_distribution = Alt_ASVs_stats %&gt;%
+  mutate(h_ijminor_cat = case_when(
+        h_ijminor &lt; h_ijminor_thres ~ paste0(&#39;h_ijminor &lt; &#39;,h_ijminor_thres),
+        h_ijminor &gt;= h_ijminor_thres ~ paste0(&#39;h_ijminor &gt;= &#39;,h_ijminor_thres)),
+        
+      Hetob_j_cat = case_when(
+        Hetob_j &lt; Hetob_j_thres ~ paste0(&#39;Hetob_j &lt; &#39;,Hetob_j_thres),
+        Hetob_j &gt;= Hetob_j_thres ~ paste0(&#39;Hetob_j &gt;= &#39;,Hetob_j_thres)
+      )
+        
+        )%&gt;%
+      ggplot(aes(x = p_ij, 
+                 y = h_ij,
+                 color = h_ijminor,
+                 size = Hetob_j))+
+      geom_point()+
+      geom_hline(yintercept = h_ij_thres,
+                 linetype = 2) +
+      theme_bw()+
+      scale_color_continuous(type = &#39;viridis&#39;)+
+      facet_grid(Hetob_j_cat ~ h_ijminor_cat)+
+      labs(x = &#39;Alternative allele prev. (p_ij)&#39;,
+           y = &#39;h_ij (H_ij/P_ij)&#39;,
+           color = &#39;h_ijminor&#39;)
+
+Alt_ASVs_metrics_distribution = ggdraw()+
+  draw_plot(plot_Hetob_j, 
+                x = 0, width = .4,
+                y = 0.66, height = .34)+
+  draw_plot(plot_h_ij, 
+                x = 0, width = .4,
+                y = 0.33, height = .33)+
+  draw_plot(plot_h_ijminor, 
+                x = 0, width = .4,
+                y = 0, height = .33)+
+  draw_plot(Alt_ASVs_metrics_distribution, 
+                x = .4, width = .6,
+                y = 0, height = 1)
+      
+Alt_ASVs_metrics_distribution</code></pre>
+<p><img src="Sequencing_Performance_files/figure-html/unnamed-chunk-16-1.png" width="672" /></p>
+<div id="identification-and-removal-of-off-target-products"
+class="section level3">
+<h3>Identification and removal of off-target products</h3>
+<p>A non-specific product is the result of the amplification of a DNA
+template that shares a certain degree of identity in the region of the
+primers with the desired target. However, the degree of identity of
+these off-targets with respect to the desired target tends to be low,
+generating a high density of polymorphisms in the alignment between the
+off-target ASV and the reference template. For that reason in this step
+we use the density of of variant sites (dVSITES_ij) in order to identify
+alleles that are potentially off-target products. The other parameters
+explained above can also be included to constraint more the definition.
+The filtering criteria can be specified with the argument “mask_formula”
+(<code>maskt_formula = "dVSITES_ij &gt;= 0.3"</code>).</p>
+<p>Run the function <code>get_ASVs_attributes</code>:</p>
+<pre class="r"><code>off_target_stats = get_ASVs_attributes(ampseq_object, 
+                                       ref_fasta = ref_fasta)</code></pre>
+<p>Generate a histogram of the density of variant sites per allele.</p>
+<pre class="r"><code>dVSITES_ij_thres = 0.25
+
+plot_off_target_stats = off_target_stats %&gt;%
+    ggplot(aes(x= dVSITES_ij)) + 
+    geom_vline(xintercept = dVSITES_ij_thres,
+               linetype = 2) +
+    geom_histogram(binwidth = 0.01) + 
+    theme_bw()
+
+plot_off_target_stats2 = off_target_stats %&gt;%
+      mutate(h_ijminor_cat = case_when(
+        h_ijminor &lt; h_ijminor_thres ~ paste0(&#39;h_ijminor &lt; &#39;,h_ijminor_thres),
+        h_ijminor &gt;= h_ijminor_thres ~ paste0(&#39;h_ijminor &gt;= &#39;,h_ijminor_thres)
+      ),
+      dVSITES_ij_cat = case_when(
+        dVSITES_ij &gt;= dVSITES_ij_thres ~ &#39;dVSITES_ij &gt;= 0.25&#39;,
+        dVSITES_ij &lt; dVSITES_ij_thres ~ &#39;dVSITES_ij &lt; 0.25&#39;
+      ),
+      Hetob_j_cat = case_when(
+        Hetob_j &lt; Hetob_j_thres ~ paste0(&#39;Hetob_j &lt; &#39;,Hetob_j_thres),
+        Hetob_j &gt;= Hetob_j_thres ~ paste0(&#39;Hetob_j &gt;= &#39;,Hetob_j_thres)
+      )
+      )%&gt;%
+      ggplot(aes(x = p_ij, 
+                 y = h_ij,
+                 color = h_ijminor,
+                 size = dVSITES_ij))+
+      geom_point()+
+      geom_hline(yintercept = h_ij_thres,
+                 linetype = 2) +
+      theme_bw()+
+      scale_color_continuous(type = &#39;viridis&#39;)+
+      facet_grid(dVSITES_ij_cat ~ Hetob_j_cat + h_ijminor_cat)+
+      labs(x = &#39;Alternative allele prev. (p_ij)&#39;,
+           y = &#39;h_ij (H_ij/P_ij)&#39;,
+           color = &#39;h_ijminor&#39;)
+    
+    plot_off_target_stats = ggdraw()+
+      draw_plot(plot_off_target_stats, 
+                x = 0, width = .4,
+                y = 0, height = 1)+
+      draw_plot(plot_off_target_stats2, 
+                x = .4, width = .6,
+                y = 0, height = 1)</code></pre>
+<pre class="r"><code>plot_off_target_stats</code></pre>
+<div class="figure">
+<img src="Sequencing_Performance_files/figure-html/unnamed-chunk-19-1.png" alt="**Figure 4:** Identifcation of off-target products. Histogram represents the distribution of the densitity of variant sites in each allele in each locus (dVSITES_ij). The scatter plot shows the distribution of the prevalence of the alternative allele (p_ij), the frequency of the alternative allele as heterozygous (h_ij), the frequency of the alternative allele as minor allele (h_ijminor), and the density of variant sites (dVSITES_ij) of the alternative allele respect to the reference template." width="768" />
+<p class="caption">
+<strong>Figure 4:</strong> Identifcation of off-target products.
+Histogram represents the distribution of the densitity of variant sites
+in each allele in each locus (dVSITES_ij). The scatter plot shows the
+distribution of the prevalence of the alternative allele (p_ij), the
+frequency of the alternative allele as heterozygous (h_ij), the
+frequency of the alternative allele as minor allele (h_ijminor), and the
+density of variant sites (dVSITES_ij) of the alternative allele respect
+to the reference template.
+</p>
+</div>
+<p>Identify how many alleles would be removed using a filter of
+0.25.</p>
+<pre class="r"><code>n_off_target_alleles = off_target_stats[off_target_stats$dVSITES_ij &gt;= dVSITES_ij_thres,][[&#39;Allele&#39;]]
+
+print(paste0(length(n_off_target_alleles), &#39; allele(s) match(es) the criteria to define off-target products&#39;))</code></pre>
+<pre><code>## [1] &quot;22 allele(s) match(es) the criteria to define off-target products&quot;</code></pre>
+<p>Check what are those allele:</p>
+<pre class="r"><code>View(off_target_stats%&gt;%
+  filter(dVSITES_ij &gt;= dVSITES_ij_thres))</code></pre>
+<p>remove off-target products:</p>
+<pre class="r"><code>ampseq_object = mask_alt_alleles(ampseq_object, mask_formula = &#39;dVSITES_ij &gt;= 0.25&#39;, ref_fasta = ref_fasta)</code></pre>
+<pre><code>## [1] &quot;Filter dVSITES_ij &gt;= 0.25 will be applied&quot;</code></pre>
+</div>
+<div id="products-with-flanking-indels" class="section level3">
+<h3>Products with flanking INDELs</h3>
+<p>Flanking INDELs are defined as INDELs that occurs at the beginning or
+the end of the ASV attached to the primer area. Flanking INDELs can lead
+to primer miss binding during PCR by creating additional alleles which
+differs in the length of the INDEL in the same sample. The filtering
+criteria can be specified in Terra with the argument
+“flanking_INDEL_formula” (by default
+<code>"flanking_INDEL_formula": "flanking_INDEL==TRUE&amp;h_ij&gt;=0.66"</code>).</p>
+<p>Identified Flanking INDELs are masked, which means the the internal
+region of the ASV is kept to define the allele.</p>
+<p>Run the function again <code>get_ASVs_attributes</code>:</p>
+<pre class="r"><code>flanking_INDEL_stats = get_ASVs_attributes(ampseq_object, 
+                                            ref_fasta = ref_fasta)</code></pre>
+<p>Generate a scatter plot of the density of variant sites per
+allele.</p>
+<pre class="r"><code>plot_flanking_INDEL_stats = flanking_INDEL_stats %&gt;%
+      mutate(h_ijminor_cat = case_when(
+        h_ijminor &lt; h_ijminor_thres ~ paste0(&#39;h_ijminor &lt; &#39;,h_ijminor_thres),
+        h_ijminor &gt;= h_ijminor_thres ~ paste0(&#39;h_ijminor &gt;= &#39;,h_ijminor_thres)),
+        flanking_INDEL_cat = case_when(
+        flanking_INDEL == TRUE ~ &#39;w/. flanking INDELs&#39;,
+        flanking_INDEL == FALSE ~ &#39;w/o flanking INDELs&#39;
+      ),
+      Hetob_j_cat = case_when(
+        Hetob_j &lt; Hetob_j_thres ~ paste0(&#39;Hetob_j &lt; &#39;,Hetob_j_thres),
+        Hetob_j &gt;= Hetob_j_thres ~ paste0(&#39;Hetob_j &gt;= &#39;,Hetob_j_thres)
+      )
+        
+        )%&gt;%
+      ggplot(aes(x = p_ij, 
+                 y = h_ij,
+                 color = h_ijminor,
+                 size = Hetob_j))+
+      geom_point()+
+      geom_hline(yintercept = h_ij_thres,
+                 linetype = 2) +
+      theme_bw()+
+      scale_color_continuous(type = &#39;viridis&#39;)+
+      facet_grid(flanking_INDEL_cat ~ Hetob_j_cat + h_ijminor_cat)+
+      labs(x = &#39;Alternative allele prev. (p_ij)&#39;,
+           y = &#39;h_ij (H_ij/P_ij)&#39;,
+           color = &#39;h_ijminor&#39;)</code></pre>
+<pre class="r"><code>plot_flanking_INDEL_stats</code></pre>
+<div class="figure">
+<img src="Sequencing_Performance_files/figure-html/unnamed-chunk-25-1.png" alt="**Figure 5:** Identification of flanking INDELs. The scatter plot shows the distribution of the prevalence of the alternative allele (p_ij), the frequency of the alternative allele as heterozygous (h_ij), and the frequency of the alternative allele as minor allele (h_ijminor). The panels FALSE and TRUE represent alleles that do not contain or contain flanking INDELs." width="672" />
+<p class="caption">
+<strong>Figure 5:</strong> Identification of flanking INDELs. The
+scatter plot shows the distribution of the prevalence of the alternative
+allele (p_ij), the frequency of the alternative allele as heterozygous
+(h_ij), and the frequency of the alternative allele as minor allele
+(h_ijminor). The panels FALSE and TRUE represent alleles that do not
+contain or contain flanking INDELs.
+</p>
+</div>
+<p>Identify how many alleles would be removed using
+<code>flanking_INDEL == TRUE</code>:</p>
+<pre class="r"><code>n_flanking_INDEL_alleles = flanking_INDEL_stats[flanking_INDEL_stats$flanking_INDEL == TRUE, ][[&#39;Allele&#39;]]
+print(paste0(length(n_flanking_INDEL_alleles), &#39; allele(s) match(es) the criteria to identify products with flanking INDELs&#39;))</code></pre>
+<pre><code>## [1] &quot;21 allele(s) match(es) the criteria to identify products with flanking INDELs&quot;</code></pre>
+<pre class="r"><code>View(
+  flanking_INDEL_stats %&gt;%
+    filter(flanking_INDEL == TRUE)
+)</code></pre>
+<p>Mask alleles with flanking indels:</p>
+<pre class="r"><code>while(length(n_flanking_INDEL_alleles) &gt; 0){
+  ampseq_object = mask_alt_alleles(ampseq_object, mask_formula = &#39;flanking_INDEL == TRUE&#39;,
+                                      ref_fasta = ref_fasta)
+  
+  flanking_INDEL_stats2 = get_ASVs_attributes(ampseq_object, 
+                                            ref_fasta = ref_fasta)
+  n_flanking_INDEL_alleles = 
+    flanking_INDEL_stats2[flanking_INDEL_stats2$flanking_INDEL == TRUE, ][[&#39;Allele&#39;]]
+}</code></pre>
+<pre><code>## [1] &quot;Filter flanking_INDEL == TRUE will be applied&quot;</code></pre>
+</div>
+<div id="pcr-errors-due-to-homopolymers" class="section level3">
+<h3>PCR errors due to homopolymers</h3>
+<p>Run the function again <code>get_ASVs_attributes</code>:</p>
+<pre class="r"><code>homopolymers_stats = get_ASVs_attributes(ampseq_object, 
+                                            ref_fasta = ref_fasta)</code></pre>
+<p>Generate a scatter plot of the density of variant sites per
+allele.</p>
+<pre class="r"><code>plot_homopolymers_stats = homopolymers_stats %&gt;%
+      mutate(h_ijminor_cat = case_when(
+        h_ijminor &lt; h_ijminor_thres ~ paste0(&#39;h_ijminor &lt; &#39;,h_ijminor_thres),
+        h_ijminor &gt;= h_ijminor_thres ~ paste0(&#39;h_ijminor &gt;= &#39;,h_ijminor_thres)
+      ),
+      
+      vsites_in_homopopylmers = case_when(
+        SNV_in_homopolymer == FALSE &amp; INDEL_in_homopolymer == FALSE ~ &#39;No VSites in Hom.&#39;,
+        SNV_in_homopolymer == TRUE ~ &#39;SNV in Hom.&#39;,
+        INDEL_in_homopolymer == TRUE ~ &#39;INDEL in Hom.&#39;
+      ),
+      
+      vsites_in_homopopylmers = factor(vsites_in_homopopylmers,
+                                       levels = c(&#39;No VSites in Hom.&#39;,
+                                                  &#39;SNV in Hom.&#39;,
+                                                  &#39;INDEL in Hom.&#39;)),
+      Hetob_j_cat = case_when(
+        Hetob_j &lt; Hetob_j_thres ~ paste0(&#39;Hetob_j &lt; &#39;,Hetob_j_thres),
+        Hetob_j &gt;= Hetob_j_thres ~ paste0(&#39;Hetob_j &gt;= &#39;,Hetob_j_thres)
+      )
+      
+      )%&gt;%
+      ggplot(aes(x = p_ij, 
+                 y = h_ij,
+                 color = h_ijminor,
+                 size = Hetob_j))+
+      geom_point()+
+      geom_hline(yintercept = h_ij_thres,
+                 linetype = 2) +
+      theme_bw()+
+      scale_color_continuous(type = &#39;viridis&#39;)+
+      facet_grid(vsites_in_homopopylmers ~ Hetob_j_cat + h_ijminor_cat )+
+      labs(x = &#39;Alternative allele prev. (p_ij)&#39;,
+           y = &#39;h_ij (H_ij/P_ij)&#39;,
+           color = &#39;h_ijminor&#39;)</code></pre>
+<pre class="r"><code>plot_homopolymers_stats</code></pre>
+<div class="figure">
+<img src="Sequencing_Performance_files/figure-html/unnamed-chunk-31-1.png" alt="**Figure 5:** Identification of flanking INDELs. The scatter plot shows the distribution of the prevalence of the alternative allele (p_ij), the frequency of the alternative allele as heterozygous (h_ij), and the frequency of the alternative allele as minor allele (h_ijminor). The panels FALSE and TRUE represent alleles that do not contain or contain flanking INDELs." width="672" />
+<p class="caption">
+<strong>Figure 5:</strong> Identification of flanking INDELs. The
+scatter plot shows the distribution of the prevalence of the alternative
+allele (p_ij), the frequency of the alternative allele as heterozygous
+(h_ij), and the frequency of the alternative allele as minor allele
+(h_ijminor). The panels FALSE and TRUE represent alleles that do not
+contain or contain flanking INDELs.
+</p>
+</div>
+<p>Identify how many alleles would be removed using
+<code>SNV_in_homopolymer == TRUE</code>:</p>
+<pre class="r"><code>n_snv_in_homopolymer_alleles = homopolymers_stats[
+  homopolymers_stats$SNV_in_homopolymer == TRUE &amp; 
+    (homopolymers_stats$h_ij &gt; h_ij_thres &amp; homopolymers_stats$h_ijminor &gt; h_ijminor_thres ), ][[&#39;Allele&#39;]]
+print(paste0(length(n_snv_in_homopolymer_alleles), &#39; allele(s) match(es) the criteria to identify products with SNVs in homopolymers&#39;))</code></pre>
+<pre><code>## [1] &quot;3 allele(s) match(es) the criteria to identify products with SNVs in homopolymers&quot;</code></pre>
+<p>Identify how many alleles would be removed using
+<code>INDEL_in_homopolymer == TRUE</code>:</p>
+<pre class="r"><code>n_indel_in_homopolymer_alleles = homopolymers_stats[homopolymers_stats$INDEL_in_homopolymer == TRUE &amp;
+                                                      homopolymers_stats$h_ij &gt; h_ij_thres, ][[&#39;Allele&#39;]]
+print(paste0(length(n_indel_in_homopolymer_alleles), &#39; allele(s) match(es) the criteria to identify products with INDELs in homopolymers&#39;))</code></pre>
+<pre><code>## [1] &quot;1 allele(s) match(es) the criteria to identify products with INDELs in homopolymers&quot;</code></pre>
+<p>Mask alleles with SNVs or INDELs in homopolymers</p>
+<pre class="r"><code>ampseq_object = mask_alt_alleles(ampseq_object, mask_formula = &#39;(SNV_in_homopolymer == TRUE | INDEL_in_homopolymer == TRUE) &amp; h_ij &gt;= 0.5 &amp; h_ijminor &gt;= 0.5&#39;, ref_fasta = ref_fasta)</code></pre>
+<pre><code>## [1] &quot;Filter SNV_in_homopolymer == TRUE will be applied&quot;
+## [1] &quot;Filter INDEL_in_homopolymer == TRUE will be applied&quot;
+## [1] &quot;Filter h_ij &gt;= 0.5 will be applied&quot;
+## [1] &quot;Filter h_ijminor &gt;= 0.5 will be applied&quot;</code></pre>
+</div>
+<div id="stochastic-pcr-errors" class="section level3">
+<h3>Stochastic PCR errors</h3>
+<p>PCR errors introduce new alleles in both polymorphic and monomorphic
+sites. These errors depend on the error rate of the polymerases used in
+the sWGA and library generation steps, and they will generate
+alternative alleles that are mainly present as the minor allele at a
+heterozygous site and their frequency tends to be low in the population.
+By analyzing the distribution of population frequency of each
+alternative allele p_ij (<span class="math inline">\(p_{i,j}\)</span>),
+the ratio of heterozygous samples in the locus that carry the
+alternative allele of interest respect to the total number of samples
+that amplified alternative allele h_ij (<span
+class="math inline">\(h_{i,j}\)</span>), and the ratio of heterozygous
+samples where the alternative allele is the minor allele respect to the
+total number of heterozygous samples h_ijminor (<span
+class="math inline">\(h_{i,jminor}\)</span>), in this step we will
+remove all alternative alleles that match our filtering criteria. This
+filtering criteria can be specified in Terra with the argument
+“PCR_errors_formula” (by default “PCR_errors_formula”:
+<code>"h_ij&gt;=0.66&amp;h_ijminor&gt;= 0.66"</code>)</p>
+<p>Use again the function <code>get_ASVs_attributes</code></p>
+<pre class="r"><code>PCR_errors_stats = get_ASVs_attributes(ampseq_object, ref_fasta = ref_fasta)</code></pre>
+<p>Use an scatter plot to visualize alleles about the thresholds.</p>
+<pre class="r"><code>plot_PCR_errors_stats = PCR_errors_stats %&gt;%
+      mutate(h_ijminor_cat = case_when(
+        h_ijminor &lt; h_ijminor_thres ~ paste0(&#39;h_ijminor &lt; &#39;,h_ijminor_thres),
+        h_ijminor &gt;= h_ijminor_thres ~ paste0(&#39;h_ijminor &gt;= &#39;,h_ijminor_thres)
+      ),
+      Hetob_j_cat = case_when(
+        Hetob_j &lt; Hetob_j_thres ~ paste0(&#39;Hetob_j &lt; &#39;,Hetob_j_thres),
+        Hetob_j &gt;= Hetob_j_thres ~ paste0(&#39;Hetob_j &gt;= &#39;,Hetob_j_thres))
+      )%&gt;%
+      ggplot(aes(x = p_ij, 
+                 y = h_ij,
+                 color = h_ijminor,
+                 size = Hetob_j))+
+      geom_point()+
+      geom_hline(yintercept = h_ij_thres,
+                 linetype = 2) +
+      theme_bw()+
+      scale_color_continuous(type = &#39;viridis&#39;)+
+      facet_grid(Hetob_j_cat~h_ijminor_cat)+
+      labs(x = &#39;Alternative allele prev. (p_ij)&#39;,
+           y = &#39;h_ij (H_ij/P_ij)&#39;,
+           color = &#39;h_ijminor&#39;)</code></pre>
+<pre class="r"><code>plot_PCR_errors_stats</code></pre>
+<div class="figure">
+<img src="Sequencing_Performance_files/figure-html/unnamed-chunk-37-1.png" alt="**Figure 6:** Identification and removal of stochastic PCR errors. The scatter plot shows the distribution of the prevalence of the alternative allele (p_ij), the frequency of the alternative allele as heterozygous (h_ij), and the frequency of the alternative allele as minor allele (h_ijminor). The horizontal panels are defined based on the threshold stablished for h_ijminor." width="672" />
+<p class="caption">
+<strong>Figure 6:</strong> Identification and removal of stochastic PCR
+errors. The scatter plot shows the distribution of the prevalence of the
+alternative allele (p_ij), the frequency of the alternative allele as
+heterozygous (h_ij), and the frequency of the alternative allele as
+minor allele (h_ijminor). The horizontal panels are defined based on the
+threshold stablished for h_ijminor.
+</p>
+</div>
+<p>How many alleles didn’t pass the threshold</p>
+<pre class="r"><code>n_PCR_errors_alleles = PCR_errors_stats[PCR_errors_stats$h_ij &gt;= 0.66 &amp; PCR_errors_stats$h_ijminor &gt;= 0.66, ][[&#39;Allele&#39;]]
+print(paste0(length(n_PCR_errors_alleles), &#39; allele(s) match(es) the criteria to identify PCR_errors&#39;))</code></pre>
+<pre><code>## [1] &quot;16 allele(s) match(es) the criteria to identify PCR_errors&quot;</code></pre>
+<pre class="r"><code>View(
+  PCR_errors_stats %&gt;%
+    filter(h_ij &gt;= 0.66 &amp; h_ijminor &gt;= 0.66))</code></pre>
+<p>Remove stochastic PCR errors:</p>
+<pre class="r"><code>ampseq_object = mask_alt_alleles(ampseq_object, mask_formula = &#39;h_ij &gt;= 0.66 &amp; h_ijminor &gt;= 0.66&#39;, ref_fasta = ref_fasta)</code></pre>
+<pre><code>## [1] &quot;Filter h_ij &gt;= 0.66 will be applied&quot;
+## [1] &quot;Filter h_ijminor &gt;= 0.66 will be applied&quot;</code></pre>
+<p>After removing and masking suspicious alleles, the distribution of
+the different metrics looks as follows:</p>
+<pre class="r"><code>Alt_ASVs_stats = 
+  get_ASVs_attributes(ampseq_object, 
+                      ref_fasta = ref_fasta)
+
+plot_Hetob_j = Alt_ASVs_stats %&gt;%
+  ggplot(aes(x= Hetob_j)) + 
+    geom_vline(xintercept = Hetob_j_thres,
+               linetype = 2) +
+    geom_histogram(binwidth = 0.01) + 
+    theme_bw()
+
+plot_h_ij = Alt_ASVs_stats %&gt;%
+  ggplot(aes(x= h_ij)) + 
+    geom_vline(xintercept = h_ij_thres,
+               linetype = 2) +
+    geom_histogram(binwidth = 0.01) + 
+    theme_bw()
+
+plot_h_ijminor = Alt_ASVs_stats %&gt;%
+  ggplot(aes(x= h_ijminor)) + 
+    geom_vline(xintercept = h_ijminor_thres,
+               linetype = 2) +
+    geom_histogram(binwidth = 0.01) + 
+    theme_bw()
+
+Alt_ASVs_metrics_distribution = Alt_ASVs_stats %&gt;%
+  mutate(h_ijminor_cat = case_when(
+        h_ijminor &lt; h_ijminor_thres ~ paste0(&#39;h_ijminor &lt; &#39;,h_ijminor_thres),
+        h_ijminor &gt;= h_ijminor_thres ~ paste0(&#39;h_ijminor &gt;= &#39;,h_ijminor_thres)),
+        
+      Hetob_j_cat = case_when(
+        Hetob_j &lt; Hetob_j_thres ~ paste0(&#39;Hetob_j &lt; &#39;,Hetob_j_thres),
+        Hetob_j &gt;= Hetob_j_thres ~ paste0(&#39;Hetob_j &gt;= &#39;,Hetob_j_thres)
+      )
+        
+        )%&gt;%
+      ggplot(aes(x = p_ij, 
+                 y = h_ij,
+                 color = h_ijminor,
+                 size = Hetob_j))+
+      geom_point()+
+      geom_hline(yintercept = h_ij_thres,
+                 linetype = 2) +
+      theme_bw()+
+      scale_color_continuous(type = &#39;viridis&#39;)+
+      facet_grid(Hetob_j_cat~h_ijminor_cat)+
+      labs(x = &#39;Alternative allele prev. (p_ij)&#39;,
+           y = &#39;h_ij (H_ij/P_ij)&#39;,
+           color = &#39;h_ijminor&#39;)
+
+Alt_ASVs_metrics_distribution = ggdraw()+
+  draw_plot(plot_Hetob_j, 
+                x = 0, width = .4,
+                y = 0.66, height = .34)+
+  draw_plot(plot_h_ij, 
+                x = 0, width = .4,
+                y = 0.33, height = .33)+
+  draw_plot(plot_h_ijminor, 
+                x = 0, width = .4,
+                y = 0, height = .33)+
+  draw_plot(Alt_ASVs_metrics_distribution, 
+                x = .4, width = .6,
+                y = 0, height = 1)
+      
+Alt_ASVs_metrics_distribution</code></pre>
+<p><img src="Sequencing_Performance_files/figure-html/unnamed-chunk-41-1.png" width="672" /></p>
+</div>
+</div>
+<div id="read-depth-yield-per-sample-and-locus" class="section level2">
+<h2>Read depth yield per sample and locus</h2>
+<p>Inspect again the read depth coverage of our data:</p>
+<pre class="r"><code>ReadDepth_coverage = get_ReadDepth_coverage(ampseq_object, variable = &#39;Country&#39;)</code></pre>
+<pre class="r"><code>ReadDepth_coverage$plot_read_depth_heatmap</code></pre>
+<div class="figure">
+<img src="Sequencing_Performance_files/figure-html/unnamed-chunk-44-1.png" alt="**Figure 7:** Read Coverage per sample per locus. The heatmaps show the number of read-pairs obtained per sample (rows) at each locus (columns). Separate panels are used for each value of Variable1 (e.g., sample geographic origin). Darker reds indicate higher read-depth. Grey indicates lack of signal for the locus/sample." width="1152" />
+<p class="caption">
+<strong>Figure 7:</strong> Read Coverage per sample per locus. The
+heatmaps show the number of read-pairs obtained per sample (rows) at
+each locus (columns). Separate panels are used for each value of
+Variable1 (e.g., sample geographic origin). Darker reds indicate higher
+read-depth. Grey indicates lack of signal for the locus/sample.
+</p>
+</div>
+</div>
+<div id="retention-of-loci-and-samples-for-subsequent-analysis"
+class="section level2">
+<h2>Retention of loci and samples for subsequent analysis</h2>
+<div id="locus-performance-across-different-countries"
+class="section level3">
+<h3>Locus performance across different countries</h3>
+<pre class="r"><code>all_loci_amplification_rate = locus_amplification_rate(ampseq_object, threshold = 0.65, strata = &#39;Country&#39;, update_loci = F)</code></pre>
+<pre class="r"><code>fig8.height = 2*length(unique(all_loci_amplification_rate$data$Strata))</code></pre>
+<pre class="r"><code>all_loci_amplification_rate</code></pre>
+<div class="figure">
+<img src="Sequencing_Performance_files/figure-html/unnamed-chunk-47-1.png" alt="**Figure 10:** Locus amplification rate distribution across categories in Variable1. Each panel represents the cateories of Variable1, and the bottom panel represents the total population and the actual number of loci that are retained. Vertical line represents the locus_ampl_rate threshold set by the user." width="672" />
+<p class="caption">
+<strong>Figure 10:</strong> Locus amplification rate distribution across
+categories in Variable1. Each panel represents the cateories of
+Variable1, and the bottom panel represents the total population and the
+actual number of loci that are retained. Vertical line represents the
+locus_ampl_rate threshold set by the user.
+</p>
+</div>
+<p>Keep loci with more than 50% of amplified samples in at least one of
+the countries:</p>
+<pre class="r"><code>ampseq_object = locus_amplification_rate(ampseq_object, threshold = 0.5, strata = &#39;Country&#39;, update_loci = T, based_on_strata = T)</code></pre>
+</div>
+<div id="retention-of-samples-for-subsequent-analysis"
+class="section level3">
+<h3>Retention of samples for subsequent analysis</h3>
+<p>Use the function <code>sample_amplification_rate</code>:</p>
+<pre class="r"><code>samples_amplification_rate = sample_amplification_rate(ampseq_object, threshold = 0.8, strata = &#39;Country&#39;, update_samples = F)</code></pre>
+<pre class="r"><code>fig9.height = 2*length(unique(samples_amplification_rate$data$Strata))</code></pre>
+<pre class="r"><code>samples_amplification_rate</code></pre>
+<div class="figure">
+<img src="Sequencing_Performance_files/figure-html/unnamed-chunk-51-1.png" alt="**Figure 11:** Sample amplification rate distribution across categories in Variable1. Each panel represents the categories of Variable1 and the number within each panel represents the number of samples that are retained in each category." width="672" />
+<p class="caption">
+<strong>Figure 11:</strong> Sample amplification rate distribution
+across categories in Variable1. Each panel represents the categories of
+Variable1 and the number within each panel represents the number of
+samples that are retained in each category.
+</p>
+</div>
+<p>Keep samples with at least 50% of amplified loci</p>
+<pre class="r"><code>ampseq_object = sample_amplification_rate(ampseq_object, threshold = 0.5, strata = &#39;Country&#39;, update_samples = T)</code></pre>
+</div>
+</div>
+<div id="export-the-filtered-ampseq_object" class="section level2">
+<h2>Export the filtered ampseq_object</h2>
+<p>As Excel file</p>
+<pre class="r"><code>write_ampseq(ampseq_object, name = &#39;~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered.xlsx&#39;, format = &#39;excel&#39;)</code></pre>
+<p>The exported ampseq object can also be uploaded in R to be used for
+other pipelines</p>
+<pre class="r"><code>ampseq_object2 = read_ampseq(file = &#39;~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered.xlsx&#39;, 
+                   format = &#39;excel&#39;)</code></pre>
+<p>As csv files</p>
+<pre class="r"><code>write_ampseq(ampseq_object, name = &#39;~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered&#39;, format = &#39;csv&#39;)</code></pre>
+<p>The exported ampseq object can also be uploaded in R to be used for
+other pipelines</p>
+<pre class="r"><code>ampseq_object3 = read_ampseq(file = &#39;~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered&#39;, 
+                   format = &#39;csv&#39;)</code></pre>
+</div>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+<script>
+$(document).ready(function () {
+  window.initializeCodeFolding("show" === "show");
+});
+</script>
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

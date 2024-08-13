@@ -47,10 +47,10 @@ Our first step will be to call all required packages and functions in
 the R environment:
 
 ```{r 'Loading required packages and functions'}
-source('docs/functions_and_libraries/amplseq_required_libraries.R')
-source('docs/functions_and_libraries/amplseq_functions.R')
-sourceCpp('docs/functions_and_libraries/hmmloglikelihood.cpp')
-sourceCpp('docs/functions_and_libraries/Rcpp_functions.cpp')
+source('~/Documents/Github/MHap-Analysis/docs/functions_and_libraries/amplseq_required_libraries.R')
+source('~/Documents/Github/MHap-Analysis/docs/functions_and_libraries/amplseq_functions.R')
+sourceCpp('~/Documents/Github/MHap-Analysis/docs/functions_and_libraries/hmmloglikelihood.cpp')
+sourceCpp('~/Documents/Github/MHap-Analysis/docs/functions_and_libraries/Rcpp_functions.cpp')
 ```
 
 This tutorial start with .tsv table in CIGAR format that has been
@@ -84,7 +84,7 @@ instead of the argument `paths`, where `list_of_files` is a vector with
 the names of all files we want to read.
 
 ```{r 'Uploading data sets'}
-cigar_object = read_cigar_tables(paths = "docs/data/Pfal_sequencing_data", sample_id_pattern = "ID")
+cigar_object = read_cigar_tables(paths = "~/Documents/Github/MHap-Analysis/docs/data/Pfal_example2/Seq_runs/", sample_id_pattern = "^SP")
 ```
 
 This function generates a S4 cigar object containing two data.frames, 1)
@@ -119,7 +119,7 @@ file called `metadata.csv` into our R environment.
 
 ```{r 'Adding Population'}
 # Upload metadata from an external source
-metadata = read.csv('docs/data/Pfal_metadata.csv')
+metadata = read.csv('~/Documents/Github/MHap-Analysis/docs/data/Pfal_example2/colombia_metadata_cleaned.csv')
 
 # Merge the external metadata with our cigar_object
 cigar_object@metadata = left_join(cigar_object@metadata,
@@ -200,7 +200,7 @@ for the next steps such as `loci_performance` and `pop_summary`.
 
 ```{r "Generating a ampseq object"}
 # (alleles and abundance will be in cells)
-markers = read.csv("docs/reference/Pfal_3D7/markers.csv")
+markers = read.csv("~/Documents/Github/MHap-Analysis/docs/reference/Pfal_3D7/markers.csv")
 ampseq = cigar2ampseq(cigar_object, markers = markers, min_abd = 10, min_ratio = .1, remove_controls = T)
 ```
 
@@ -217,29 +217,97 @@ vivax*, so we are going to remove this locus too as this locus is not of
 our interest in this tutorial.
 
 ```{r}
-allele_count_frac_ofHet_pAlt = frac_ofHet_pAlt_byAllele(ampseq)
+Alt_ASVs_stats = 
+  get_ASVs_attributes(ampseq, 
+                      ref_fasta = 
+                        "~/Documents/Github/MHap-Analysis/docs/reference/Pfal_3D7/pf3d7_ref_updated_v3.fasta")
 ```
 
 ```{r}
-allele_count_frac_ofHet_pAlt %>%
-  ggplot(aes(x = p_ij, 
-               y = h_ij,
-               color = h_ijminor,
-               size = dVSITES_ij,
-               shape = flanking_INDEL
-               ))+
-    geom_point()+
-    theme_bw()+
-    scale_color_continuous(type = 'viridis')+
-  #facet_grid(flanking_INDEL~h_ijminor_cat)+
-    labs(x = 'Alternative allele frequency (p_ij)',
-         y = 'h_ij (H_ij/P_ij)',
-         color = 'h_ijminor')
+h_ij_thres = 0.66
+h_ijminor_thres = 0.66
+Hetob_j_thres = 0.05
+
+Alt_ASVs_stats %>%
+  mutate(h_ijminor_cat = case_when(
+        h_ijminor < h_ijminor_thres ~ paste0('h_ijminor < ',h_ijminor_thres),
+        h_ijminor >= h_ijminor_thres ~ paste0('h_ijminor >= ',h_ijminor_thres)),
+        flanking_INDEL_cat = case_when(
+        flanking_INDEL == TRUE ~ 'w/. flanking INDELs',
+        flanking_INDEL == FALSE ~ 'w/o flanking INDELs'
+      ),
+      Hetob_j_cat = case_when(
+        Hetob_j < Hetob_j_thres ~ paste0('Hetob_j < ',Hetob_j_thres),
+        Hetob_j >= Hetob_j_thres ~ paste0('Hetob_j >= ',Hetob_j_thres)
+      )
+        
+        )%>%
+      ggplot(aes(x = p_ij, 
+                 y = h_ij,
+                 color = h_ijminor,
+                 size = Hetob_j))+
+      geom_point()+
+      geom_hline(yintercept = h_ij_thres,
+                 linetype = 2) +
+      theme_bw()+
+      scale_color_continuous(type = 'viridis')+
+      facet_grid(flanking_INDEL_cat~h_ijminor_cat + Hetob_j_cat)+
+      labs(x = 'Alternative allele prev. (p_ij)',
+           y = 'h_ij (H_ij/P_ij)',
+           color = 'h_ijminor')
 ```
 
 ```{r 'Removing artifacts and Pvivax control locus'}
-ampseq@gt = mask_alt_alleles(ampseq, mask_formula = "h_ij >= 0.75 & h_ijminor >= 0.75")
+ampseq = 
+  mask_alt_alleles(ampseq, 
+                   mask_formula = "h_ij >= 0.75 & h_ijminor >= 0.75",
+                   ref_fasta = 
+                        "~/Documents/Github/MHap-Analysis/docs/reference/Pfal_3D7/pf3d7_ref_updated_v3.fasta")
 ```
+
+After removal of PCR errors the distribution of the different metrics
+looks as follow:
+
+```{r}
+Alt_ASVs_stats = 
+  get_ASVs_attributes(ampseq, 
+                      ref_fasta = 
+                        "~/Documents/Github/MHap-Analysis/docs/reference/Pfal_3D7/pf3d7_ref_updated_v3.fasta")
+
+h_ij_thres = 0.66
+h_ijminor_thres = 0.66
+Hetob_j_thres = 0.05
+
+Alt_ASVs_stats %>%
+  mutate(h_ijminor_cat = case_when(
+        h_ijminor < h_ijminor_thres ~ paste0('h_ijminor < ',h_ijminor_thres),
+        h_ijminor >= h_ijminor_thres ~ paste0('h_ijminor >= ',h_ijminor_thres)),
+        flanking_INDEL_cat = case_when(
+        flanking_INDEL == TRUE ~ 'w/. flanking INDELs',
+        flanking_INDEL == FALSE ~ 'w/o flanking INDELs'
+      ),
+      Hetob_j_cat = case_when(
+        Hetob_j < Hetob_j_thres ~ paste0('Hetob_j < ',Hetob_j_thres),
+        Hetob_j >= Hetob_j_thres ~ paste0('Hetob_j >= ',Hetob_j_thres)
+      )
+        
+        )%>%
+      ggplot(aes(x = p_ij, 
+                 y = h_ij,
+                 color = h_ijminor,
+                 size = Hetob_j))+
+      geom_point()+
+      geom_hline(yintercept = h_ij_thres,
+                 linetype = 2) +
+      theme_bw()+
+      scale_color_continuous(type = 'viridis')+
+      facet_grid(flanking_INDEL_cat~h_ijminor_cat + Hetob_j_cat)+
+      labs(x = 'Alternative allele prev. (p_ij)',
+           y = 'h_ij (H_ij/P_ij)',
+           color = 'h_ijminor')
+```
+
+There are no longer loci with high heterozygosity!!!
 
 ### Read depth coverage
 
@@ -251,7 +319,7 @@ can use the function `plot_coverage()` which requires two arguments, the
 split the information.
 
 ```{r, fig.height= 15}
-ampseq@metadata$TotalReadDepth = sample_TotalReadDepth(ampseq)
+ampseq@metadata$TotalReadDepth = sample_ReadDepth(ampseq, stat = 'sum')[[2]]
 
 pcr_plate = data.frame(order_in_plate = 1:192,
                        pcr_col = rep(rep(1:12, each = 8), 2),
@@ -262,7 +330,7 @@ ampseq@metadata = left_join(ampseq@metadata, pcr_plate, by = 'order_in_plate')
 ampseq@metadata %>%
   ggplot(aes(x = as.factor(pcr_col), y = factor(pcr_row, levels = LETTERS[8:1]), fill = TotalReadDepth))+
   geom_tile(color = 'black')+
-  facet_wrap(.~run, ncol = 1, scales = 'free_x')+
+  facet_wrap(.~Run, ncol = 1, scales = 'free_x')+
   theme_bw()+
   labs(x = 'Columns',
        y = 'Rows')+
@@ -271,7 +339,7 @@ ampseq@metadata %>%
 ```
 
 ```{r 'Describing the read depth coverage by run and study site'}
-coverage_by_municipality = plot_coverage(ampseq, variable = "Subnational_level2")
+coverage_by_municipality = get_ReadDepth_coverage(ampseq, variable = "Subnational_level2")
 ```
 
 The output of this function is a list with three plots
@@ -310,7 +378,7 @@ marker should amplify in order to be keep it for further analysis
 stored in a different slot in our object.
 
 ```{r 'Filtering loci of low amplification rate'}
-ampseq_filtered = locus_amplification_rate(ampseq, threshold = .65)
+ampseq_filtered = locus_amplification_rate(ampseq, threshold = .65, strata = "Subnational_level2")
 ```
 
 Thus in this data set `r ncol(ampseq@gt)` loci had an amplification rate
@@ -322,17 +390,7 @@ within the `ampseq_object`. The discarded loci were:
 ```{r 'Ploting loci performance', fig.width=7, fig.height=7, fig.cap= '**Figure 2:** Proportion of amplified samples per locus. Top figure shows the distribution of the amplification rate (or proportion of amplified samples) of loci, with the number of loci in the y-axis and the amplification rate in the x-axis. Bottom figure shows the the chromosome location of each locus (chromosomes in y-axis and position in the x-axis) and the gradient color represents its amplification rate.'}
 # Plot Amplification rate per loci ----
 
-ggdraw()+
-  draw_plot(ampseq_filtered@plots$amplification_rate_per_locus,
-            x = 0,
-            y = 0,
-            width = 1,
-            height = .5)+
-  draw_plot(ampseq_filtered@plots$all_loci_amplification_rate,
-            x = 0,
-            y = .5,
-            width = 1,
-            height = .5)
+ampseq_filtered@plots$all_loci_amplification_rate
 ```
 
 ### Amplification rate by sample
@@ -346,7 +404,7 @@ amplified (by default 0.8).
 
 ```{r 'Filtering samples of low amplification rate', fig.width=5, fig.height=5, fig.cap='**Figure 3:** Proportion of amplified loci per sample. The figure shows the distribution of the amplification rate (or proportion of amplified loci) of the samples, with the number of samples in the y-axis and the amplification rate in the x-axis.'}
 
-ampseq_filtered = sample_amplification_rate(ampseq_filtered, threshold = .8)
+ampseq_filtered = sample_amplification_rate(ampseq_filtered, threshold = .8, strata = "Subnational_level2")
 
 ampseq_filtered@plots$samples_amplification_rate+
          theme(axis.text = element_text(size = 12),
@@ -428,7 +486,7 @@ gene_ids = c('PF3D7_0417200',
              'PF3D7_1343700',
              'PF3D7_1447900')
 
-drugs = c('Artemisinine',
+drugs = c('Artemisinin',
           'Chloroquine', 
           'Pyrimethamine',
           'Sulfadoxine',
@@ -454,23 +512,24 @@ ampseq_drug@markers =
     
 
 drug_resistant_haplotypes_plot = drug_resistant_haplotypes(
-  ampseq_drug,
-  reference_alleles = 'docs/reference/Pfal_3D7/drugR_alleles.csv',
+  ampseq_object = ampseq_drug,
+  reference_alleles = '~/Documents/Github/MHap-Analysis/docs/reference/Pfal_3D7/drugR_alleles.csv',
   gene_names = gene_names,
   gene_ids = gene_ids,
   drugs = drugs,
-  gff_file = "docs/reference/Pfal_3D7/PlasmoDB-59_Pfalciparum3D7.gff",
-  fasta_file = "docs/reference/Pfal_3D7/PlasmoDB-59_Pfalciparum3D7_Genome.fasta",
+  gff_file = "~/Documents/Github/MHap-Analysis/docs/reference/Pfal_3D7/PlasmoDB-59_Pfalciparum3D7.gff",
+  fasta_file = "~/Documents/Github/MHap-Analysis/docs/reference/Pfal_3D7/PlasmoDB-59_Pfalciparum3D7_Genome.fasta",
   variables = c('Sample_id',
                 'Subnational_level2',
                 'Quarter_of_Collection'),
   Longitude = NULL,
   Latitude = NULL,
-  na.var.rm = FALSE,
+  na.var.rm = TRUE,
   na.hap.rm = TRUE,
   filters = c(
-    'Subnational_level2;Municipality 1,Municipality 2,Municipality 3,Municipality 4,Municipality 5',
-    'Quarter_of_Collection;2020-Q4,2021-Q1,2021-Q2,2021-Q3,2021-Q4,2022-Q1,2022-Q2,2022-Q3'))
+    'Subnational_level2;Buenaventura,Quibdó,Guapi',
+    'Quarter_of_Collection;2020-Q4,2021-Q1,2021-Q2,2021-Q3,2021-Q4,2022-Q1,2022-Q2,2022-Q3'),
+  hap_color_palette = 'random')
 
 ```
 
@@ -627,17 +686,16 @@ ampseq_filtered@loci_performance %>%
 
 ```{r}
 ampseq_filtered@metadata %>%
-  select(Sample_id,NPolyLoci, Frac_PolyLoci, Polyloci, alleles_at_loci, nalleles_per_loci, coi)%>%
+  select(Sample_id, NHetLoci, Frac_HetLoci, Fws,  Polyloci, alleles_at_loci, nalleles_per_loci)%>%
   datatable(rownames = F)
 ```
 
-3.  Distribution of fraction of polyclonal loci per sample
+3.  Distribution of fraction of heterozygous loci and within host
+    divergence per sample
 
 ```{r}
 
-ampseq_filtered@metadata %>%
-  ggplot(aes(x = Frac_PolyLoci))+
-  geom_histogram(binwidth = 0.005)
+ampseq_filtered@plots$plot_fracHet_vs_Fws
 
 ```
 
@@ -648,7 +706,7 @@ ampseq_filtered@metadata %>%
 ```{r}
 ampseq_filtered@pop_summary%>%
   datatable(rownames = F) %>%
-  formatRound(columns=c('mean_coi', 'prop_poly', 'prop_poly_lower', 'prop_poly_upper'),
+  formatRound(columns=c('prop_poly', 'prop_poly_lower', 'prop_poly_upper'),
               digits=3)
 ```
 
@@ -660,8 +718,8 @@ respect to the number of samples with more than 10 heterozygous loci.
 
 ```{r 'Distribution of the number of heterozygous loci per sample by sampling location', fig.width=7, fig.height=4, fig.cap = '**Figure 5:** Distribution of the number of heterozygous loci per samples per population.'}
 
-plot_log_NPolyLoci_by_pop = log_scale_histogram(data = ampseq_filtered@metadata[ampseq_filtered@metadata$NPolyLoci != 0,],
-                                                var = "NPolyLoci", binwidth = 1, group_by = "Subnational_level2",
+plot_log_NPolyLoci_by_pop = log_scale_histogram(data = ampseq_filtered@metadata[ampseq_filtered@metadata$NHetLoci != 0,],
+                                                var = "NHetLoci", binwidth = 1, group_by = "Subnational_level2",
                                                 levels = pop_levels, x_label = "Number of heterozygous loci per polyclonal sample",
                                                 fill_color = pop_colors,
                                                 y_breaks = c(1, 5,10, 30), ncol = 4)+
@@ -678,7 +736,7 @@ We can do the same with the COI by sample.
 ```{r 'Distribution of COI by sampling location', fig.width=7, fig.height=4, fig.cap = '**Figure 6:** Distribution of the complexity of infection (COI) by study area. y-axis is in logarithm scale.'}
 
 plot_log_coi_by_pop = log_scale_histogram(data = ampseq_filtered@metadata,
-                                          var = "coi",
+                                          var = "max_nAlleles",
                                           binwidth = 1,
                                           group_by = "Subnational_level2",
                                           levels = pop_levels,
@@ -734,10 +792,10 @@ poly_by_pop_over_time = get_polygenomic(ampseq_object = ampseq_filtered,
                                         strata = "Pop_quarter",
                                         update_popsummary = F,
                                         na.rm = TRUE,
-                                        filters = 'Municipality 1|Municipality 2|Municipality 3')
+                                        filters = 'Buenaventura|Quibdó|Guapi')
 
 poly_by_pop_over_time$pop_summary %>% datatable() %>%
-  formatRound(columns=c('mean_coi', 'prop_poly', 'prop_poly_lower', 'prop_poly_upper'),
+  formatRound(columns=c('prop_poly', 'prop_poly_lower', 'prop_poly_upper'),
               digits=3)
 
 ```
@@ -788,11 +846,9 @@ of our metadata table.
 nsamples_vs_proppoly = 
   left_join(poly_by_pop_over_time$pop_summary%>% 
               select(pop, prop_poly), metadata %>%
-              mutate(Quarter_of_Collection = 
-                       paste(substr(Date_of_Collection, 1, 4), quarters.Date(Date_of_Collection), sep='-')) %>%
               summarise(nsamples= n(), .by = c(Subnational_level2, Quarter_of_Collection)) %>% 
               mutate(pop = paste(Subnational_level2, Quarter_of_Collection, sep = '_')), by = 'pop') %>%
-  filter(Subnational_level2 %in% c('Municipality 1', 'Municipality 2', 'Municipality 3'))
+  filter(Subnational_level2 %in% c('Buenaventura', 'Quibdó', 'Guapi'))
 ```
 
 Then we can plot the correlation using the function `ggscatter`.
@@ -838,8 +894,8 @@ to use the following functions:
 ```{r 'Estimating relatedness'}
 # measuring relatedness----
 
-if(file.exists('docs/data/Pfal_pairwise_relatedness.csv')){
-  pairwise_relatedness = read.csv('docs/data/Pfal_pairwise_relatedness.csv')
+if(file.exists('~/Documents/Github/MHap-Analysis/docs/data/Pfal_example2/Pfal_pairwise_relatedness.csv')){
+  pairwise_relatedness = read.csv('~/Documents/Github/MHap-Analysis/docs/data/Pfal_example2/Pfal_pairwise_relatedness.csv')
 }else{
   pairwise_relatedness = NULL
   
@@ -853,7 +909,7 @@ if(file.exists('docs/data/Pfal_pairwise_relatedness.csv')){
     
   }
   
-  write.csv(pairwise_relatedness, 'docs/data/Pfal_pairwise_relatedness.csv', row.names = F, quote = F)
+  write.csv(pairwise_relatedness, '~/Documents/Github/MHap-Analysis/docs/data/Pfal_example2/Pfal_pairwise_relatedness.csv', row.names = F, quote = F)
 }
 ```
 
@@ -866,7 +922,7 @@ if(file.exists('docs/data/Pfal_pairwise_relatedness.csv')){
 
 plot_relatedness_distribution_within = plot_relatedness_distribution(
   pairwise_relatedness = pairwise_relatedness,
-  metadata = ampseq@metadata,
+  metadata = ampseq_filtered@metadata,
   Population = 'Subnational_level2',
   fill_color = pop_colors,
   type_pop_comparison = 'within',
@@ -901,10 +957,10 @@ plot_relatedness_distribution_within$relatedness %>%
 ```{r 'highly related samples within study areas', fig.width = 7, fig.height = 4, fig.cap = '**Figure 11:** Proportion of highly related samples (IBD > 0.99) in each study area.'}
 plot_frac_highly_related_within = plot_frac_highly_related(
   pairwise_relatedness = pairwise_relatedness,
-  metadata = ampseq@metadata,
+  metadata = ampseq_filtered@metadata,
   Population = 'Subnational_level2',
   fill_color = pop_colors,
-  threshold = 0.97, type_pop_comparison = 'within', pop_levels = pop_levels)
+  threshold = 0.99, type_pop_comparison = 'within', pop_levels = pop_levels)
 
 plot_frac_highly_related_within$plot
 ```
@@ -924,7 +980,7 @@ plot_frac_highly_related_within$highly_related_table%>%
 
 ```{r 'fraction of highly related samples over time (3 months intervals) within study areas', fig.width = 7, fig.height=10, fig.cap = '**Figure 12:** Proportion of highly related samples over year quarters in each study area.'}
 plot_frac_highly_related_over_months_within = plot_frac_highly_related_over_time(pairwise_relatedness = pairwise_relatedness,
-                                       metadata = ampseq@metadata,
+                                       metadata = ampseq_filtered@metadata,
                                        Population = c('Subnational_level2', 'Month_of_Collection'),
                                        fill_color = pop_colors,
                                        threshold = 0.99,
@@ -944,7 +1000,7 @@ nsamples_vs_highlyR = left_join(plot_frac_highly_related_over_months_within$plot
   filter(!is.na(Subnational_level2)) %>%
   group_by(Subnational_level2, Month_of_Collection) %>%
   summarise(nsamples= n()) %>% mutate(pop = paste(Subnational_level2, Month_of_Collection, sep = '_')), by = 'pop')  %>%
-  filter(prop != 0, Subnational_level2 %in% c('Municipality 1', 'Municipality 2', 'Municipality 3'))
+  filter(prop != 0, Subnational_level2 %in% c('Buenaventura', 'Quibdó', 'Guapi'))
 
 plot_cor_highlyR_nsamples = ggscatter(nsamples_vs_highlyR, x = "prop", y = "nsamples", 
           add = "reg.line", conf.int = TRUE, 
@@ -1029,15 +1085,18 @@ different study sites. In this case, we are going to set
 
 plot_relatedness_distribution_between = plot_relatedness_distribution(
   pairwise_relatedness = pairwise_relatedness,
-  metadata = ampseq_filtered@metadata %>% mutate(Pop = gsub('unicipality ','', Subnational_level2)),
+  metadata = ampseq_filtered@metadata %>% 
+    mutate(Pop = case_when(
+      Subnational_level2 == 'Buenaventura' ~ 'BVe',
+      Subnational_level2 == 'Quibdó' ~ 'Qui',
+      Subnational_level2 == 'Guapi' ~ 'Gup',
+      Subnational_level2 == 'Tumaco' ~ 'Tum',
+      Subnational_level2 == 'Puerto Inírida' ~ 'PIn'
+    )),
   Population = 'Pop',
   fill_color = rep('gray50', 10),
   type_pop_comparison = 'between',
-  ncol = 5,
-  pop_levels = c("M1-M2", "M1-M3", "M1-M4",
-                  "M1-M5", "M2-M3", "M2-M4", 
-                  "M2-M5", "M3-M4", "M3-M5", 
-                  "M4-M5")
+  ncol = 5
 )
 
 plot_relatedness_distribution_between$plot
@@ -1051,21 +1110,23 @@ explored with the function `plot_frac_highly_related` and setting
 
 plot_frac_highly_related_between = plot_frac_highly_related(
   pairwise_relatedness = pairwise_relatedness,
-  metadata = ampseq_filtered@metadata %>% mutate(Pop = gsub('unicipality ','', Subnational_level2)),
+  metadata = ampseq_filtered@metadata %>% 
+    mutate(Pop = case_when(
+      Subnational_level2 == 'Buenaventura' ~ 'BVe',
+      Subnational_level2 == 'Quibdó' ~ 'Qui',
+      Subnational_level2 == 'Guapi' ~ 'Gup',
+      Subnational_level2 == 'Tumaco' ~ 'Tum',
+      Subnational_level2 == 'Puerto Inírida' ~ 'PIn'
+    )),
   Population = 'Pop',
   fill_color = rep('gray50', 10),
-  threshold = 0.99, type_pop_comparison = 'between',
-  pop_levels = c("M1-M2", "M1-M3", "M1-M4",
-                  "M1-M5", "M2-M3", "M2-M4", 
-                  "M2-M5", "M3-M4", "M3-M5", 
-                  "M4-M5"))
+  threshold = 0.99, type_pop_comparison = 'between')
 
 plot_frac_highly_related_between$plot
 ```
 
 ```{r}
 plot_frac_highly_related_between$highly_related_table%>%
-  filter(grepl('M(1|2|3)-M(1|2|3)',Pop_comparison))%>%
   DT::datatable()
 
 ```
@@ -1074,12 +1135,8 @@ plot_frac_highly_related_between$highly_related_table%>%
 
 ```{r}
 
-diversity = fx_pop_diversity(ampseq_object = ampseq_filtered, strata = 'Subnational_level2')
+diversity = get_pop_diversity(ampseq_object = ampseq_filtered, strata = 'Subnational_level2')
 
 diversity %>% DT::datatable()
 
-```
-
-```{r}
-polyclonas = get_polygenomic(ampseq_object, strata = '')
 ```

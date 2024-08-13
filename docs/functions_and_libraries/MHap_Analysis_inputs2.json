@@ -1,4 +1,71 @@
 {
-  "MHap_Analysis.MHap_Analysis_tool.name": " world!!!"
+  "vmem": 32,
+  "cores": 8,
+  "h_rt1": 00:30:00,
+  "h_rt2": 02:00:00,
+  "h_rt3": 01:00:00,
+  "nTasks": 1,
+  
+  "wd": "/Users/pam3650/Documents/Github/MHap-Analysis/docs/data/Pvivax_sequencing_data/Pvivax_Gates/",
+  "fd": "/Users/pam3650/Documents/Github/MHap-Analysis/docs/functions_and_libraries/",
+  "rd": "/Users/pam3650/Documents/Github/MHap-Analysis/docs/reference/Pviv_P01/",
+  
+  "cigar_paths": null,
+  "cigar_files": "cigar_table",
+  "ampseq_jsonfile": null,
+  "ampseq_excelfile": null,
+  
+  "output": "MHap_PvTest1",
+  
+  "sample_id_pattern": "^(SP|G\\d|HR)",
+  "markers": "PvGTSeq271_markersTable.csv",
+  "min_abd": 5,
+  "min_ratio": 0.1,
+  
+  "off_target_formula": "dVSITES_ij>=0.3",
+  "flanking_INDEL_formula": "flanking_INDEL==TRUE&h_ij>=0.66",
+  "PCR_errors_formula": "h_ij>=0.66&h_ijminor>=0.66",
+  
+  "PerformanceReport": true,
+  
+  "sample_ampl_rate": 0.75,
+  "locus_ampl_rate": 0.75,
+  
+  "Drug_Surveillance_Report": false,
+  "Variants_of_Interest_Report": false,
+  
+  "ref_gff": "PlasmoDB-59_Pfalciparum3D7.gff",
+  "ref_fasta": "PlasmoDB-59_Pfalciparum3D7_Genome.fasta",
+  "reference_alleles": "drugR_alleles.csv",
+  "hap_color_palette": "random",
+  
+  "gene_names": "null",
+  "gene_ids": "null",
+  "drugs": "null",
+  "include_all_drug_markers": false,
+
+  "metadata": "null", 
+  "join_by": "null",
+  "Variable1": "null",
+  "Variable2": "null",
+  "Longitude": "null",
+  "Latitude": "null",
+  "na_var_rm": true,
+  "na_hap_rm": true,
+  
+  "var_filter": "null",
+
+  
+  "ibd_thres": "null",
+  "pairwise_relatedness_table": "null",
+  "parallel": true,
+  "ibd_ncol": 4,
+  "pop_levels": null,
+  "nchunks": 500,
+  
+  "poly_quantile": 0.75,
+  "poly_formula": "NHetLoci>=1",
 }
+
+
 

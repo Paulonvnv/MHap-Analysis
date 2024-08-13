@@ -4,9 +4,21 @@ navbar:
   left:
     - text: 'Home'
       href: index.html
-    - text: 'MHap-Pfalciparum'
+    - text: 'MHap-Analysis pipeline'
+      href: MHap_Analysis_pipeline.html
+    - text: 'Performance of amplicon sequencing data'
+      href: Sequencing_Performance.html
+    - text: 'Drug Resistance Surveillance'
+      href: Drug_resistance_surveillance.html
+    - text: 'Complexity of infection (COI)'
+      href: Complexity_of_infection.html
+    - text: 'PopStructure and Connectivity'
+      href: PopStructure_and_Connectivity.html
+    - text: 'Genetic Relatedness (IBD) and Tranmission'
+      href: IBD_and_Tranmission.html
+    - text: 'MHap-Pfalciparum example'
       href: MHapPfalciparum.html
-    - text: 'MHap-Pvivax'
+    - text: 'MHap-Pvivax example'
       href: MHapPvivax.html
     - text: 'Intro to R'
       href: Intro_to_R.html

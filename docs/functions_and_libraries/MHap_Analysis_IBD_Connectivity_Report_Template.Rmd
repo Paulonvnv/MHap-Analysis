@@ -15,6 +15,38 @@ params:
   RData_image: ""
 ---
 
+The genetic relatedness between individual parasite haplotypes and among
+parasite populations has several practical uses in the study of malaria.
+For example, relatedness information can help determine the geographic
+origin of imported infections, define the extent to which parasites are
+dispersing or are contained within landscapes, and identify whether
+specific strains are being selected for over time. Relatedness
+information is also very helpful in understanding longitudinal
+(within-individual) infection dynamics. In the case of *P. vivax*, for
+example, it can distinguish whether infection represents newly acquired
+parasites, recrudescence after treatment, or relapse from longer-lasting
+hypnozoite reservoirs. Relatedness information can also help resolve
+polyclonality signals, i.e., clarify the number of different haplotypes
+co-infecting individual patients.
+
+Relatedness is defined as the probability that, at any locus in the
+genome, the alleles sampled from two different individuals are identical
+by descent ($IBD$). Genetic markers used for this purpose include SNPs,
+microsatellites, and (increasingly) amplicon micro-haplotypes (MHAP).
+Relatedness can be estimated using a Hidden Markov Model approach
+implemented in the [R package
+paneljudge](https://github.com/aimeertaylor/paneljudge/tree/master) (see
+mathematical framework in [AR Taylor et al.
+2019](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6707449/)). In this
+package, relatedness ($r$) is estimated as a function of the haplotype
+of the two sampled parasites ($Y^{(i)}$ and $Y^{(j)}$, where $i$ and $j$
+denote two different sampled genotypes from the population), the
+frequency of the alleles in the population ($f_t(g)$, where $t$ denotes
+locus), the physical distance ($d_t$, in base-pairs) between
+successively analyzed loci ($t-1$ and $t$), the recombination rate
+($\rho$), a switching rate of the Markov chain ($k$), and a constant
+genotyping error rate ($\varepsilon$).
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, include = TRUE)
 ```
@@ -40,54 +72,11 @@ load(params$RData_image)
 
 ```
 
-The haplotype of each sample is stored in the table `aacigar_table`
-within the object `drug_resistant_haplotypes_plot`.
+### Pairwise relatedness comparisons between categories
 
-```{r, fig.width=10, fig.height=10, fig.cap = "**Figure 1:** IBD distribution between sites"}
-
-plot_relatedness_distribution_between$plot
-
-```
-
-```{r, fig.width=10, fig.height=6, fig.cap = "**Figure 2:** Frequency of highly related among sites"}
-
-plot_frac_highly_related_between$plot
-```
-
-
-```{r, fig.width=10, fig.height=10, fig.cap = "**Figure 2:** Frequency of highly related between sites over time"}
-
-if(!is.na(Variable2)){plot_frac_highly_related_overtime_between$plot_IBD_correlation_matrix}
-```
-
-```{r, fig.width=10, fig.height=10, fig.cap = "**Figure 2:** Frequency of highly related between sites over time"}
-
-if(!is.na(Variable2)){plot_frac_highly_related_overtime_between$plot_frac_highly_related}
-```
-
-
-```{r, fig.width=10, fig.height=12, fig.cap="**Figure 3:** IBD PCA"}
-IBD_PCA
-```
-
-```{r, fig.width=10, fig.height=12, fig.cap="**Figure 4:** IBD network"}
-
-qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
-col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
-
-set.seed(1)
-
-plot_network(pairwise_relatedness,
-                               threshold = ibd_thres,
-                               metadata = ampseq_object@metadata, 
-                               sample_id = 'Sample_id', 
-                               group_by = Variable1, 
-                               levels = levels(as.factor(ampseq_object@metadata[[Variable1]])),
-                               colors = sample(col_vector, nlevels(as.factor(ampseq_object@metadata[[Variable1]])))
-                              )
-```
-
-### Pairwise relatedness comparisons between categories of Variable1
+For this report all possible pairwise IBD comparisons between samples
+from different categories of Variable1 and Variable2 are computed, and
+the results are shown in the following table:
 
 ```{r}
 
@@ -98,7 +87,24 @@ plot_relatedness_distribution_between$relatedness %>%
 
 ```
 
+```{r, include = FALSE}
+fig1.height = 2 * ceiling(length(unique(plot_relatedness_distribution_between$plot$data$Pop_comparison))/3)
+```
+
+The distribution of pairwise genetic relatedness values is presented
+using histograms as follows:
+
+```{r, fig.width=10, fig.height=fig1.height, fig.cap = "**Figure 1:** Pairwise IBD distribution between categories of Variable1 (panels). The x-axis shows genetic relatedness values, ranging from 0 (unrelated) to 1 (clonal). The y-axis shows the number of pairwise comparisons corresponding to each of these relatedness values. The dotted vertical line represents the median genetic relatedness in the total dataset (including both within and between-population comparisons)."}
+plot_relatedness_distribution_between$plot
+```
+
 ### Fraction of highly related comparisons between categories of Variable1
+
+Based on the threshold defined in the workflow in Terra (`ibd_thres`),
+highly related pairwise comparisons between categories in Variable1 are
+counted and proportions with their 95% CI (Fisher exact test) are
+calculated. These values are presented in the following table and in
+Figure 2:
 
 ```{r}
 plot_frac_highly_related_between$highly_related_table %>%
@@ -107,8 +113,24 @@ plot_frac_highly_related_between$highly_related_table %>%
                   buttons = c('csv', 'excel')))
 ```
 
+```{r, include = FALSE}
+fig2.height = 2.5 + max(round(nchar(as.character(unique(plot_frac_highly_related_between$plot$data$Pop_comparison)))/10, 0))
+fig2.width = 1*length(unique(plot_frac_highly_related_between$plot$data$Pop_comparison))
+
+fig2.width = ifelse(fig2.width > 20, 20, fig2.width)
+```
+
+```{r, fig.width=fig2.width, fig.height=fig2.height, fig.cap = "**Figure 2:** Fraction of highly related pairwise comparisons (IBD >= ibd_thres) between categories of Variable1 (x-axis). 95% confidence intervals are computed using a Fisher exact test."}
+
+plot_frac_highly_related_between$plot
+```
 
 ### Fraction of highly related comparisons between categories of Variable1 over Variable2
+
+Highly related pairwise comparisons between categories in Variable1 and
+Variable2 are also counted and proportions with their 95% CI (Fisher
+exact test) are calculated. These values are presented in the following
+table and in Figures 3-4:
 
 ```{r}
 if(!is.na(Variable2)){plot_frac_highly_related_overtime_between$frac_highly_related %>%
@@ -117,3 +139,55 @@ if(!is.na(Variable2)){plot_frac_highly_related_overtime_between$frac_highly_rela
                   buttons = c('csv', 'excel')))}
 ```
 
+```{r, include = FALSE}
+fig3.height = 0.5*length(unique(plot_frac_highly_related_overtime_between$plot_IBD_correlation_matrix$data$Pop_Date_Yi))
+
+fig3.height = ifelse(fig3.height > 20, 20, fig3.height)
+
+fig3.width = 0.5*length(unique(plot_frac_highly_related_overtime_between$plot_IBD_correlation_matrix$data$Pop_Date_Yj))
+
+fig3.width = ifelse(fig3.width > 20, 20, fig3.width)
+```
+
+```{r, fig.width=fig3.width, fig.height=fig3.height, fig.cap = "**Figure 3:** Heatmap matrix of the fraction of highly related pairwise comparisons (IBD >= ibd_thres) between categories of Variable1 and Variable2. The color scale indicates the fraction of highly related samples (increasing with higher intensities of red). The diagonal in the matrix represents pairwise comparisons within categories."}
+if(!is.na(Variable2)){plot_frac_highly_related_overtime_between$plot_IBD_correlation_matrix}
+```
+
+```{r, include = FALSE}
+
+fig4.height = 3*ceiling(length(unique(plot_frac_highly_related_overtime_between$plot_frac_highly_related$data$Pop_comparison))/3)
+
+fig4.width = ceiling(3 *
+  0.5*length(unique(plot_frac_highly_related_overtime_between$plot_frac_highly_related$data$Date_Yi)))
+
+fig4.width = ifelse(fig4.width > 20, 20, fig4.width)
+```
+
+```{r, fig.width=fig4.width, fig.height=fig4.height, fig.cap = "**Figure 4:** Bar plot of the fraction of highly related pairwise comparisons (IBD >= ibd_thres) between categories of Variable1 (panels) and Variable2 (x-axis). 95% confidence intervals are computed using a Fisher exact test."}
+
+if(!is.na(Variable2)){plot_frac_highly_related_overtime_between$plot_frac_highly_related}
+```
+
+Finally, PCoA and network plots summarizing the genetic relatedness
+between samples are constructed.
+
+```{r, fig.width=6, fig.height=4.5, fig.cap="**Figure 5:** Principal coordinate analysis (PCoA) based on the inverse of genetic relatedness (1 - IBD). Colors are randomly assigned based on the categories of Variable1. Each dot represents a sample."}
+IBD_PCA
+```
+
+```{r, fig.width=6, fig.height=6, fig.cap="**Figure 6:** Network representation of pairwise genetic relatedness (IBD), Colors are randomly assigned based on the categories of Variable1. Each dot represents a sample and the lines connect samples with IBD >= ibd_thres."}
+
+qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
+
+set.seed(1)
+
+ibd_network = plot_network(pairwise_relatedness,
+                               threshold = ibd_thres,
+                               metadata = ampseq_object@metadata, 
+                               sample_id = 'Sample_id', 
+                               group_by = Variable1, 
+                               levels = levels(as.factor(ampseq_object@metadata[[Variable1]])),
+                               colors = sample(col_vector, nlevels(as.factor(ampseq_object@metadata[[Variable1]])))
+                              )
+```

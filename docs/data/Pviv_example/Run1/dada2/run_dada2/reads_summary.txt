@@ -1,0 +1,136 @@
+                               input filtered denoisedF denoisedR merged
+220-GZ-Alt-sWGA-bc_S69         14284    14048     13870     13785  12612
+PF-230-Alt-sWGA-bc_S38        211765   209755    204675    205541 175847
+174-GZ-Alt-sWGA-bc_S58        123709   120828    115088    118497  85048
+220-GZ-Alt-sWGA-Dilution_S105   5629     5545      5459      5409   5103
+116-GZ-Control_S6               6838     6748      6612      6589   4951
+PF-327-Alt-sWGA-Dilution_S108    433      432       386       384    383
+127-GZ-Control_S32              3335     3262      3157      3127   2901
+201-GZ-Control_S12              9173     9033      8765      8811   7969
+190-GZ-Alt-sWGA-Dilution_S73  110583   109231    106150    107280  86542
+200-GZ-Alt-sWGA-Dilution_S103  18488    18177     17512     17852  14215
+182-GZ-Alt-sWGA-Dilution_S107    759      730       657       644    315
+PF-428-Alt-sWGA-Dilution_S77  208883   206882    201924    205652 168000
+107-GZ-Alt-sWGA-Dilution_S81  117979   116431    115051    113697  93832
+193-GZ-Alt-sWGA-bc_S40        187249   185479    182511    182738 160200
+165-GZ-Alt-sWGA-Dilution_S102  87188    85299     82396     84143  60703
+183-GZ-Control_S24              6820     6705      6590      6564   6085
+183-GZ-Alt-sWGA-bc_S60        159122   156302    151745    153282 126047
+PF-230-Control_S2               1997     1984      1855      1776   1732
+174-GZ-Control_S22              3686     3637      3473      3525   3068
+200-GZ-Control_S31              2583     2556      2420      2414   2281
+182-GZ-Alt-sWGA-bc_S71         14942    14503     13752     13762   7153
+200-GZ-Alt-sWGA-bc_S67         58289    57225     54935     56561  46332
+183-GZ-Alt-sWGA-Dilution_S96  121729   119230    116380    116073  94050
+PF-27420-Control_S3                1        1         1         1      1
+220-GZ-Control_S33               734      728       652       636    606
+118-GZ-Alt-sWGA-Dilution_S87   67267    66309     62403     65515  52264
+PF-327-Control_S36              1570     1562      1507      1512   1298
+190-GZ-Alt-sWGA-bc_S37         62852    62264     60572     61421  46393
+110-GZ-Control_S7               2564     2537      2422      2454   2328
+PF-231-Alt-sWGA-bc_S70           126      125       100        96     45
+175-GZ-Alt-sWGA-Dilution_S89   73421    72587     70690     71607  53050
+213-GZ-Alt-sWGA-bc_S57         83690    82402     80938     81379  75174
+205-GZ-Control_S16                 2        2         2         1      1
+107-GZ-Alt-sWGA-bc_S45        121324   120096    115632    118383  87403
+175-GZ-Alt-sWGA-bc_S53        119019   117536    113863    115935  89180
+127-GZ-Alt-sWGA-Dilution_S104  14924    14809     14351     14560  11634
+PF-230-Alt-sWGA-Dilution_S74  107763   106844    104604    105414  92388
+193-GZ-Control_S4               3674     3583      3469      3358   3252
+118-GZ-Alt-sWGA-bc_S51        113343   111168    107933    108026  74513
+159-GZ-Alt-sWGA-Dilution_S100      2        1         1         1      1
+Undetermined_S0               388469   361030    338509    335666 265358
+107-GZ-Control_S9               4133     4069      3925      3906   3751
+182-GZ-Control_S35              1986     1956      1870      1773   1623
+PF-428-Control_S5               4248     4206      4051      4041   3018
+PF-428-Alt-sWGA-bc_S41        220609   218816    214651    217320 174584
+104-GZ-Alt-sWGA-bc_S49         71296    68529     65031     68017  54388
+110-GZ-Alt-sWGA-bc_S43        242888   237930    227362    232040 158834
+213-GZ-Control_S21              1667     1645      1539      1518   1342
+110-GZ-Alt-sWGA-Dilution_S79  167883   164585    158136    161746 111903
+175-GZ-Control_S17              5858     5508      5389      5284   4819
+104-GZ-Control_S13              5538     5475      5278      5339   4704
+PF-231-Alt-sWGA-Dilution_S106    118      113        88        83     37
+PF-231-Control_S34               822      814       750       747    685
+118-GZ-Control_S15              8233     8099      7896      7910   6135
+190-GZ-Control_S1               8211     7698      7562      7316   7169
+213-GZ-Alt-sWGA-Dilution_S93   36969    36201     35628     35715  33010
+193-GZ-Alt-sWGA-Dilution_S76  139800   138462    135915    136408 123592
+PF-327-Alt-sWGA-bc_S72          9013     8967      8883      8872   8771
+116-GZ-Alt-sWGA-bc_S42        146220   144895    142772    142817 124764
+104-GZ-Alt-sWGA-Dilution_S85  115626   108565    104138    107090  85053
+174-GZ-Alt-sWGA-Dilution_S94   40700    39940     37650     39346  29687
+165-GZ-Alt-sWGA-bc_S66          5414     5348      5169      5194   4343
+201-GZ-Alt-sWGA-Dilution_S84   70102    68934     66681     68017  50960
+116-GZ-Alt-sWGA-Dilution_S78  116966   115663    114231    113902 100377
+165-GZ-Control_S30             11493    10852     10689     10579   9352
+127-GZ-Alt-sWGA-bc_S68           345      341       296       271    126
+201-GZ-Alt-sWGA-bc_S48        156299   153428    148510    151359 108382
+                              nonchim
+220-GZ-Alt-sWGA-bc_S69          12612
+PF-230-Alt-sWGA-bc_S38         175847
+174-GZ-Alt-sWGA-bc_S58          85048
+220-GZ-Alt-sWGA-Dilution_S105    5103
+116-GZ-Control_S6                4951
+PF-327-Alt-sWGA-Dilution_S108     383
+127-GZ-Control_S32               2901
+201-GZ-Control_S12               7969
+190-GZ-Alt-sWGA-Dilution_S73    86542
+200-GZ-Alt-sWGA-Dilution_S103   14215
+182-GZ-Alt-sWGA-Dilution_S107     315
+PF-428-Alt-sWGA-Dilution_S77   167813
+107-GZ-Alt-sWGA-Dilution_S81    93832
+193-GZ-Alt-sWGA-bc_S40         159666
+165-GZ-Alt-sWGA-Dilution_S102   60446
+183-GZ-Control_S24               6085
+183-GZ-Alt-sWGA-bc_S60         126039
+PF-230-Control_S2                1732
+174-GZ-Control_S22               3068
+200-GZ-Control_S31               2281
+182-GZ-Alt-sWGA-bc_S71           7153
+200-GZ-Alt-sWGA-bc_S67          46332
+183-GZ-Alt-sWGA-Dilution_S96    94050
+PF-27420-Control_S3                 1
+220-GZ-Control_S33                606
+118-GZ-Alt-sWGA-Dilution_S87    52264
+PF-327-Control_S36               1298
+190-GZ-Alt-sWGA-bc_S37          46393
+110-GZ-Control_S7                2328
+PF-231-Alt-sWGA-bc_S70             45
+175-GZ-Alt-sWGA-Dilution_S89    53050
+213-GZ-Alt-sWGA-bc_S57          75174
+205-GZ-Control_S16                  1
+107-GZ-Alt-sWGA-bc_S45          87403
+175-GZ-Alt-sWGA-bc_S53          88970
+127-GZ-Alt-sWGA-Dilution_S104   11634
+PF-230-Alt-sWGA-Dilution_S74    92388
+193-GZ-Control_S4                3252
+118-GZ-Alt-sWGA-bc_S51          74513
+159-GZ-Alt-sWGA-Dilution_S100       1
+Undetermined_S0                264556
+107-GZ-Control_S9                3751
+182-GZ-Control_S35               1623
+PF-428-Control_S5                2940
+PF-428-Alt-sWGA-bc_S41         174394
+104-GZ-Alt-sWGA-bc_S49          54388
+110-GZ-Alt-sWGA-bc_S43         158634
+213-GZ-Control_S21               1342
+110-GZ-Alt-sWGA-Dilution_S79   111786
+175-GZ-Control_S17               4819
+104-GZ-Control_S13               4704
+PF-231-Alt-sWGA-Dilution_S106      37
+PF-231-Control_S34                685
+118-GZ-Control_S15               6135
+190-GZ-Control_S1                7169
+213-GZ-Alt-sWGA-Dilution_S93    33010
+193-GZ-Alt-sWGA-Dilution_S76   123433
+PF-327-Alt-sWGA-bc_S72           8771
+116-GZ-Alt-sWGA-bc_S42         124252
+104-GZ-Alt-sWGA-Dilution_S85    85053
+174-GZ-Alt-sWGA-Dilution_S94    29687
+165-GZ-Alt-sWGA-bc_S66           4343
+201-GZ-Alt-sWGA-Dilution_S84    50852
+116-GZ-Alt-sWGA-Dilution_S78    99868
+165-GZ-Control_S30               9352
+127-GZ-Alt-sWGA-bc_S68            126
+201-GZ-Alt-sWGA-bc_S48         108086

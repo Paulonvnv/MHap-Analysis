@@ -1,0 +1,9 @@
+x
+1	SP0112286667_S56_prim_1.fq.gz
+2	PCR-Control-48-2_S177_prim_1.fq.gz
+3	PCR-Control-47-2_S81_prim_1.fq.gz
+4	PCR-Control-48-1_S138_prim_1.fq.gz
+5	Negative-Control-47_S14_prim_1.fq.gz
+6	PCR-Control-47-1_S42_prim_1.fq.gz
+7	Negative-Control-48_S110_prim_1.fq.gz
+8	SP0112286608_S92_prim_1.fq.gz

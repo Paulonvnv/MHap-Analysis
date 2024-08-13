@@ -1,0 +1,11 @@
+x
+1	SP0101254246_S179_prim_1.fq.gz
+2	AMPL-neg1_S43_prim_1.fq.gz
+3	SP0112286298_S23_prim_1.fq.gz
+4	AMPL-neg3_S138_prim_1.fq.gz
+5	EXTR-neg1_S14_prim_1.fq.gz
+6	AMPL-neg4_S177_prim_1.fq.gz
+7	EXTR-neg2_S110_prim_1.fq.gz
+8	SP0112286131_S139_prim_1.fq.gz
+9	SP0112286297_S15_prim_1.fq.gz
+10	SP0101254209_S119_prim_1.fq.gz

@@ -1,4 +1,5 @@
 {
+  //UGER parameters
   "vmem": 32,
   "cores": 8,
   "h_rt1": 00:30:00,
@@ -6,36 +7,68 @@
   "h_rt3": 01:00:00,
   "nTasks": 1,
   
-  "wd": "/Users/pam3650/Documents/Github/MHap-Analysis/docs/data/Pfal_example/",
+  //PATHs to references and functions
+  "wd": "/Users/pam3650/Documents/Github/MHap-Analysis/docs/data/Pfal_example3/",
   "fd": "/Users/pam3650/Documents/Github/MHap-Analysis/docs/functions_and_libraries/",
   "rd": "/Users/pam3650/Documents/Github/MHap-Analysis/docs/reference/Pfal_3D7/",
   
-  "cigar_paths": null,
-  "cigar_files": "cigar_tables",
+  //Upload of raw data
+  "cigar_paths": null, // Path to output folders of the denoising pipeline, e.i.: "Seq_runs", null
+  
+  "cigar_files": "cigar_tables",//"cigar_tables", null
+  "asv_table_files": "asv_tables",//"asv_tables", null
+  "asv2cigar_files": "asv2cigar",//"asv2cigar", null
+  "asv_seq_files": "asv_seqs",//"asv_seqs", null
+  "zero_read_sample_list": "zeroReadSamples",//"zeroReadSamples", null
+  
   "ampseq_jsonfile": null,
   "ampseq_excelfile": null,
+  "ampseq_csvfolder": null,
   
-  "output": "MHap_Philipptest2",
-  
-  "sample_id_pattern": "^ID",
+  "sample_id_pattern": "^SP",
   "markers": "markers.csv",
+  
+  //Parameters to export data and results
+  "output": "MHap_test_excel",
+  "ampseq_export_format": "excel",//"csv", "excel", "json"  null
+  
+  //Removing or masking ASVs in the genotype table
   "min_abd": 10,
   "min_ratio": 0.1,
-  
-  "off_target_formula": "dVSITES_ij>=0.3",
+  "off_target_formula": "dVSITES_ij>=0.3", //nVSITES>40, nSNVs>30, nINDELs>10
   "flanking_INDEL_formula": "flanking_INDEL==TRUE&h_ij>=0.66",
-  "PCR_errors_formula": "h_ij>=0.66&h_ijminor>=0.66",
+  "homopolymer_length": 5,
+  "SNV_in_homopolymer_formula": "SNV_in_homopolymer==TRUE&h_ij>=0.66",
+  "INDEL_in_homopolymer_formula": "INDEL_in_homopolymer==TRUE&h_ij>=0.66",
+  "bimera_formula": "bimera==TRUE&h_ij>=0.66",
+  "PCR_errors_formula": "h_ij>=0.66&h_ijminor>=0.66&p_ij>=0.05",
   
-  "PerformanceReport": true,
-  
+  //Removing samples or loci with low performance
   "sample_ampl_rate": 0.75,
   "locus_ampl_rate": 0.75,
   
-  "Drug_Surveillance_Report": true,
-  "Variants_of_Interest_Report": false,
+  //Adding metadata
+  "metadata": "colombia_metadata_cleaned.csv", 
+  "join_by": "Sample_id",
+  "Variable1": "Subnational_level2",
+  "Variable2": "Quarter_of_Collection",
+  "Longitude": null,
+  "Latitude": null,
   
+  //Filtering desired or undesired populations or samples
+  "var_filter": "Subnational_level2;Keep;Buenaventura,Quibdó,Guapi/Quarter_of_Collection;Keep;2021-Q1,2021-Q2,2021-Q3,2021-Q4,2022-Q1,2022-Q2",
+  
+  //Reports
+  "PerformanceReport": true,
+  "Drug_Surveillance_Report": false,
+  "Variants_of_Interest_Report": false,
+  "ibd_thres": null,
+  "poly_formula": null,
+  
+  // Parameters for DSR
   "ref_gff": "PlasmoDB-59_Pfalciparum3D7.gff",
   "ref_fasta": "PlasmoDB-59_Pfalciparum3D7_Genome.fasta",
+  "amplicon_fasta": "pf3d7_ref_updated_v3.fasta",
   "reference_alleles": "drugR_alleles.csv",
   "hap_color_palette": "random",
   
@@ -44,27 +77,20 @@
   "drugs": "Artemisinin,Chloroquine,Pyrimethamine,Sulfadoxine,Lumefantrine,Mefloquine",
   "include_all_drug_markers": true,
 
-  "metadata": "Pfal_metadata.csv", 
-  "join_by": "Sample_id",
-  "Variable1": "Subnational_level2",
-  "Variable2": "Quarter_of_Collection",
-  "Longitude": "Longitude",
-  "Latitude": "Latitude",
   "na_var_rm": true,
   "na_hap_rm": true,
   
-  "var_filter": "Subnational_level2;Remove;Municipality.4,Municipality.5/Quarter_of_Collection;Keep;2021-Q1,2021-Q2,2021-Q3,2021-Q4,2022-Q1,2022-Q2",
-
-  
-  "ibd_thres": 0.99,
+  //Parameters for IBD and Conectivity report
   "pairwise_relatedness_table": "pairwise_relatedness.csv",
+  "nchunks": 500,
   "parallel": true,
   "ibd_ncol": 4,
   "pop_levels": null,
-  "nchunks": 500,
+  
+  //Parameters for COI report
   
   "poly_quantile": 0.75,
-  "poly_formula": "NHetLoci>=1&Fws<1",
+  
 }
 
 

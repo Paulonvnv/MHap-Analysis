@@ -1,0 +1,640 @@
+---
+title: 'Micro-Haplotype (MHap) Analysis pipeline'
+author: "Neafsey Lab"
+output:
+  html_document:
+    toc: yes
+    number_sections: no
+    toc_float: yes
+    code_folding: show
+editor_options:
+  markdown:
+    wrap: 72
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, include = TRUE)
+```
+
+# Content
+
+1.  Dada 2 based denoising pipeline.
+    a.  Denoising Fastq files.
+    b.  Post-Dada2 processing.
+    c.  ASV to Cigar (Variant calling)
+2.  Micro-Haplotype (MHap) Analysis pipeline.
+    1.  Functions.
+    2.  Pipeline structure and parameters.
+    3.  The .json file.
+    4.  Running the pipeline using a bash script.
+
+# Dada2 based denoising pipeline: malaria-amplicon-pipeline
+
+This pipeline is based on Dada2 R Package. For more documentation and
+tutorials about Dada2 and its functionalities please look a the
+following links:
+
+-   <https://benjjneb.github.io/dada2/>
+-   <https://bioconductor.org/packages/devel/bioc/vignettes/dada2/inst/doc/dada2-intro.html>
+-   <https://benjjneb.github.io/dada2/tutorial.html>
+-   <https://benjjneb.github.io/dada2/tutorial_1_8.html>
+
+The documentation of this pipeline is
+[here](https://github.com/broadinstitute/malaria-amplicon-pipeline).
+Before to start you will require to install [Anaconda
+3](https://docs.anaconda.com/anaconda/install/linux/), and download and
+create the [ampseq
+enviroment](https://github.com/broadinstitute/malaria-amplicon-pipeline).
+
+## Denoising fastq files:
+
+On the terminal, use the `environment.yml` file (or the
+`environment_mac.yml` for macos system) to create a conda virtual
+environment:
+
+```{bash, eval = FALSE}
+conda env create --file environment.yml -p /path/to/env/<name-of-environment>/
+```
+
+To activate the conda environment write the following line in the
+terminal:
+
+```{bash, eval = FALSE}
+source activate <name-of-environment>
+```
+
+All inputs (files and specifications on how to run the pipeline) should
+be provided using a `.json` file.
+
+Apart of the fastq files, there are three input files that are required
+to run the pipeline:
+
+1.  `PvGTSeq271_fwd.fasta`: Fasta file with the sequence of the forward
+    primers without including the adapters.
+2.  `PvGTSeq271_rvs.fasta`: Fasta file with the sequence of the reverse
+    primers without including the adapters.
+
+Additionally, you require to generate a `.csv` file, called
+`metafile.csv` (you can name it as you want) with the path to all the
+fastq files. You can use the scripts `create_meta.R` or `create_meta.py`
+to generate that file.
+
+Your `.json` file should looks like this:
+
+```{bash, eval = FALSE}
+{
+  "##_COMMENT_##": "INPUTS",
+  "tool": "",
+  "run_dir": "",
+  "path_to_meta": "PATHS_TO/PvGTSeq_metafile.csv",
+  "preprocess": 1,
+  "remove_primer": 1,
+  "Class": "parasite",
+  "dada2_default": 0,
+  "maxEE": "5,5",
+  "trimRight": "2,2",
+  "minLen": 30,
+  "truncQ": "5,5",
+  "max_consist": 10,
+  "omegaA": 1e-120,
+  "matchIDs": 1,
+  "justConcatenate": 0,
+  "saveRdata":"",
+  "qvalue": 5,
+  "length": 20,
+  "pr1": "PATHS_TO/PvGTSeq271_fwd.fasta",
+  "pr2": "PATHS_TO/PvGTSeq271_rvs.fasta",
+  "pr_action": "trim"
+}
+```
+
+To run the denoising pipeline you can write the following lines in the
+terminal
+
+```{bash, eval = FALSE}
+
+source activate ampseq
+
+cd PATHS_TO/PvGTSeq_MiSeq_Run_1
+
+Rscript PATHS_TO/create_meta.R \
+  -i Fastq \
+  -o PvGTSeq_metafile.csv \
+  -fw _L001_R1_001.fastq.gz \
+  -rv _L001_R2_001.fastq.gz
+
+mkdir dada2
+python PATHS_TO/AmpliconPipeline.py \
+  --json PvGTSeq_MiSeq_Run1_inputs.json
+mv prim_fq preprocess_fq run_dada2 prim_meta.txt preprocess_meta.txt stderr.txt stdout.txt ./dada2 
+
+```
+
+## Post-DADA2 Filters (optional processing parasite only) :
+
+Then we have to run an additional Post-processing. This step map the
+given ASV sequences to the target amplicons while keeping track of
+non-matching sequences with the number of nucleotide differences and
+insertions/deletions. It will then output a table of ASV sequences with
+the necessary information. Optionally, a FASTA file can be created in
+addition to the table output, listing the sequences in standard FASTA
+format. A filter tag can be provided to tag the sequences above certain
+nucleotide (SNV) and length differences due to INDELs and a bimera
+column to tag sequences which are bimeric (a hybrid of two sequences).
+
+For the analysis of the PvGTSeq amplicon panel you will require the
+folowing file as input: - `PvGTSeq271_refseqs.fasta`: Fasta file with
+the sequence of the inserts without including the forward and reverse
+primers.
+
+You can run this post-processing using the following code in the
+terminal
+
+```{bash, eval = FALSE}
+source activate ampseq
+
+cd PATHS_TO/PvGTSeq_MiSeq_Run_1
+
+Rscript PATHS_TO/postProc_dada2.R \
+  -s dada2/run_dada2/seqtab.tsv \
+  --strain PvP01 \
+  -ref PATHS_TO/PvGTSeq271_refseqs.fasta \
+  -o dada2/run_dada2/ASVTable.txt \
+  -b dada2/run_dada2/ASVBimeras.txt \
+  --fasta \
+  --parallel
+
+cut -f1,3- dada2/run_dada2/ASVTable.txt > dada2/run_dada2/ASVTable2.txt
+```
+
+## ASV to CIGAR / Variant Calling:
+
+Finally we are going to change the representation of the ASV sequences
+in a kind of pseudo-CIGAR string format. This step assumes Post-DADA2
+step is used as it requires mapped ASV table as one of the inputs.
+
+**General idea:**
+
+1.  Parse DADA2 pipeline outputs to get ASVs → amplicon target.
+    a.  Fasta file of ASV sequences.
+    b.  ASV → amplicon table from the previous step.
+    c.  seqtab tsv file from DADA2.
+2.  Build multi-fasta file for each amplicon target containing one or
+    more ASVs
+3.  Run Muscle on each fasta file to generate alignment file (\*.msa)
+4.  Parse alignments per amplicon target, masking on polyN homopolymer
+    runs (and optionally DUST-masker low complexity sequences). This
+    step is inactivated.
+5.  Output seqtab read count table, but the columns are amplicon, CIGAR
+    instead of ASV sequence
+6.  Optional output ASV to amplicon + CIGAR string table
+    (--asv_to_cigar) An ASV matching perfectly to the 3D7 reference is
+    currently indicated by "." A complete list of inputs for running
+    this step is given below
+
+To code in the terminal should looks like this:
+
+```{bash, eval = FALSE}
+source activate ampseq
+
+cd PATHS_TO/PvGTSeq_MiSeq_Run_1
+
+python PATHS_TO/ASV_to_CIGAR.py \
+  -d PATHS_TO/PvGTSeq271_refseqs.fasta \
+  --asv_to_cigar dada2/run_dada2/ASV_to_CIGAR.out.txt \
+  dada2/run_dada2/ASVSeqs.fasta \
+  dada2/run_dada2/ASVTable2.txt \
+  dada2/run_dada2/seqtab.tsv \
+  dada2/run_dada2/CIGARVariants.out.tsv \
+  -p 1
+```
+
+At the end of running the three bash scripts we obtain 5 files:
+
+1.  The CigarVariants or cigar table. This table has the following
+    structure:
+
+    $\begin{array}{c|c:c:c:c:c:c} \text{sampleID}&Gene_1,Allele_1&Gene_1,Allele_2&...&Gene_1,Allele_k&... & Gene_m, Allele_{k_m}\\ \hline ID_1 & \text{Read counts} &&& \\ \hdashline ... &&&&\\ \hdashline ID_n &&&& \end{array}$
+
+    Where the $Allele$ is coded in Pseudo-CIGAR format, typing "." for
+    the reference allele, $[0-9]*[A,T,C,G]$ for each point mutation
+    observed, and $[0-9]*[D,I]=[A,T,C,G]*$ for indels (Insertions and
+    Deletions). The numbers before the letters denotes the position in
+    the amplicon where the polymorphism is located.
+
+2.  The ASVSeqs.fasta file, which contains the ADN sequence of each ASV
+    in the cigar table in fasta format. Each ASV has a unique identifier
+    (hap_id).
+
+3.  The ASVTable which link the hap_id with some metrics calculated for
+    each ASV such as if the ASV is a potential bimera, the number of
+    samples that amplify the ASV, if there are SNVs or INDELs in
+    homopolymer regions in the ASV, and others.
+
+4.  The ASV_to_CIGAR table, that links the hap_id with the Pseudo-cigar
+    string.
+
+5.  zeroReadSamples file which is a list of samples with zero reads fo
+    all the amplicons in the fastq file.
+
+For MHap-Analysis pipeline, all this files are need, however only the
+first one and the last one are mandatory. If the other three files are
+not provided, the pipeline will work, but any change in the structure of
+the cigar string won't be tracked.
+
+# The Micro-Haplotype (MHap) Analysis pipeline
+
+The objectives of the pipeline are:
+
+1.  Integrate the outputs of the denoising pipeline into a single object
+    that allows traceability of changes (filtering or information
+    generation) both in the initial steps and in later stages of
+    analysis (the ampseq object).
+2.  Automate the process of filtering and cleaning the ampseq object at
+    the level of samples, loci, and alleles based on parameters easily
+    customizable by end users.
+3.  Generate automated reports for tertiary analyses (Performance, DRS,
+    COI, IBD, and others).
+
+The MHap-Analysis pipeline is based on a series of functions organized
+in an R script, allowing flexible execution of three tasks using
+parameters from a .json file. These tasks are executed from the terminal
+via a bash script. The user only needs to modify the .json file to
+customize their analysis parameters.
+
+## Functions
+
+This pipeline is based on up to 40 R functions that were originally
+created to run in the broad server using UGER or in a personal computer.
+The list of functions includes:
+
+1.  Eight functions to create, upload, joint, write or convert formats
+    that store genetic data (`create_cigar`, `read_cigar_tables`,
+    `create_ampseq`, `cigar2ampseq`, `join_ampseq`, `write_ampseq`,
+    `read_ampseq`, `ampseq2loci`).
+2.  Three functions to filter or mask alleles, loci, or samples on the
+    ampseq object (`filter_samples`, `filter_loci`, `mask_alt_alleles`).
+3.  Five functions to calculate metrics of the performance or quality of
+    the data at the level of the Sample, Locus, or the allele
+    (`sample_TotalReadDept`, `get_ReadDepth_coverage`,
+    `locus_amplification_rate`, `sample_amplification_rate`,
+    `get_ASVs_attributes`).
+4.  And 20 functions to perform tertiary analysis:
+    a.  DRS and variants of interest (`haplotypes_respect_to_reference`,
+        `drug_resistant_haplotypes`).
+    b.  Complexity of infection (`get_polygenomic`, `draw_haplotypes`).
+    c.  IBD and other population structure metrics (`fs_checks`,
+        `estimate_r_and_k`, `pairwise_hmmIBD`,
+        `plot_relatedness_distribution`, `plot_frac_highly_related`,
+        `plot_frac_highly_related_over_time`, `plot_network`,
+        `fastGRMcpp`, `GRM_evectors`, `IBD_evectors`)
+    d.  Genetic diversity (`get_locus_diversity`, `get_loci_diversity`,
+        `get_pop_diversity`).
+    e.  Others (`log_scale_histogram`, `gadm_loadtCountries`, `nthroot`)
+
+## Pipeline structure and parameters
+
+### Step 1: Upload
+
+1.  **Upload**: Data can be uploaded in up to 4 different ways using the
+    following parameters:
+    1.  **wd:** Path to input and output files or folders.
+    2.  **fd**: Path to function files.
+    3.  **rd**: Path to reference files.
+    4.  **cigar_paths:** Name of the path where one or more outputs of
+        the denoising pipeline are located. The directory structure
+        inside cigar_paths folder shoud be `"dada2/run_dada2/"`.
+    5.  Using together the following parameters:
+        1.  **cigar_files**: Name of the folder where one or more cigar
+            files are located. All cigar files must have the folowing
+            name structure:
+            `"(\\w+_)?CIGARVariants(_Bfilter_)?(_?w+|\\d+)?.tsv"`.
+        2.  **asv_table_files**: Name of the file or folder where one or
+            more ASV Tables are located. All ASV Tables must have the
+            folowing name structure:
+            `"(\\w+_)?ASVTables(_?w+|\\d+)?.txt"`.
+        3.  **asv2cigar_files**: Name of the file or folder where one or
+            more ASV_to_CIGAR tables are located. All ASV_to_CIGAR
+            Tables must have the folowing name structure:
+            `"(\\w+_)?ASV_to_CIGAR.out(_?w+|\\d+)?.txt"`.
+        4.  **asv_seq_files**: Name of the file or folder where one or
+            more ASVSeqs.fasta files are located. All ASVSeqs.fasta
+            files must have the folowing name structure:
+            `"(\\w+_)?ASVSeqs(_?w+|\\d+)?.fasta"`.
+        5.  **zero_read_sample_list**: Name of the file or folder where
+            one or more zeroReadSamples tables are located. All
+            zeroReadSamples tables must have the folowing name
+            structure: `"(\\w+_)?zeroReadSamples(_?w+|\\d+)?.txt"`.
+    6.  If data is already in the ampseq format:
+        1.  **ampseq_jsonfile** (In development): Name of the ampseq
+            file in json format.
+        2.  **ampseq_excelfile**: Name of the ampseq file in excel
+            format
+        3.  **ampseq_csvfolder**: Name of the folder where all the slots
+            of the ampseq object are stored in csv files.
+    7.  Two additional parameters are needed when uploading data:
+        1.  **sample_id_pattern**: Regular expression the allows to
+            identify samples of interest and remove controls or other
+            undesired samples that we don't want in further analysis.
+        2.  **markers**: Name of the csv. table that contains
+            coordinates of the each marker in the reference genome and
+            the distance in bp between contiguous markers in a
+            chromosome (This information is required for IBD
+            estimation). If this table is not provided the slot in the
+            AmpSeq object will be filled just with the list of the names
+            of markers extracted from the cigar table.
+    8.  Metadata can be added using the following parameters:
+        1.  **metadata**: Name of the metadata file in csv format. If
+            not required write null, and a metadata slot will be created
+            in the AmpSeq object, the created metadata table will
+            contain the samples ids (Sample_id), the name of the run
+            plate, the order in the PCR plate and the type of sample
+            (sample of interest or controls).
+        2.  **join_by**: String that indicates the variable where Sample
+            ID's are stored. Just if Sample ID's are not labeled as
+            Sample_id.
+        3.  **Variable1** and **Variable2**: Name of variable in
+            metadata that we want to use to group samples and split the
+            outputs or summary metrics. For some visual representations
+            geographic information is better to be written in Variable1,
+            while temporal information should be in Variable2.
+        4.  **Longitude** and **Latitude**: Name of variables in the
+            metadata that indicates the geographic coordinates in
+            decimal degrees WGS84 system. These variables are only
+            required visualization of information in maps. The
+            coordinates can be at any geographic level (household,
+            village, district, region, country, etc.), and depending on
+            the geographic level defined by Variable1, all observations
+            in each category will be summarized using their centroid.
+
+### Step 2: Filtering
+
+1.  Removing or masking ASVs in the genotype table:
+    1.  **min_abd**: Integer that define the minimum read depth of
+        trusted alleles. Alleles bellow this threshold will be removed.
+        The default is 10 reads, however, if data was generated by an
+        iSeq100 machine or if the sequencing run was overloaded with
+        samples (high occupancy and low QC30) a lower threshold is
+        recommended..
+    2.  **min_ratio**: Double or float that define the minimum ratio
+        between the read depth of minor alleles respect to major alleles
+        in heterozygous positions. Minor alleles bellow this threshold
+        will be discarded. (default 0.1) As for the previous parameter,
+        the ratio depends on the quality and depth of the sequencing
+        run.
+    3.  **off_target_formula**: Formula used to identify and remove
+        off-targget PCR products. By default the parameter density of
+        variant sites of the ASV (or allele $i$) per amplicon $j$
+        (dVSTIES_ij) is used, but other metrics can be employed too.
+        (default: `"dVSITES_ij>=0.3"`).
+    4.  **flanking_INDEL_formula**: Formula for masking INDELs in
+        flanking areas of the ASV. (default:
+        `"flanking_INDEL==TRUE&h_ij>=0.66"`).
+    5.  **homopolymer_length**: Minimun number of single nucleotide
+        tandem repeats to define an homopolymer region in an ASV.
+        (defualt is 5)
+    6.  **SNV_in_homopolymer_formula**: Formula for masking SNVs in
+        homopolymer regions of ASVs. (default:
+        `SNV_in_homopolymer_formula==TRUE&h_ij>=0.66`).
+    7.  **INDEL_in_homopolymer_formula**: Formula for masking INDELs in
+        homopolymer regions of ASVs. (default:
+        `"INDEL_in_homopolymer_formula==TRUE&h_ij>=0.66"`).
+    8.  **bimera_formula**: Formula for removing bimeras. (default:
+        `"bimera_formula==TRUE&h_ij>=0.66"`).
+    9.  **PCR_errors_formula**: Formula used to define other kinds of
+        PCR errors. (defualt:
+        `"h_ij>=0.66&h_ijminor>=0.66&p_ij>=0.05"`).
+2.  Removing samples or loci with low performance:
+    1.  **sample_ampl_rate**: Min proportion of amplified loci by a
+        sample that is required for the sample to be kept (default
+        0.75).
+    2.  **locus_ampl_rate**: Min proportion of amplified samples by a
+        locus that is required for the locus to be kept (default 0.75).
+
+### Step 3: Automated reports for tertiary analysis.
+
+1.  Reports:
+    1.  **PerformanceReport**: Boolean. If this input is true, the
+        filtering step is executed after the generation of the report.
+        This reports includes: 1) A heatmap of the read depth of each
+        marker and each sample, this heatmap is facet based on
+        Variable1. 2)Dot and jitter plots of read depth across different
+        categories (Variable1). 3) Histograms of the amplification rate
+        of the samples and the amplification rate of the loci.
+    2.  **Drug_Surveillance_Report**: Boolean. If this is set to true,
+        other inputs are required, and they are going to be explained in
+        next slides. The output of this reports includes: 1) Report card
+        maps for each desired drug, where the list of drugs is specified
+        by the argument drug. 2) Line plots and stacked bar plots for
+        the different phenotypes for each desired drug. 3) Line plots
+        and stacked bar plots for the different haplotypes for each gene
+        target. 4) Table with the haplotype and phenotype of each sample
+        for each targeted gene.
+    3.  **Variants_of_Interest_Report**: (In development) Boolean. This
+        report is similar to the Drug_Surveillance_Report, however it is
+        intended for gene targets whose phenotypes are unknown as in the
+        case of Plasmodium vivax or vaccine candidates.
+    4.  **ibd_thres**: Numerical value that set Minimum IBD to define
+        highly related samples. If this parameter is different than
+        `null`, then two reports are going to be written.
+    5.  **poly_formula**: Formula used to define a polyclonal sample.
+        (default: `"NHetLoci>=1&Fws<1"`. When this parameter is
+        different than `null` a report will be generated.
+2.  Parameters required to run or to customize the tertiary analysis:
+    1.  Drug surveillance report:
+
+        1.  **ref_gff**: Name of .gff file containing coordinates of
+            genomic regions.
+        2.  **ref_fasta**: Name of .fasta file of the genome of
+            reference.
+        3.  **amplicon_fasta**: Name of .fasta file of the inserts of
+            the amplicons on the reference strain.
+        4.  **reference_alleles**: Name of .csv file containing
+            sensitive alleles respect to a drug treatment.
+        5.  **hap_color_palette**: Character indicating how colors will
+            be assigned to haplotypes in drug plots. If 'auto'
+            (defualt), the red scales will be applied based on the
+            presence of mutations associated with resistance, instead if
+            'random', a random palette will be generated.
+        6.  **gene_names**: gene name of the markers in the csv file.
+        7.  **gene_ids**: gene ids on the .gff file.
+        8.  **drugs**: Vector which allows to define the drugs that we
+            want to screen and generate plots for the presence of
+            resistant mutations.
+        9.  **na_var_rm**: boolean that removes samples that have
+            incomplete metadata (**Variable1** or **Variable2** is
+            missing). This is another way to remove controls or samples
+            in the cigar tables that belongs to other project or study
+            sites that we don't want to include in the final report,
+            however, if there are spelling errors in the sample ids then
+            we won't be able to detect them.
+        10. **na_hap_rm**: boolean that remove samples with incomplete
+            haplotypes from the calculus of the haplotypes frequencies
+            and the plots from the final reports.
+
+    2.  Parameters for IBD and Conectivity report:
+
+        UGER parameters for IBD calculation using task arrays. Only
+        "nTasks must be defined in the json file, the other two
+        parameters are defined automatically.
+
+        1.  **nTasks**: Number of Tasks arrays to split the estimation
+            of IBD using tasks arrays in UGER.
+        2.  **Task_id**: Tasks array ID defined by UGER.
+        3.  **ibd_step**: Step of the estimation of IBD, values are
+            pairwise and merge.
+
+        Other parameters for IBD
+
+        1.  **pairwise_relatedness_table**: string with the file name of
+            the pairwise_relatedness_table if it has been
+            pre-calculated.
+        2.  **nchunks**: Number of chunks to subdivide the pairwise
+            comparisons to reduce the consumption of RAM memory.
+        3.  **parallel**: Boolean to allow parallelization of the
+            estimation of IBD.
+        4.  **ibd_ncol**: Number of column to use to draw different
+            panels in plots.
+        5.  **pop_levels**: Order in which categories of Variable1 and
+            Variable2 are going to be display in plots.
+
+    3.  Parameters for COI report
+
+        1.  **poly_quantile**: Numerical value that specify the quantile
+            to define polyclonal samples if this metric is included in
+            poly_formula.
+
+### Other parameters
+
+1.  PATHs to references and functions:
+    1.  **wd**: Path to input and output files or folders.
+    2.  **fd**: Path to function files.
+    3.  **rd**: Path to reference files.
+2.  Paramters to export data and results:
+    1.  **out**: string that define the prefix to be used for naming all
+        output files and headers in the reports.
+    2.  **ampseq_export_format**: String that specify the format to
+        export the filtered and masked ampseq object, options are
+        "xlsx", "csv", and "json".
+
+## The json file
+
+The json file with all parameters should looks as follow:
+
+```{bash, eval = FALSE}
+
+{
+  //UGER parameters
+  "vmem": 32,
+  "cores": 8,
+  "h_rt1": 00:30:00,
+  "h_rt2": 02:00:00,
+  "h_rt3": 01:00:00,
+  "nTasks": 1,
+  
+  //PATHs to references and functions
+  "wd": "/Users/pam3650/Documents/Github/MHap-Analysis/docs/data/Pfal_example3/",
+  "fd": "/Users/pam3650/Documents/Github/MHap-Analysis/docs/functions_and_libraries/",
+  "rd": "/Users/pam3650/Documents/Github/MHap-Analysis/docs/reference/Pfal_3D7/",
+  
+  //Upload of raw data
+  "cigar_paths": null, // Path to output folders of the denoising pipeline, e.i.: "Seq_runs", null
+  
+  "cigar_files": "cigar_tables",//"cigar_tables", null
+  "asv_table_files": "asv_tables",//"asv_tables", null
+  "asv2cigar_files": "asv2cigar",//"asv2cigar", null
+  "asv_seq_files": "asv_seqs",//"asv_seqs", null
+  "zero_read_sample_list": "zeroReadSamples",//"zeroReadSamples", null
+  
+  "ampseq_jsonfile": null,
+  "ampseq_excelfile": null,
+  "ampseq_csvfolder": null,
+  
+  "sample_id_pattern": "^SP",
+  "markers": "markers.csv",
+  
+  //Parameters to export data and results
+  "output": "MHap_test_excel",
+  "ampseq_export_format": "excel",//"csv", "excel", "json"  null
+  
+  //Removing or masking ASVs in the genotype table
+  "min_abd": 10,
+  "min_ratio": 0.1,
+  "off_target_formula": "dVSITES_ij>=0.3", //nVSITES>40, nSNVs>30, nINDELs>10
+  "flanking_INDEL_formula": "flanking_INDEL==TRUE&h_ij>=0.66",
+  "homopolymer_length": 5,
+  "SNV_in_homopolymer_formula": "SNV_in_homopolymer==TRUE&h_ij>=0.66",
+  "INDEL_in_homopolymer_formula": "INDEL_in_homopolymer==TRUE&h_ij>=0.66",
+  "bimera_formula": "bimera==TRUE&h_ij>=0.66",
+  "PCR_errors_formula": "h_ij>=0.66&h_ijminor>=0.66&p_ij>=0.05",
+  
+  //Removing samples or loci with low performance
+  "sample_ampl_rate": 0.75,
+  "locus_ampl_rate": 0.75,
+  
+  //Adding metadata
+  "metadata": "colombia_metadata_cleaned.csv", 
+  "join_by": "Sample_id",
+  "Variable1": "Subnational_level2",
+  "Variable2": "Quarter_of_Collection",
+  "Longitude": null,
+  "Latitude": null,
+  
+  //Filtering desired or undesired populations or samples
+  "var_filter": "Subnational_level2;Keep;Buenaventura,Quibdó,Guapi/Quarter_of_Collection;Keep;2021-Q1,2021-Q2,2021-Q3,2021-Q4,2022-Q1,2022-Q2",
+  
+  //Reports
+  "PerformanceReport": true,
+  "Drug_Surveillance_Report": false,
+  "Variants_of_Interest_Report": false,
+  "ibd_thres": null,
+  "poly_formula": null,
+  
+  // Parameters for DSR
+  "ref_gff": "PlasmoDB-59_Pfalciparum3D7.gff",
+  "ref_fasta": "PlasmoDB-59_Pfalciparum3D7_Genome.fasta",
+  "amplicon_fasta": "pf3d7_ref_updated_v3.fasta",
+  "reference_alleles": "drugR_alleles.csv",
+  "hap_color_palette": "random",
+  
+  "gene_names": "PfDHFR,PfMDR1,PfDHPS,PfKelch13,PF3D7_1447900",
+  "gene_ids": "PF3D7_0417200,PF3D7_0523000,PF3D7_0810800,PF3D7_1343700,PF3D7_1447900",
+  "drugs": "Artemisinin,Chloroquine,Pyrimethamine,Sulfadoxine,Lumefantrine,Mefloquine",
+  "include_all_drug_markers": true,
+
+  "na_var_rm": true,
+  "na_hap_rm": true,
+  
+  //Parameters for IBD and Conectivity report
+  "pairwise_relatedness_table": "pairwise_relatedness.csv",
+  "nchunks": 500,
+  "parallel": true,
+  "ibd_ncol": 4,
+  "pop_levels": null,
+  
+  //Parameters for COI report
+  
+  "poly_quantile": 0.75
+  
+}
+
+```
+
+However, as most of them have default values only the parameters to
+upload the data are mandatory in the json file (`wd`, `fd`, `rd`, and at
+least one of the following: `cigar_paths`, `cigar_files`,
+`asv_table_files`, `asv2cigar_files`, `asv_seq_files`,
+`zero_read_sample_list`, `ampseq_jsonfile`, `ampseq_excelfile`,
+`ampseq_csvfolder`). The json file showed in the previous chunk of code
+can be downloaded from here.
+
+## Running the MHap-Analysis pipeline
+
+Once all parameters have been defined in the json file, the execution of
+the pipeline is controlled by the this bash script which can be launched
+from the terminal using the following line:
+
+```{bash, eval = FALSE}
+./run_mhap.sh MHap_Analysis_inputs.json
+```

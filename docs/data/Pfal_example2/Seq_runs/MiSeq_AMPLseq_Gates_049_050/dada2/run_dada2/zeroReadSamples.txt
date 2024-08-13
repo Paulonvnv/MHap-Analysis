@@ -1,0 +1,6 @@
+x
+1	PCR-Control-50-2_S81_prim_1.fq.gz
+2	PCR-Control-49-1_S138_prim_1.fq.gz
+3	Negative-Control-49_S110_prim_1.fq.gz
+4	Negative-Control-50_S14_prim_1.fq.gz
+5	PCR-Control-49-2_S177_prim_1.fq.gz

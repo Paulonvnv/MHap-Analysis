@@ -1,0 +1,26 @@
+{
+  "##_COMMENT_##": "INPUTS",
+  "tool": "",
+  "run_dir": "",
+  "path_to_meta": "/Users/pam3650/Documents/Github/PvGTSeq_paper_draft/PvGTSeq_MiSeq_Run_1/PvGTSeq_metafile.csv",
+  "preprocess": 1,
+  "remove_primer": 1,
+  "Class": "parasite",
+  "dada2_default": 0,
+  "maxEE": "5,5",
+  "trimRight": "2,2",
+  "minLen": 30,
+  "truncQ": "5,5",
+  "max_consist": 10,
+  "omegaA": 1e-120,
+  "matchIDs": 1,
+  "justConcatenate": 0,
+  "saveRdata":"",
+  "qvalue": 5,
+  "length": 20,
+  "reference":"/Users/pam3650/Documents/Github/MHap-Analysis/docs/reference/Pviv_P01/PvGTSeq271_refseqs.fasta",
+  "pr1": "/Users/pam3650/Documents/Github/MHap-Analysis/docs/reference/Pviv_P01/PvGTSeq271_fwd.fasta",
+  "pr2": "/Users/pam3650/Documents/Github/MHap-Analysis/docs/reference/Pviv_P01/PvGTSeq271_rvs.fasta",
+  "pr_action": "trim"
+}
+

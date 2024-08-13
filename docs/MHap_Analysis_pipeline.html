@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Neafsey Lab" />
+
+
+<title>Micro-Haplotype (MHap) Analysis pipeline</title>
+
+<script src="site_libs/header-attrs-2.26/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.13.2/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<script src="site_libs/navigation-1.1/codefolding.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+<style type="text/css">
+.code-folding-btn { margin-bottom: 4px; }
+</style>
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">MHap-Analysis</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li>
+  <a href="MHap_Analysis_pipeline.html">MHap-Analysis pipeline</a>
+</li>
+<li>
+  <a href="Sequencing_Performance.html">Performance of amplicon sequencing data</a>
+</li>
+<li>
+  <a href="Drug_resistance_surveillance.html">Drug Resistance Surveillance</a>
+</li>
+<li>
+  <a href="Complexity_of_infection.html">Complexity of infection (COI)</a>
+</li>
+<li>
+  <a href="PopStructure_and_Connectivity.html">PopStructure and Connectivity</a>
+</li>
+<li>
+  <a href="IBD_and_Tranmission.html">Genetic Relatedness (IBD) and Tranmission</a>
+</li>
+<li>
+  <a href="MHapPfalciparum.html">MHap-Pfalciparum example</a>
+</li>
+<li>
+  <a href="MHapPvivax.html">MHap-Pvivax example</a>
+</li>
+<li>
+  <a href="Intro_to_R.html">Intro to R</a>
+</li>
+<li>
+  <a href="basic_bash.html">Basic bash</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+<div class="btn-group pull-right float-right">
+<button type="button" class="btn btn-default btn-xs btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+<ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
+<li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
+<li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+</ul>
+</div>
+
+
+
+<h1 class="title toc-ignore">Micro-Haplotype (MHap) Analysis
+pipeline</h1>
+<h4 class="author">Neafsey Lab</h4>
+
+</div>
+
+
+<div id="content" class="section level1">
+<h1>Content</h1>
+<ol style="list-style-type: decimal">
+<li>Dada 2 based denoising pipeline.
+<ol style="list-style-type: lower-alpha">
+<li>Denoising Fastq files.</li>
+<li>Post-Dada2 processing.</li>
+<li>ASV to Cigar (Variant calling)</li>
+</ol></li>
+<li>Micro-Haplotype (MHap) Analysis pipeline.
+<ol style="list-style-type: decimal">
+<li>Functions.</li>
+<li>Pipeline structure and parameters.</li>
+<li>The .json file.</li>
+<li>Running the pipeline using a bash script.</li>
+</ol></li>
+</ol>
+</div>
+<div id="dada2-based-denoising-pipeline-malaria-amplicon-pipeline"
+class="section level1">
+<h1>Dada2 based denoising pipeline: malaria-amplicon-pipeline</h1>
+<p>This pipeline is based on Dada2 R Package. For more documentation and
+tutorials about Dada2 and its functionalities please look a the
+following links:</p>
+<ul>
+<li><a href="https://benjjneb.github.io/dada2/"
+class="uri">https://benjjneb.github.io/dada2/</a></li>
+<li><a
+href="https://bioconductor.org/packages/devel/bioc/vignettes/dada2/inst/doc/dada2-intro.html"
+class="uri">https://bioconductor.org/packages/devel/bioc/vignettes/dada2/inst/doc/dada2-intro.html</a></li>
+<li><a href="https://benjjneb.github.io/dada2/tutorial.html"
+class="uri">https://benjjneb.github.io/dada2/tutorial.html</a></li>
+<li><a href="https://benjjneb.github.io/dada2/tutorial_1_8.html"
+class="uri">https://benjjneb.github.io/dada2/tutorial_1_8.html</a></li>
+</ul>
+<p>The documentation of this pipeline is <a
+href="https://github.com/broadinstitute/malaria-amplicon-pipeline">here</a>.
+Before to start you will require to install <a
+href="https://docs.anaconda.com/anaconda/install/linux/">Anaconda 3</a>,
+and download and create the <a
+href="https://github.com/broadinstitute/malaria-amplicon-pipeline">ampseq
+enviroment</a>.</p>
+<div id="denoising-fastq-files" class="section level2">
+<h2>Denoising fastq files:</h2>
+<p>On the terminal, use the <code>environment.yml</code> file (or the
+<code>environment_mac.yml</code> for macos system) to create a conda
+virtual environment:</p>
+<pre class="bash"><code>conda env create --file environment.yml -p /path/to/env/&lt;name-of-environment&gt;/</code></pre>
+<p>To activate the conda environment write the following line in the
+terminal:</p>
+<pre class="bash"><code>source activate &lt;name-of-environment&gt;</code></pre>
+<p>All inputs (files and specifications on how to run the pipeline)
+should be provided using a <code>.json</code> file.</p>
+<p>Apart of the fastq files, there are three input files that are
+required to run the pipeline:</p>
+<ol style="list-style-type: decimal">
+<li><code>PvGTSeq271_fwd.fasta</code>: Fasta file with the sequence of
+the forward primers without including the adapters.</li>
+<li><code>PvGTSeq271_rvs.fasta</code>: Fasta file with the sequence of
+the reverse primers without including the adapters.</li>
+</ol>
+<p>Additionally, you require to generate a <code>.csv</code> file,
+called <code>metafile.csv</code> (you can name it as you want) with the
+path to all the fastq files. You can use the scripts
+<code>create_meta.R</code> or <code>create_meta.py</code> to generate
+that file.</p>
+<p>Your <code>.json</code> file should looks like this:</p>
+<pre class="bash"><code>{
+  &quot;##_COMMENT_##&quot;: &quot;INPUTS&quot;,
+  &quot;tool&quot;: &quot;&quot;,
+  &quot;run_dir&quot;: &quot;&quot;,
+  &quot;path_to_meta&quot;: &quot;PATHS_TO/PvGTSeq_metafile.csv&quot;,
+  &quot;preprocess&quot;: 1,
+  &quot;remove_primer&quot;: 1,
+  &quot;Class&quot;: &quot;parasite&quot;,
+  &quot;dada2_default&quot;: 0,
+  &quot;maxEE&quot;: &quot;5,5&quot;,
+  &quot;trimRight&quot;: &quot;2,2&quot;,
+  &quot;minLen&quot;: 30,
+  &quot;truncQ&quot;: &quot;5,5&quot;,
+  &quot;max_consist&quot;: 10,
+  &quot;omegaA&quot;: 1e-120,
+  &quot;matchIDs&quot;: 1,
+  &quot;justConcatenate&quot;: 0,
+  &quot;saveRdata&quot;:&quot;&quot;,
+  &quot;qvalue&quot;: 5,
+  &quot;length&quot;: 20,
+  &quot;pr1&quot;: &quot;PATHS_TO/PvGTSeq271_fwd.fasta&quot;,
+  &quot;pr2&quot;: &quot;PATHS_TO/PvGTSeq271_rvs.fasta&quot;,
+  &quot;pr_action&quot;: &quot;trim&quot;
+}</code></pre>
+<p>To run the denoising pipeline you can write the following lines in
+the terminal</p>
+<pre class="bash"><code>
+source activate ampseq
+
+cd PATHS_TO/PvGTSeq_MiSeq_Run_1
+
+Rscript PATHS_TO/create_meta.R \
+  -i Fastq \
+  -o PvGTSeq_metafile.csv \
+  -fw _L001_R1_001.fastq.gz \
+  -rv _L001_R2_001.fastq.gz
+
+mkdir dada2
+python PATHS_TO/AmpliconPipeline.py \
+  --json PvGTSeq_MiSeq_Run1_inputs.json
+mv prim_fq preprocess_fq run_dada2 prim_meta.txt preprocess_meta.txt stderr.txt stdout.txt ./dada2 
+</code></pre>
+</div>
+<div id="post-dada2-filters-optional-processing-parasite-only"
+class="section level2">
+<h2>Post-DADA2 Filters (optional processing parasite only) :</h2>
+<p>Then we have to run an additional Post-processing. This step map the
+given ASV sequences to the target amplicons while keeping track of
+non-matching sequences with the number of nucleotide differences and
+insertions/deletions. It will then output a table of ASV sequences with
+the necessary information. Optionally, a FASTA file can be created in
+addition to the table output, listing the sequences in standard FASTA
+format. A filter tag can be provided to tag the sequences above certain
+nucleotide (SNV) and length differences due to INDELs and a bimera
+column to tag sequences which are bimeric (a hybrid of two
+sequences).</p>
+<p>For the analysis of the PvGTSeq amplicon panel you will require the
+folowing file as input: - <code>PvGTSeq271_refseqs.fasta</code>: Fasta
+file with the sequence of the inserts without including the forward and
+reverse primers.</p>
+<p>You can run this post-processing using the following code in the
+terminal</p>
+<pre class="bash"><code>source activate ampseq
+
+cd PATHS_TO/PvGTSeq_MiSeq_Run_1
+
+Rscript PATHS_TO/postProc_dada2.R \
+  -s dada2/run_dada2/seqtab.tsv \
+  --strain PvP01 \
+  -ref PATHS_TO/PvGTSeq271_refseqs.fasta \
+  -o dada2/run_dada2/ASVTable.txt \
+  -b dada2/run_dada2/ASVBimeras.txt \
+  --fasta \
+  --parallel
+
+cut -f1,3- dada2/run_dada2/ASVTable.txt &gt; dada2/run_dada2/ASVTable2.txt</code></pre>
+</div>
+<div id="asv-to-cigar-variant-calling" class="section level2">
+<h2>ASV to CIGAR / Variant Calling:</h2>
+<p>Finally we are going to change the representation of the ASV
+sequences in a kind of pseudo-CIGAR string format. This step assumes
+Post-DADA2 step is used as it requires mapped ASV table as one of the
+inputs.</p>
+<p><strong>General idea:</strong></p>
+<ol style="list-style-type: decimal">
+<li>Parse DADA2 pipeline outputs to get ASVs → amplicon target.
+<ol style="list-style-type: lower-alpha">
+<li>Fasta file of ASV sequences.</li>
+<li>ASV → amplicon table from the previous step.</li>
+<li>seqtab tsv file from DADA2.</li>
+</ol></li>
+<li>Build multi-fasta file for each amplicon target containing one or
+more ASVs</li>
+<li>Run Muscle on each fasta file to generate alignment file
+(*.msa)</li>
+<li>Parse alignments per amplicon target, masking on polyN homopolymer
+runs (and optionally DUST-masker low complexity sequences). This step is
+inactivated.</li>
+<li>Output seqtab read count table, but the columns are amplicon, CIGAR
+instead of ASV sequence</li>
+<li>Optional output ASV to amplicon + CIGAR string table (–asv_to_cigar)
+An ASV matching perfectly to the 3D7 reference is currently indicated by
+“.” A complete list of inputs for running this step is given below</li>
+</ol>
+<p>To code in the terminal should looks like this:</p>
+<pre class="bash"><code>source activate ampseq
+
+cd PATHS_TO/PvGTSeq_MiSeq_Run_1
+
+python PATHS_TO/ASV_to_CIGAR.py \
+  -d PATHS_TO/PvGTSeq271_refseqs.fasta \
+  --asv_to_cigar dada2/run_dada2/ASV_to_CIGAR.out.txt \
+  dada2/run_dada2/ASVSeqs.fasta \
+  dada2/run_dada2/ASVTable2.txt \
+  dada2/run_dada2/seqtab.tsv \
+  dada2/run_dada2/CIGARVariants.out.tsv \
+  -p 1</code></pre>
+<p>At the end of running the three bash scripts we obtain 5 files:</p>
+<ol style="list-style-type: decimal">
+<li><p>The CigarVariants or cigar table. This table has the following
+structure:</p>
+<p><span class="math inline">\(\begin{array}{c|c:c:c:c:c:c}
+\text{sampleID}&amp;Gene_1,Allele_1&amp;Gene_1,Allele_2&amp;...&amp;Gene_1,Allele_k&amp;...
+&amp; Gene_m, Allele_{k_m}\\ \hline ID_1 &amp; \text{Read counts}
+&amp;&amp;&amp; \\ \hdashline ... &amp;&amp;&amp;&amp;\\ \hdashline ID_n
+&amp;&amp;&amp;&amp; \end{array}\)</span></p>
+<p>Where the <span class="math inline">\(Allele\)</span> is coded in
+Pseudo-CIGAR format, typing “.” for the reference allele, <span
+class="math inline">\([0-9]*[A,T,C,G]\)</span> for each point mutation
+observed, and <span
+class="math inline">\([0-9]*[D,I]=[A,T,C,G]*\)</span> for indels
+(Insertions and Deletions). The numbers before the letters denotes the
+position in the amplicon where the polymorphism is located.</p></li>
+<li><p>The ASVSeqs.fasta file, which contains the ADN sequence of each
+ASV in the cigar table in fasta format. Each ASV has a unique identifier
+(hap_id).</p></li>
+<li><p>The ASVTable which link the hap_id with some metrics calculated
+for each ASV such as if the ASV is a potential bimera, the number of
+samples that amplify the ASV, if there are SNVs or INDELs in homopolymer
+regions in the ASV, and others.</p></li>
+<li><p>The ASV_to_CIGAR table, that links the hap_id with the
+Pseudo-cigar string.</p></li>
+<li><p>zeroReadSamples file which is a list of samples with zero reads
+fo all the amplicons in the fastq file.</p></li>
+</ol>
+<p>For MHap-Analysis pipeline, all this files are need, however only the
+first one and the last one are mandatory. If the other three files are
+not provided, the pipeline will work, but any change in the structure of
+the cigar string won’t be tracked.</p>
+</div>
+</div>
+<div id="the-micro-haplotype-mhap-analysis-pipeline"
+class="section level1">
+<h1>The Micro-Haplotype (MHap) Analysis pipeline</h1>
+<p>The objectives of the pipeline are:</p>
+<ol style="list-style-type: decimal">
+<li>Integrate the outputs of the denoising pipeline into a single object
+that allows traceability of changes (filtering or information
+generation) both in the initial steps and in later stages of analysis
+(the ampseq object).</li>
+<li>Automate the process of filtering and cleaning the ampseq object at
+the level of samples, loci, and alleles based on parameters easily
+customizable by end users.</li>
+<li>Generate automated reports for tertiary analyses (Performance, DRS,
+COI, IBD, and others).</li>
+</ol>
+<p>The MHap-Analysis pipeline is based on a series of functions
+organized in an R script, allowing flexible execution of three tasks
+using parameters from a .json file. These tasks are executed from the
+terminal via a bash script. The user only needs to modify the .json file
+to customize their analysis parameters.</p>
+<div id="functions" class="section level2">
+<h2>Functions</h2>
+<p>This pipeline is based on up to 40 R functions that were originally
+created to run in the broad server using UGER or in a personal computer.
+The list of functions includes:</p>
+<ol style="list-style-type: decimal">
+<li>Eight functions to create, upload, joint, write or convert formats
+that store genetic data (<code>create_cigar</code>,
+<code>read_cigar_tables</code>, <code>create_ampseq</code>,
+<code>cigar2ampseq</code>, <code>join_ampseq</code>,
+<code>write_ampseq</code>, <code>read_ampseq</code>,
+<code>ampseq2loci</code>).</li>
+<li>Three functions to filter or mask alleles, loci, or samples on the
+ampseq object (<code>filter_samples</code>, <code>filter_loci</code>,
+<code>mask_alt_alleles</code>).</li>
+<li>Five functions to calculate metrics of the performance or quality of
+the data at the level of the Sample, Locus, or the allele
+(<code>sample_TotalReadDept</code>, <code>get_ReadDepth_coverage</code>,
+<code>locus_amplification_rate</code>,
+<code>sample_amplification_rate</code>,
+<code>get_ASVs_attributes</code>).</li>
+<li>And 20 functions to perform tertiary analysis:
+<ol style="list-style-type: lower-alpha">
+<li>DRS and variants of interest
+(<code>haplotypes_respect_to_reference</code>,
+<code>drug_resistant_haplotypes</code>).</li>
+<li>Complexity of infection (<code>get_polygenomic</code>,
+<code>draw_haplotypes</code>).</li>
+<li>IBD and other population structure metrics (<code>fs_checks</code>,
+<code>estimate_r_and_k</code>, <code>pairwise_hmmIBD</code>,
+<code>plot_relatedness_distribution</code>,
+<code>plot_frac_highly_related</code>,
+<code>plot_frac_highly_related_over_time</code>,
+<code>plot_network</code>, <code>fastGRMcpp</code>,
+<code>GRM_evectors</code>, <code>IBD_evectors</code>)</li>
+<li>Genetic diversity (<code>get_locus_diversity</code>,
+<code>get_loci_diversity</code>, <code>get_pop_diversity</code>).</li>
+<li>Others (<code>log_scale_histogram</code>,
+<code>gadm_loadtCountries</code>, <code>nthroot</code>)</li>
+</ol></li>
+</ol>
+</div>
+<div id="pipeline-structure-and-parameters" class="section level2">
+<h2>Pipeline structure and parameters</h2>
+<div id="step-1-upload" class="section level3">
+<h3>Step 1: Upload</h3>
+<ol style="list-style-type: decimal">
+<li><strong>Upload</strong>: Data can be uploaded in up to 4 different
+ways using the following parameters:
+<ol style="list-style-type: decimal">
+<li><strong>wd:</strong> Path to input and output files or folders.</li>
+<li><strong>fd</strong>: Path to function files.</li>
+<li><strong>rd</strong>: Path to reference files.</li>
+<li><strong>cigar_paths:</strong> Name of the path where one or more
+outputs of the denoising pipeline are located. The directory structure
+inside cigar_paths folder shoud be <code>"dada2/run_dada2/"</code>.</li>
+<li>Using together the following parameters:
+<ol style="list-style-type: decimal">
+<li><strong>cigar_files</strong>: Name of the folder where one or more
+cigar files are located. All cigar files must have the folowing name
+structure:
+<code>"(\\w+_)?CIGARVariants(_Bfilter_)?(_?w+|\\d+)?.tsv"</code>.</li>
+<li><strong>asv_table_files</strong>: Name of the file or folder where
+one or more ASV Tables are located. All ASV Tables must have the
+folowing name structure:
+<code>"(\\w+_)?ASVTables(_?w+|\\d+)?.txt"</code>.</li>
+<li><strong>asv2cigar_files</strong>: Name of the file or folder where
+one or more ASV_to_CIGAR tables are located. All ASV_to_CIGAR Tables
+must have the folowing name structure:
+<code>"(\\w+_)?ASV_to_CIGAR.out(_?w+|\\d+)?.txt"</code>.</li>
+<li><strong>asv_seq_files</strong>: Name of the file or folder where one
+or more ASVSeqs.fasta files are located. All ASVSeqs.fasta files must
+have the folowing name structure:
+<code>"(\\w+_)?ASVSeqs(_?w+|\\d+)?.fasta"</code>.</li>
+<li><strong>zero_read_sample_list</strong>: Name of the file or folder
+where one or more zeroReadSamples tables are located. All
+zeroReadSamples tables must have the folowing name structure:
+<code>"(\\w+_)?zeroReadSamples(_?w+|\\d+)?.txt"</code>.</li>
+</ol></li>
+<li>If data is already in the ampseq format:
+<ol style="list-style-type: decimal">
+<li><strong>ampseq_jsonfile</strong> (In development): Name of the
+ampseq file in json format.</li>
+<li><strong>ampseq_excelfile</strong>: Name of the ampseq file in excel
+format</li>
+<li><strong>ampseq_csvfolder</strong>: Name of the folder where all the
+slots of the ampseq object are stored in csv files.</li>
+</ol></li>
+<li>Two additional parameters are needed when uploading data:
+<ol style="list-style-type: decimal">
+<li><strong>sample_id_pattern</strong>: Regular expression the allows to
+identify samples of interest and remove controls or other undesired
+samples that we don’t want in further analysis.</li>
+<li><strong>markers</strong>: Name of the csv. table that contains
+coordinates of the each marker in the reference genome and the distance
+in bp between contiguous markers in a chromosome (This information is
+required for IBD estimation). If this table is not provided the slot in
+the AmpSeq object will be filled just with the list of the names of
+markers extracted from the cigar table.</li>
+</ol></li>
+<li>Metadata can be added using the following parameters:
+<ol style="list-style-type: decimal">
+<li><strong>metadata</strong>: Name of the metadata file in csv format.
+If not required write null, and a metadata slot will be created in the
+AmpSeq object, the created metadata table will contain the samples ids
+(Sample_id), the name of the run plate, the order in the PCR plate and
+the type of sample (sample of interest or controls).</li>
+<li><strong>join_by</strong>: String that indicates the variable where
+Sample ID’s are stored. Just if Sample ID’s are not labeled as
+Sample_id.</li>
+<li><strong>Variable1</strong> and <strong>Variable2</strong>: Name of
+variable in metadata that we want to use to group samples and split the
+outputs or summary metrics. For some visual representations geographic
+information is better to be written in Variable1, while temporal
+information should be in Variable2.</li>
+<li><strong>Longitude</strong> and <strong>Latitude</strong>: Name of
+variables in the metadata that indicates the geographic coordinates in
+decimal degrees WGS84 system. These variables are only required
+visualization of information in maps. The coordinates can be at any
+geographic level (household, village, district, region, country, etc.),
+and depending on the geographic level defined by Variable1, all
+observations in each category will be summarized using their
+centroid.</li>
+</ol></li>
+</ol></li>
+</ol>
+</div>
+<div id="step-2-filtering" class="section level3">
+<h3>Step 2: Filtering</h3>
+<ol style="list-style-type: decimal">
+<li>Removing or masking ASVs in the genotype table:
+<ol style="list-style-type: decimal">
+<li><strong>min_abd</strong>: Integer that define the minimum read depth
+of trusted alleles. Alleles bellow this threshold will be removed. The
+default is 10 reads, however, if data was generated by an iSeq100
+machine or if the sequencing run was overloaded with samples (high
+occupancy and low QC30) a lower threshold is recommended..</li>
+<li><strong>min_ratio</strong>: Double or float that define the minimum
+ratio between the read depth of minor alleles respect to major alleles
+in heterozygous positions. Minor alleles bellow this threshold will be
+discarded. (default 0.1) As for the previous parameter, the ratio
+depends on the quality and depth of the sequencing run.</li>
+<li><strong>off_target_formula</strong>: Formula used to identify and
+remove off-targget PCR products. By default the parameter density of
+variant sites of the ASV (or allele <span
+class="math inline">\(i\)</span>) per amplicon <span
+class="math inline">\(j\)</span> (dVSTIES_ij) is used, but other metrics
+can be employed too. (default: <code>"dVSITES_ij&gt;=0.3"</code>).</li>
+<li><strong>flanking_INDEL_formula</strong>: Formula for masking INDELs
+in flanking areas of the ASV. (default:
+<code>"flanking_INDEL==TRUE&amp;h_ij&gt;=0.66"</code>).</li>
+<li><strong>homopolymer_length</strong>: Minimun number of single
+nucleotide tandem repeats to define an homopolymer region in an ASV.
+(defualt is 5)</li>
+<li><strong>SNV_in_homopolymer_formula</strong>: Formula for masking
+SNVs in homopolymer regions of ASVs. (default:
+<code>SNV_in_homopolymer_formula==TRUE&amp;h_ij&gt;=0.66</code>).</li>
+<li><strong>INDEL_in_homopolymer_formula</strong>: Formula for masking
+INDELs in homopolymer regions of ASVs. (default:
+<code>"INDEL_in_homopolymer_formula==TRUE&amp;h_ij&gt;=0.66"</code>).</li>
+<li><strong>bimera_formula</strong>: Formula for removing bimeras.
+(default: <code>"bimera_formula==TRUE&amp;h_ij&gt;=0.66"</code>).</li>
+<li><strong>PCR_errors_formula</strong>: Formula used to define other
+kinds of PCR errors. (defualt:
+<code>"h_ij&gt;=0.66&amp;h_ijminor&gt;=0.66&amp;p_ij&gt;=0.05"</code>).</li>
+</ol></li>
+<li>Removing samples or loci with low performance:
+<ol style="list-style-type: decimal">
+<li><strong>sample_ampl_rate</strong>: Min proportion of amplified loci
+by a sample that is required for the sample to be kept (default
+0.75).</li>
+<li><strong>locus_ampl_rate</strong>: Min proportion of amplified
+samples by a locus that is required for the locus to be kept (default
+0.75).</li>
+</ol></li>
+</ol>
+</div>
+<div id="step-3-automated-reports-for-tertiary-analysis."
+class="section level3">
+<h3>Step 3: Automated reports for tertiary analysis.</h3>
+<ol style="list-style-type: decimal">
+<li>Reports:
+<ol style="list-style-type: decimal">
+<li><strong>PerformanceReport</strong>: Boolean. If this input is true,
+the filtering step is executed after the generation of the report. This
+reports includes: 1) A heatmap of the read depth of each marker and each
+sample, this heatmap is facet based on Variable1. 2)Dot and jitter plots
+of read depth across different categories (Variable1). 3) Histograms of
+the amplification rate of the samples and the amplification rate of the
+loci.</li>
+<li><strong>Drug_Surveillance_Report</strong>: Boolean. If this is set
+to true, other inputs are required, and they are going to be explained
+in next slides. The output of this reports includes: 1) Report card maps
+for each desired drug, where the list of drugs is specified by the
+argument drug. 2) Line plots and stacked bar plots for the different
+phenotypes for each desired drug. 3) Line plots and stacked bar plots
+for the different haplotypes for each gene target. 4) Table with the
+haplotype and phenotype of each sample for each targeted gene.</li>
+<li><strong>Variants_of_Interest_Report</strong>: (In development)
+Boolean. This report is similar to the Drug_Surveillance_Report, however
+it is intended for gene targets whose phenotypes are unknown as in the
+case of Plasmodium vivax or vaccine candidates.</li>
+<li><strong>ibd_thres</strong>: Numerical value that set Minimum IBD to
+define highly related samples. If this parameter is different than
+<code>null</code>, then two reports are going to be written.</li>
+<li><strong>poly_formula</strong>: Formula used to define a polyclonal
+sample. (default: <code>"NHetLoci&gt;=1&amp;Fws&lt;1"</code>. When this
+parameter is different than <code>null</code> a report will be
+generated.</li>
+</ol></li>
+<li>Parameters required to run or to customize the tertiary analysis:
+<ol style="list-style-type: decimal">
+<li><p>Drug surveillance report:</p>
+<ol style="list-style-type: decimal">
+<li><strong>ref_gff</strong>: Name of .gff file containing coordinates
+of genomic regions.</li>
+<li><strong>ref_fasta</strong>: Name of .fasta file of the genome of
+reference.</li>
+<li><strong>amplicon_fasta</strong>: Name of .fasta file of the inserts
+of the amplicons on the reference strain.</li>
+<li><strong>reference_alleles</strong>: Name of .csv file containing
+sensitive alleles respect to a drug treatment.</li>
+<li><strong>hap_color_palette</strong>: Character indicating how colors
+will be assigned to haplotypes in drug plots. If ‘auto’ (defualt), the
+red scales will be applied based on the presence of mutations associated
+with resistance, instead if ‘random’, a random palette will be
+generated.</li>
+<li><strong>gene_names</strong>: gene name of the markers in the csv
+file.</li>
+<li><strong>gene_ids</strong>: gene ids on the .gff file.</li>
+<li><strong>drugs</strong>: Vector which allows to define the drugs that
+we want to screen and generate plots for the presence of resistant
+mutations.</li>
+<li><strong>na_var_rm</strong>: boolean that removes samples that have
+incomplete metadata (<strong>Variable1</strong> or
+<strong>Variable2</strong> is missing). This is another way to remove
+controls or samples in the cigar tables that belongs to other project or
+study sites that we don’t want to include in the final report, however,
+if there are spelling errors in the sample ids then we won’t be able to
+detect them.</li>
+<li><strong>na_hap_rm</strong>: boolean that remove samples with
+incomplete haplotypes from the calculus of the haplotypes frequencies
+and the plots from the final reports.</li>
+</ol></li>
+<li><p>Parameters for IBD and Conectivity report:</p>
+<p>UGER parameters for IBD calculation using task arrays. Only “nTasks
+must be defined in the json file, the other two parameters are defined
+automatically.</p>
+<ol style="list-style-type: decimal">
+<li><strong>nTasks</strong>: Number of Tasks arrays to split the
+estimation of IBD using tasks arrays in UGER.</li>
+<li><strong>Task_id</strong>: Tasks array ID defined by UGER.</li>
+<li><strong>ibd_step</strong>: Step of the estimation of IBD, values are
+pairwise and merge.</li>
+</ol>
+<p>Other parameters for IBD</p>
+<ol style="list-style-type: decimal">
+<li><strong>pairwise_relatedness_table</strong>: string with the file
+name of the pairwise_relatedness_table if it has been
+pre-calculated.</li>
+<li><strong>nchunks</strong>: Number of chunks to subdivide the pairwise
+comparisons to reduce the consumption of RAM memory.</li>
+<li><strong>parallel</strong>: Boolean to allow parallelization of the
+estimation of IBD.</li>
+<li><strong>ibd_ncol</strong>: Number of column to use to draw different
+panels in plots.</li>
+<li><strong>pop_levels</strong>: Order in which categories of Variable1
+and Variable2 are going to be display in plots.</li>
+</ol></li>
+<li><p>Parameters for COI report</p>
+<ol style="list-style-type: decimal">
+<li><strong>poly_quantile</strong>: Numerical value that specify the
+quantile to define polyclonal samples if this metric is included in
+poly_formula.</li>
+</ol></li>
+</ol></li>
+</ol>
+</div>
+<div id="other-parameters" class="section level3">
+<h3>Other parameters</h3>
+<ol style="list-style-type: decimal">
+<li>PATHs to references and functions:
+<ol style="list-style-type: decimal">
+<li><strong>wd</strong>: Path to input and output files or folders.</li>
+<li><strong>fd</strong>: Path to function files.</li>
+<li><strong>rd</strong>: Path to reference files.</li>
+</ol></li>
+<li>Paramters to export data and results:
+<ol style="list-style-type: decimal">
+<li><strong>out</strong>: string that define the prefix to be used for
+naming all output files and headers in the reports.</li>
+<li><strong>ampseq_export_format</strong>: String that specify the
+format to export the filtered and masked ampseq object, options are
+“xlsx”, “csv”, and “json”.</li>
+</ol></li>
+</ol>
+</div>
+</div>
+<div id="the-json-file" class="section level2">
+<h2>The json file</h2>
+<p>The json file with all parameters should looks as follow:</p>
+<pre class="bash"><code>
+{
+  //UGER parameters
+  &quot;vmem&quot;: 32,
+  &quot;cores&quot;: 8,
+  &quot;h_rt1&quot;: 00:30:00,
+  &quot;h_rt2&quot;: 02:00:00,
+  &quot;h_rt3&quot;: 01:00:00,
+  &quot;nTasks&quot;: 1,
+  
+  //PATHs to references and functions
+  &quot;wd&quot;: &quot;/Users/pam3650/Documents/Github/MHap-Analysis/docs/data/Pfal_example3/&quot;,
+  &quot;fd&quot;: &quot;/Users/pam3650/Documents/Github/MHap-Analysis/docs/functions_and_libraries/&quot;,
+  &quot;rd&quot;: &quot;/Users/pam3650/Documents/Github/MHap-Analysis/docs/reference/Pfal_3D7/&quot;,
+  
+  //Upload of raw data
+  &quot;cigar_paths&quot;: null, // Path to output folders of the denoising pipeline, e.i.: &quot;Seq_runs&quot;, null
+  
+  &quot;cigar_files&quot;: &quot;cigar_tables&quot;,//&quot;cigar_tables&quot;, null
+  &quot;asv_table_files&quot;: &quot;asv_tables&quot;,//&quot;asv_tables&quot;, null
+  &quot;asv2cigar_files&quot;: &quot;asv2cigar&quot;,//&quot;asv2cigar&quot;, null
+  &quot;asv_seq_files&quot;: &quot;asv_seqs&quot;,//&quot;asv_seqs&quot;, null
+  &quot;zero_read_sample_list&quot;: &quot;zeroReadSamples&quot;,//&quot;zeroReadSamples&quot;, null
+  
+  &quot;ampseq_jsonfile&quot;: null,
+  &quot;ampseq_excelfile&quot;: null,
+  &quot;ampseq_csvfolder&quot;: null,
+  
+  &quot;sample_id_pattern&quot;: &quot;^SP&quot;,
+  &quot;markers&quot;: &quot;markers.csv&quot;,
+  
+  //Parameters to export data and results
+  &quot;output&quot;: &quot;MHap_test_excel&quot;,
+  &quot;ampseq_export_format&quot;: &quot;excel&quot;,//&quot;csv&quot;, &quot;excel&quot;, &quot;json&quot;  null
+  
+  //Removing or masking ASVs in the genotype table
+  &quot;min_abd&quot;: 10,
+  &quot;min_ratio&quot;: 0.1,
+  &quot;off_target_formula&quot;: &quot;dVSITES_ij&gt;=0.3&quot;, //nVSITES&gt;40, nSNVs&gt;30, nINDELs&gt;10
+  &quot;flanking_INDEL_formula&quot;: &quot;flanking_INDEL==TRUE&amp;h_ij&gt;=0.66&quot;,
+  &quot;homopolymer_length&quot;: 5,
+  &quot;SNV_in_homopolymer_formula&quot;: &quot;SNV_in_homopolymer==TRUE&amp;h_ij&gt;=0.66&quot;,
+  &quot;INDEL_in_homopolymer_formula&quot;: &quot;INDEL_in_homopolymer==TRUE&amp;h_ij&gt;=0.66&quot;,
+  &quot;bimera_formula&quot;: &quot;bimera==TRUE&amp;h_ij&gt;=0.66&quot;,
+  &quot;PCR_errors_formula&quot;: &quot;h_ij&gt;=0.66&amp;h_ijminor&gt;=0.66&amp;p_ij&gt;=0.05&quot;,
+  
+  //Removing samples or loci with low performance
+  &quot;sample_ampl_rate&quot;: 0.75,
+  &quot;locus_ampl_rate&quot;: 0.75,
+  
+  //Adding metadata
+  &quot;metadata&quot;: &quot;colombia_metadata_cleaned.csv&quot;, 
+  &quot;join_by&quot;: &quot;Sample_id&quot;,
+  &quot;Variable1&quot;: &quot;Subnational_level2&quot;,
+  &quot;Variable2&quot;: &quot;Quarter_of_Collection&quot;,
+  &quot;Longitude&quot;: null,
+  &quot;Latitude&quot;: null,
+  
+  //Filtering desired or undesired populations or samples
+  &quot;var_filter&quot;: &quot;Subnational_level2;Keep;Buenaventura,Quibdó,Guapi/Quarter_of_Collection;Keep;2021-Q1,2021-Q2,2021-Q3,2021-Q4,2022-Q1,2022-Q2&quot;,
+  
+  //Reports
+  &quot;PerformanceReport&quot;: true,
+  &quot;Drug_Surveillance_Report&quot;: false,
+  &quot;Variants_of_Interest_Report&quot;: false,
+  &quot;ibd_thres&quot;: null,
+  &quot;poly_formula&quot;: null,
+  
+  // Parameters for DSR
+  &quot;ref_gff&quot;: &quot;PlasmoDB-59_Pfalciparum3D7.gff&quot;,
+  &quot;ref_fasta&quot;: &quot;PlasmoDB-59_Pfalciparum3D7_Genome.fasta&quot;,
+  &quot;amplicon_fasta&quot;: &quot;pf3d7_ref_updated_v3.fasta&quot;,
+  &quot;reference_alleles&quot;: &quot;drugR_alleles.csv&quot;,
+  &quot;hap_color_palette&quot;: &quot;random&quot;,
+  
+  &quot;gene_names&quot;: &quot;PfDHFR,PfMDR1,PfDHPS,PfKelch13,PF3D7_1447900&quot;,
+  &quot;gene_ids&quot;: &quot;PF3D7_0417200,PF3D7_0523000,PF3D7_0810800,PF3D7_1343700,PF3D7_1447900&quot;,
+  &quot;drugs&quot;: &quot;Artemisinin,Chloroquine,Pyrimethamine,Sulfadoxine,Lumefantrine,Mefloquine&quot;,
+  &quot;include_all_drug_markers&quot;: true,
+
+  &quot;na_var_rm&quot;: true,
+  &quot;na_hap_rm&quot;: true,
+  
+  //Parameters for IBD and Conectivity report
+  &quot;pairwise_relatedness_table&quot;: &quot;pairwise_relatedness.csv&quot;,
+  &quot;nchunks&quot;: 500,
+  &quot;parallel&quot;: true,
+  &quot;ibd_ncol&quot;: 4,
+  &quot;pop_levels&quot;: null,
+  
+  //Parameters for COI report
+  
+  &quot;poly_quantile&quot;: 0.75
+  
+}
+</code></pre>
+<p>However, as most of them have default values only the parameters to
+upload the data are mandatory in the json file (<code>wd</code>,
+<code>fd</code>, <code>rd</code>, and at least one of the following:
+<code>cigar_paths</code>, <code>cigar_files</code>,
+<code>asv_table_files</code>, <code>asv2cigar_files</code>,
+<code>asv_seq_files</code>, <code>zero_read_sample_list</code>,
+<code>ampseq_jsonfile</code>, <code>ampseq_excelfile</code>,
+<code>ampseq_csvfolder</code>). The json file showed in the previous
+chunk of code can be downloaded from here.</p>
+</div>
+<div id="running-the-mhap-analysis-pipeline" class="section level2">
+<h2>Running the MHap-Analysis pipeline</h2>
+<p>Once all parameters have been defined in the json file, the execution
+of the pipeline is controlled by the this bash script which can be
+launched from the terminal using the following line:</p>
+<pre class="bash"><code>./run_mhap.sh MHap_Analysis_inputs.json</code></pre>
+</div>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+<script>
+$(document).ready(function () {
+  window.initializeCodeFolding("show" === "show");
+});
+</script>
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

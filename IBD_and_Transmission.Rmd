@@ -1,0 +1,123 @@
+---
+title: "Genetic Relatedness (IBD) and Tranmission"
+author: "Neafsey Lab"
+output:
+  html_document:
+    toc: yes
+    number_sections: no
+    toc_float: yes
+    code_folding: hide
+editor_options:
+  markdown:
+    wrap: 72
+  chunk_output_type: inline
+params:
+  RData_image: ""
+---
+
+The previous section focused primarily on using relatedness information
+for malaria parasite source-tracking and connectivity analysis. An
+additional important use case for relatedness information involves the
+inference of malaria transmission intensity over space and time. In low
+transmission settings, human infections are most often monoclonal (i.e.,
+involve only a single parasite strain). Therefore, when parasites
+transmit to the mosquito vector and enter the obligate sexual stage of
+their life cycle, it is common for self-fertilization to occur between
+identical parasite gametes. Parasite propagation thus becomes 'clonal',
+i.e., alleles remain fully linked over multiple generations. Low
+transmission also makes it more likely for parasite diversity to be lost
+via drift, exacerbating the extent of clonality and inbreeding in the
+population. In higher transmission settings, on the other hand, higher
+parasite prevalence and greater standing parasite genetic diversity make
+it more likely for polyclonal infections to occur. The sexual parasite
+stage is therefore more likely to involve the co-occurrence of distinct
+parasite gametes. This enables effective recombination between
+haplotypes and the erosion of highly related parasite relationships.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, include = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(magrittr)
+load(params$RData_image)
+
+```
+
+### Pairwise relatedness comparisons within categories of Variable1
+
+For this report all possible pairwise IBD comparisons within samples
+from different categories of Subnational_level1 and Quarter_of_Collection are computed, and
+the results are shown in the following table:
+
+```{r}
+
+plot_relatedness_distribution_within$relatedness %>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+
+```
+
+The distribution of the pairwise genetic relatedness is presented using
+histograms as follows:
+
+```{r, include = FALSE}
+fig1.height = 2 * ceiling(length(unique(plot_relatedness_distribution_within$plot$data$Pop_comparison))/3)
+```
+
+```{r, fig.width=10, fig.height=fig1.height, fig.cap = "**Figure 1:**  Pairwise IBD distribution within categories of Variable1 (panels). The x-axis shows genetic relatedness values, ranging from 0 (unrelated) to 1 (clonal). The y-axis shows the number of pairwise comparisons corresponding to each of these relatedness values. The dotted vertical line represents the median genetic relatedness in the total dataset (including both within and between-population comparisons)."}
+plot_relatedness_distribution_within$plot
+```
+
+### Fraction of highly related comparisons within categories of Variable1
+
+Based on the threshold defined in the workflow in Terra (`ibd_thres`),
+highly related pairwise comparisons within categories in Variable1 are
+counted and proportions with their 95% CI (Fisher exact test) are
+calculated. These values are presented in the following table and in
+Figure 2:
+
+```{r}
+plot_frac_highly_related_within$highly_related_table %>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+```
+
+```{r, include = FALSE}
+fig2.height = 2.5 + max(round(nchar(as.character(unique(plot_frac_highly_related_within$plot$data$Pop_comparison)))/10, 0))
+fig2.width = 1*length(unique(plot_frac_highly_related_within$plot$data$Pop_comparison))
+```
+
+```{r, fig.width=fig2.width, fig.height=fig2.height, fig.cap = "**Figure 2:** Fraction of highly related pairwise comparisons (IBD >= ibd_thres) within categories of Variable1 (x-axis). 95% confidence intervals are computed using a Fisher exact test."}
+plot_frac_highly_related_within$plot
+```
+
+### Fraction of highly related comparisons between categories of Variable1 over Variable2
+
+Highly related pairwise comparisons within categories in Variable1 and
+Variable2 are also counted and proportions with their 95% CI (Fisher
+exact test) are calculated. These values are presented in the following
+table and in Figure 3:
+
+```{r}
+if(!is.na(Variable2)){plot_frac_highly_related_overtime_within$frac_highly_related %>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))}
+```
+
+```{r, include = FALSE}
+fig4.height = 3*ceiling(length(unique(plot_frac_highly_related_overtime_within$plot_frac_highly_related$data$Pop_comparison))/3)
+fig4.width = ceiling(length(unique(plot_frac_highly_related_overtime_within$plot_frac_highly_related$data$Pop_comparison)) *
+  0.5*length(unique(plot_frac_highly_related_overtime_within$plot_frac_highly_related$data$Date_Yi)))
+
+fig4.width = ifelse(fig4.width > 20, 20, fig4.width)
+```
+
+```{r, fig.width=fig4.width, fig.height=fig4.height, fig.cap = "**Figure 4:** Fraction of highly related pairwise comparisons (IBD >= ibd_thres) within categories of Variable1 (panles) and Variable2 (x-axis). 95% confidence intervals are computed using a Fisher exact test."}
+
+if(!is.na(Variable2)){plot_frac_highly_related_overtime_within$plot_frac_highly_related}
+```

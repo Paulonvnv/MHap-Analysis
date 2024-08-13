@@ -1,0 +1,37 @@
+#!/bin/bash
+
+cd /Users/pam3650/Documents/Github/MHap-Analysis/docs/functions_and_libraries/cromwell-executions/MHap_Analysis/037252c3-0989-434e-863a-0130a93ab5b4/call-MHap_Analysis_tool/execution
+tmpDir=$(mkdir -p "/Users/pam3650/Documents/Github/MHap-Analysis/docs/functions_and_libraries/cromwell-executions/MHap_Analysis/037252c3-0989-434e-863a-0130a93ab5b4/call-MHap_Analysis_tool/tmp.51c903d3" && echo "/Users/pam3650/Documents/Github/MHap-Analysis/docs/functions_and_libraries/cromwell-executions/MHap_Analysis/037252c3-0989-434e-863a-0130a93ab5b4/call-MHap_Analysis_tool/tmp.51c903d3")
+
+export _JAVA_OPTIONS=-Djava.io.tmpdir="$tmpDir"
+export TMPDIR="$tmpDir"
+export HOME="$HOME"
+(
+cd /Users/pam3650/Documents/Github/MHap-Analysis/docs/functions_and_libraries/cromwell-executions/MHap_Analysis/037252c3-0989-434e-863a-0130a93ab5b4/call-MHap_Analysis_tool/execution
+
+)
+out037252c3="${tmpDir}/out.$$" err037252c3="${tmpDir}/err.$$"
+mkfifo "$out037252c3" "$err037252c3"
+trap 'rm "$out037252c3" "$err037252c3"' EXIT
+touch '/Users/pam3650/Documents/Github/MHap-Analysis/docs/functions_and_libraries/cromwell-executions/MHap_Analysis/037252c3-0989-434e-863a-0130a93ab5b4/call-MHap_Analysis_tool/execution/stdout' '/Users/pam3650/Documents/Github/MHap-Analysis/docs/functions_and_libraries/cromwell-executions/MHap_Analysis/037252c3-0989-434e-863a-0130a93ab5b4/call-MHap_Analysis_tool/execution/stderr'
+tee '/Users/pam3650/Documents/Github/MHap-Analysis/docs/functions_and_libraries/cromwell-executions/MHap_Analysis/037252c3-0989-434e-863a-0130a93ab5b4/call-MHap_Analysis_tool/execution/stdout' < "$out037252c3" &
+tee '/Users/pam3650/Documents/Github/MHap-Analysis/docs/functions_and_libraries/cromwell-executions/MHap_Analysis/037252c3-0989-434e-863a-0130a93ab5b4/call-MHap_Analysis_tool/execution/stderr' < "$err037252c3" >&2 &
+(
+cd /Users/pam3650/Documents/Github/MHap-Analysis/docs/functions_and_libraries/cromwell-executions/MHap_Analysis/037252c3-0989-434e-863a-0130a93ab5b4/call-MHap_Analysis_tool/execution
+
+
+echo "Hello  world!!!"
+)  > "$out037252c3" 2> "$err037252c3"
+echo $? > /Users/pam3650/Documents/Github/MHap-Analysis/docs/functions_and_libraries/cromwell-executions/MHap_Analysis/037252c3-0989-434e-863a-0130a93ab5b4/call-MHap_Analysis_tool/execution/rc.tmp
+(
+# add a .file in every empty directory to facilitate directory delocalization on the cloud
+cd /Users/pam3650/Documents/Github/MHap-Analysis/docs/functions_and_libraries/cromwell-executions/MHap_Analysis/037252c3-0989-434e-863a-0130a93ab5b4/call-MHap_Analysis_tool/execution
+find . -type d -exec sh -c '[ -z "$(ls -A '"'"'{}'"'"')" ] && touch '"'"'{}'"'"'/.file' \;
+)
+(
+cd /Users/pam3650/Documents/Github/MHap-Analysis/docs/functions_and_libraries/cromwell-executions/MHap_Analysis/037252c3-0989-434e-863a-0130a93ab5b4/call-MHap_Analysis_tool/execution
+sync
+
+
+)
+mv /Users/pam3650/Documents/Github/MHap-Analysis/docs/functions_and_libraries/cromwell-executions/MHap_Analysis/037252c3-0989-434e-863a-0130a93ab5b4/call-MHap_Analysis_tool/execution/rc.tmp /Users/pam3650/Documents/Github/MHap-Analysis/docs/functions_and_libraries/cromwell-executions/MHap_Analysis/037252c3-0989-434e-863a-0130a93ab5b4/call-MHap_Analysis_tool/execution/rc

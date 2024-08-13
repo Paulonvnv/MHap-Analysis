@@ -26,52 +26,78 @@ load(params$RData_image)
 
 ```
 
-The haplotype of each sample is stored in the table `aacigar_table`
-within the object `drug_resistant_haplotypes_plot`.
+Surveillance of polymorphisms or allelic variants associated with
+resistance against antimalarials is an important public health
+objective. Therefore most amplicon panels include several markers
+against genes that have polymorphisms associated with antimalarial
+resistance (i.e. AMPLseq includes 9 markers within 5 genes). This report
+identifies the different haplotypes of these genes present in our data
+set, and we will determine the frequency of each haplotype in each
+category of Variable1 and Variable2.
 
-```{r, fig.width=10, fig.height=10, fig.cap = "**Figure 1:** Frequency of haplotypes carrying mutations associated with resistance to Chloroquine, Lumefantrine...(panels). Dots represent study sites, color gradient represent the frequency and the size the logarithm of the sample size."}
+## Individual (sample-level) gene genotypes
 
-if(!is.null(Longitude) & !is.null(Latitude)){
-  library(tmap)
-  tmap_mode('view')
-  drug_resistant_haplotypes_plot$i_drug_map  
-}
+> *Plasmodium* parasites are haploid during the erythrocytic stage.
+> However, multiple clone lineages can exist in the same infected
+> individual. Some genes are amplified by multiple amplicons, making it
+> hard to determine the haplotype of each individual clone (phasing or
+> unique combination of alleles across several loci) in polyclonal
+> infections. As such, in this report, we will use the term **genotype**
+> to refer to the combination of alleles across loci in a sample,
+> regardless of their clonal status. We will use the term **haplotype**
+> to refer to the unique combination of alleles across loci in a gene
+> for which we will calculate a population frequency.
 
-```
+In the cigar format the variant positions are based on the location of
+the mutation in the amplified region and not the position in the coding
+sequence, so this format does not directly indicate the consequences of
+the mutation in terms of amino acid change.
 
-```{r, fig.width=10, fig.height=12, fig.cap = "**Figure 2:** Frequency of haplotypes carrying mutations associated with resistance to Chloroquine, Lumefantrine...(panels). y-axis shows the frequency in each population, x-axis shows the quarter of the year where the sample was collected, rows panels corresponds to the study areas, and column panels represents each Drug. Colors were assigned based on the possible phenotype, blue indicates sensitive, red indicates resistance, and gloden represent haplotypes carrying mutations respect to the reference strain but that haven't been associated with resistance."}
+The workflow identifies the location of the mutations in the coding
+sequence, and based on that translates the base pair changes into amino
+acid changes. The annotation of the nucleotide and amino acid changes is
+based on the [recommendations for the descriptions of variants from the
+Human Genome Variation
+Society](https://www.hgmd.cf.ac.uk/docs/mut_nom.html) with slight
+modifications. In the case of amino acid changes, we use the one letter
+code because it is shorter to show in tables and figures.
 
-drug_resistant_haplotypes_plot$drug_phenotyope_lineplot
-```
+$$
+\overbrace{c.\overbrace{152}^{\text{Position in coding sequence}}\underbrace{A}_{\text{Reference allele}}>\underbrace{T}_{\text{Observed allele}}}^{\text{Nucleotide change in coding region}} \equiv \underbrace{\overbrace{N}^{\text{Reference or Sensitive allele}}\underbrace{51}_{\text
+{Amino acid position}}\overbrace{I}^{\text{Observed Allele}}}_{\text{Amino acid change}}
+$$
 
-```{r, fig.width=10, fig.height=12, fig.cap="**Figure 3:** Frequency of haplotypes carrying mutations associated with resistance to Chloroquine, Lumefantrine...(panels). y-axis shows the frequency in each population, x-axis shows the quarter of the year where the sample was collected, rows panels corresponds to the study areas, and column panels represents each Drug. Colors were assigned based on the possible phenotype, blue indicates sensitive, red indicates resistance, and gloden represent haplotypes carrying mutations respect to the reference strain but that haven't been associated with resistance."}
-drug_resistant_haplotypes_plot$drug_phenotype_barplot
-```
+The scheme above shows the notation for a nucleotide change in the
+coding sequence (left) and its equivalent amino acid change (right).
 
-```{r, fig.width=10, fig.height=12, fig.cap="**Figure 4:** Frequency of haplotypes of genes that carry mutations associated with resistance to Chloroquine, Lumefantrine...(panels). y-axis shows the frequency in each population, x-axis shows the quarter of the year where the sample was collected, rows panels corresponds to the study areas, and column panels represents each Drug. Colors were assigned based on the possible phenotype, blue indicates sensitive, red indicates resistance (and the intensity the number of mutations), and orange represent haplotypes carrying mutations respect to the reference strain but that haven't been associated with resistance."}
-drug_resistant_haplotypes_plot$haplotypes_freq_lineplot
-```
+For a nucleotide change, the code starts with a `c.` which makes
+reference to the coding sequence, then the number indicates the position
+in the coding sequence of the gene, the first letter represents the
+nucleotide in the reference strain, and finally the last letter
+represents the observed nucleotide in the sample. If the DNA sequence of
+the amplicon is 100% identical to the reference strain then the genotype
+is written as follows `c.(=)`.
 
-```{r, fig.width=10, fig.height=12, fig.cap="**Figure 5:** Frequency of haplotypes of genes that carry mutations associated with resistance to Chloroquine, Lumefantrine...(panels). y-axis shows the frequency in each population, x-axis shows the quarter of the year where the sample was collected, rows panels corresponds to the study areas, and column panels represents each Drug. Colors were assigned based on the possible phenotype, blue indicates sensitive, red indicates resistance (and the intensity the number of mutations), and orange represent haplotypes carrying mutations respect to the reference strain but that haven't been associated with resistance."}
-
-
-drug_resistant_haplotypes_plot$haplotype_freq_barplot
-
-```
+Information on individual (sample-level) coding sequence polymorphism
+with respect to the **reference strain** is shown in the following table
+for each amplicon:
 
 ```{r}
-drug_resistant_haplotypes_plot$genotype_phenotype_table %>%
+drug_resistant_haplotypes_plot$dna_mutations %>%
   DT::datatable(extensions = 'Buttons',
-                options = list(dom = 'Blfrtip',
+                options = list(
                   buttons = c('csv', 'excel')))
 ```
 
-```{r}
-drug_resistant_haplotypes_plot$drug_phenotype_table %>%
-  DT::datatable(extensions = 'Buttons',
-                options = list(dom = 'Blfrtip',
-                  buttons = c('csv', 'excel')))
-```
+In the case of the amino acid change, allele codes are written such that
+the letter to the left of the amino acid position represent the
+reference strain allele. If the amino acid sequence of the amplicon is
+100% identical to the reference strain then the genotype is written as
+follows `p.(=)`.
+
+Information on individual (sample-level) amino acid polymorphism with
+respect to the **reference strain** is shown in the next table for each
+amplicon:
 
 ```{r}
 drug_resistant_haplotypes_plot$aa_mutations %>%
@@ -80,9 +106,258 @@ drug_resistant_haplotypes_plot$aa_mutations %>%
                   buttons = c('csv', 'excel')))
 ```
 
+More often than not, the reference strain allele represents a
+drug-sensitive phenotype. However, in some cases the reference strain
+allele is itself a resistance-associated allele. In these cases, we
+indicate the sensitive allele instead of the reference allele at the
+left of the amino acid position in the code. The sensitive and
+resistance-associated mutations are taken from the following
+[article](https://elifesciences.org/articles/62997#table3) and the
+information is incorporated into the workflow through the
+`reference_allele` table in Terra. We use capital letters to denote
+known resistance-associated mutations, and lowercase letters for
+mutations not previously reported with respect to the reference strain.
+Furthermore, if a sample contains two or more mutations, the haplotype
+is determined by arranging the different mutations in ascending order in
+relation to the positive DNA strand and the amino acid chain.
+
+$$
+\overbrace{\text{c.[47C>T;152A>T]}}^{\text{Nucleotide changes in coding region}} \equiv \underbrace{\overbrace{a16v}^{\text{Nonsynonymous polymorphism}\atop\text{with respect to reference strain}}\underbrace{N51I}_{\text{Known resistance-associated}\atop\text{mutation}}}_{\text{Amino acid changes}}
+$$
+
+In the example above, there are two nonsynonymous mutations at positions
+47 and 152 of the DNA coding sequence. The mutation at the first amino
+acid position has not been reported as resistance-associated, while the
+second one is a known resistance-associated mutation. If a
+resistance-associated mutation has been reported at a specific amino
+acid position, but we observe a change in the sample that has not been
+associated with resistance or not reported before, the first letter will
+be in uppercase and the second one in lowercase (e.g., $N51a$).
+
+When an amplicon in a sample is heterozygous, then a slash (/) and a
+vertical bar (\|) are used to separate the alleles in the DNA coding
+sequence and in the amino acid chain, respectively. If one gene is
+genotyped by two or more amplicons and one of them is heterozygous, the
+slash and vertical bar are only applicable to polymorphisms observed in
+the heterozygous amplicon. Moreover, all observed variants in the
+heterozygous amplicon are sorted in order of descending read depth (i.e.
+the better supported allele is indicated first).
+
+$$
+\overbrace{\overbrace{\text{c.[47C>T; 152A>T]/c.(=)}}^{1^{st}\text{ amplicon}} \text{; }\underbrace{\text{c.323G>A}}_{2^{nd}\text{ amplicon}}}^{\text{Nucleotide changes in coding region}} \equiv \underbrace{\overbrace{\text{a16v|a N51I|N}}^{1^{st}\text{ amplicon}} \underbrace{\text{ S108N}}_{2^{nd}\text{ amplicon}}}_{\text{Amino acid changes}}
+$$
+
+In addition, as this genotype annotation could be confusing for people
+outside of the area of molecular biology and genetics, and as the
+presence of the resistant mutations does not directly indicate which
+drug the genotype might be resistant to, a table that matches the
+genotype and its likely phenotype is generated. In addition to showing
+which drug the mutations confer resistance, the phenotype output of the
+workflow also reports the number of resistance-associated mutations
+observed. Additional, resistance-unrelated mutations are also indicated
+by the phenotype output. Finally, the phenotype output also reports
+whether any amplicons or genes involve missing information (unsuccessful
+amplification).
+
+The following scheme shows the annotated phenotype for the genotype of
+the gene $pfdhfr$ (PF3D7_0417200):
+
+$$
+\overbrace{\text{a16v N51I C59C S108N I164I}}^{\text{Genotype}} \equiv \overbrace{\text{a16v polymorphism in gene PF3D7_0417200 respect to Reference Strain;} \atop \text{2 Pyrimethamine resistance-associated mutations}}^{\text{Likely Phenotype}}
+$$
+
+As observed, the genotype contains 3 amino acid changes at positions 16,
+51 and 108, the last two of which are associated to resistance to
+Pyrimethamine in previous studies. In the next scheme is an example of a
+genotype with missing data:
+
+$$
+\overbrace{\underbrace{\text{a16? N51? C59?}}_{\text{Amplicon PfDHFR_1}}\underbrace{\text{S108N I164I}}_{\text{Amplicon PfDHFR_2}}}^{\text{Genotype}} \equiv \overbrace{\text{Amplicon(s) PfDHFR_1 for gene PF3D7_0417200 did not amplify;} \atop \text{1 Pyrimethamine resistance mutation}}^{\text{Likely Phenotype}}
+$$
+
+Question marks (`?`) represent missing information in the genotype,
+placed after the amino acid positions found to be polymorphic in other
+samples of the tested population or in previous studies (as indicated in
+the `reference_allele` table). If none of the amplicons amplify for a
+specific gene, the phenotype annotation will read as
+`Gene PF3D7_0417200 did not amplify`. To enhance readability across
+different samples and genotypes, the genotype of each sample is written
+taking into account all polymorphic positions in the data set or in
+previous studies (as indicated in the `reference_allele` table).
+
+Information on individual (sample-level) amino acid polymorphism with
+respect to the reference strain is shown in the next table for each gene
+of interest:
+
 ```{r}
-drug_resistant_haplotypes_plot$dna_mutations %>%
+drug_resistant_haplotypes_plot$genotype_phenotype_table %>%
   DT::datatable(extensions = 'Buttons',
-                options = list(
+                options = list(dom = 'Blfrtip',
                   buttons = c('csv', 'excel')))
+```
+
+## Haplotype frequency
+
+The haplotype is defined as the unique combination of alleles across
+loci (variant sites across different amplicons) in a gene. In monoclonal
+samples, the genotype is equivalent to the haplotype as only one allele
+is observe at each locus.
+
+For polyclonal samples, the complexity of infection (i.e., the number of
+strains in the sample) is defined based on the maximum number of alleles
+observed at any of the loci in the gene, and alleles in heterozygous
+loci are sorted in descending order of read depth. The order of the
+alleles in heterozygous loci is used to phase the haplotype:
+
+$$
+\overbrace{\underbrace{\text{a16v N51I|N C59C}}_{\text{Amplicon PfDHFR_1}}\underbrace{\text{S108N|S I164I}}_{\text{Amplicon PfDHFR_2}}}^{\text{Genotype}} \equiv \overbrace{\text{a16v N51 I C59C S108N I164I} \atop \text{a16v N51N C59C S108S I164I}}^{\text{Haplotypes}}
+$$
+
+When different amplicons within a gene each show multiple alleles, and
+the number of alleles is different between these amplicons, the major
+allele on the locus with fewest alleles is used to impute the
+unknown/ambiguous haplotype(s) (haplotype with least read support).
+
+$$
+\overbrace{\underbrace{\text{a16v N51I|N C59C}}_{\text{Amplicon PfDHFR_1}}\underbrace{\text{ S108N|S|T I164I}}_{\text{Amplicon PfDHFR_2}}}^{\text{Genotype}} \equiv \overbrace{\text{a16v N51 I C59C S108N I164I} \\ \text{a16v N51N C59C S108S I164I} \\ \text{a16v N51 I C59C S108T I164I}}^{\text{Haplotypes}}
+$$
+
+Finally, haplotypes observed in monoclonal and polyclonal infections
+have equal weights for calculating haplotype frequencies, so the
+denominator is the total number of haplotypes counted instead of the
+total number of infections.
+
+The following table contains haplotype counts and frequencies (with 95%
+CI) for each category of Variable1 and Variable2:
+
+```{r}
+drug_resistant_haplotypes_plot$haplotype_freq_barplot$data %>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+```
+
+The next two figures shows the haplotype frequencies using a bar plot
+and a line plot with 95%CI
+
+```{r, include = FALSE}
+fig1.width = 0.4 * 
+  length(unique(drug_resistant_haplotypes_plot$haplotype_freq_barplot$data$var2)) *
+  length(unique(drug_resistant_haplotypes_plot$haplotype_freq_barplot$data$gene_names))
+
+fig1.height = 2 * 
+  length(unique(drug_resistant_haplotypes_plot$haplotype_freq_barplot$data$var1)) +
+  ceiling(length(unique(drug_resistant_haplotypes_plot$haplotype_freq_barplot$data$gene_haplo))/3)/2
+```
+
+```{r, fig.width=fig1.width, fig.height=fig1.height, fig.cap="**Figure 1:** Bar plot showing the frequency of haplotypes of genes that carry mutations associated with resistance to Chloroquine, Lumefantrine, etc... (panels). y-axis shows the frequency in each population, x-axis shows the quarter of the year in which the sample was collected, horizontal sections correspond to the study areas, and vertical sections represents each Drug. If the user specifies 'auto' for the color scheme, blue indicates sensitive and red indicates the presence of one or more resistance-associated mutations. The intensity of red indicates the number of resistance-associated mutations. Finally, orange represents haplotypes carrying mutations with respect to the reference strain which have not been associated with resistance."}
+drug_resistant_haplotypes_plot$haplotype_freq_barplot
+```
+
+```{r, fig.width=fig1.width, fig.height=fig1.height, fig.cap="**Figure 2:** Line plot showing the frequency of haplotypes of genes that carry mutations associated with resistance to Chloroquine, Lumefantrine, etc... (panels). y-axis shows the frequency in each population, x-axis shows the quarter of the year in which the sample was collected, horizontal sections correspond to the study areas, and vertical sections represents each Gene. If the user specifies 'auto' for the color scheme, blue indicates sensitive and red indicates the presence of one or more resistance-associated mutations. The intensity of red indicates the number of resistance-associated mutations. Finally, orange represents haplotypes carrying mutations with respect to the reference strain which have not been associated with resistance."}
+drug_resistant_haplotypes_plot$haplotypes_freq_lineplot
+```
+
+## Drug phenotypes
+
+Resistance to a particular drug can be conferred by mutations in
+multiple different genes, which is why in this section, instead of using
+the gene as a unit of analysis we will use the drug of interest. In this
+way, for each drug in each sample we will define the possible phenotype
+based on the joint analysis of all the genes that have
+resistance-associated mutations to that particular drug.
+
+For example, in the case of pyrimethamine, 7 mutations associated with
+resistance to this drug have been reported. Six of these mutations are
+found in the *pfdhfr* gene and one in the *pfmdr2* gene. Therefore, to
+define the possible phenotype of this drug, the workflow will analyze
+the alleles present in each of these 7 positions in the sample. It will
+also report other mutations that occur in either of these two genes and
+whether amplification was unsuccessful for any of the amplicons.
+
+Therefore, when no mutations are found, the phenotype is defined as
+follows:
+
+$$
+\begin{matrix}\overbrace{\text{a16v N51N C59C S108S I164I}}^{\text{Genotype for gene} \atop \text{pfdhfr: PF3D7_0417200}} \\ \underbrace{\text{y479y T484T i492i}}_{\text{Genotype for gene} \atop \text{pfmdr2: PF3D7_1447900}}\end{matrix} \implies \overbrace{\text{Sensitive phenotype based on gene(s) } \\ \text{PF3D7_0417200 and PF3D7_1447900}}^{\text{Phenotype}}
+$$
+
+When at least one gene contains resistance-associated mutations or
+mutations with respect to the reference, the defined phenotype is:
+
+$$
+\begin{matrix}\overbrace{\text{a16v N51I C59C S108N I164I}}^{\text{Genotype for gene} \atop \text{pfdhfr: PF3D7_0417200}} \\ \underbrace{\text{y479y T484T i492v}}_{\text{Genotype for gene} \atop \text{pfmdr2: PF3D7_1447900}}\end{matrix} \implies \overbrace{\text{2 Pyrimethamine resistance mutations in gene PF3D7_0417200;} \\ \text{i492v polymorphism in gene PF3D7_1447900}}^{\text{Phenotype}}
+$$
+
+In the case of partial or unsuccessful amplification of any of the
+genes:
+
+$$
+\begin{matrix}\overbrace{\text{a16v N51I C59C S108? I164?}}^{\text{Genotype for gene} \atop \text{pfdhfr: PF3D7_0417200}} \\ \underbrace{\text{y479? T484? i492?}}_{\text{Genotype for gene} \atop \text{pfmdr2: PF3D7_1447900}}\end{matrix} \implies \overbrace{\text{Partial haplotype: Amplicon(s) PfDHFR_2 for gene PF3D7_0417200 did not amplify} \\ \text{and Gene PF3D7_1447900 did not amplify}}^{\text{Phenotype}}
+$$
+
+Information on individual (sample-level) phenotypes is shown in the next
+table for each drug of interest:
+
+```{r}
+drug_resistant_haplotypes_plot$drug_phenotype_table %>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+```
+
+For each drug the phenotypic profiles are classified into five
+categories:
+
+a.  Sensitive Phenotype: All amplicons amplified and no mutations were
+    found with respect to the reference strain and the
+    `reference_allele` table.
+b.  Polymorphism(s) with respect to the reference strain: At least one
+    mutation with respect to the reference strain was found, but no
+    resistance-associated mutations occur. Partial haplotypes are also
+    included.
+c.  Mutation(s) associated with a resistant phenotype: At least one
+    resistance-associated mutations was found. Partial haplotypes are
+    also included.
+d.  Partial Haplotype: At least one amplicon has amplified and no
+    mutations occur.
+e.  Missing data: None of the amplicons amplified.
+
+Finally, the prevalence of these categories in the population (defined
+by Variable1 and Variable2) is reported in the following table:
+
+```{r}
+drug_resistant_haplotypes_plot$drug_phenotype_barplot$data %>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+```
+
+The next three figures show the phenotype frequencies using a bar plot
+and a line plot with 95% CI, and a map of the geographic distribution of
+resistance phenotypes with respect to each drug of interest.
+
+```{r, include = FALSE}
+fig3.width = 0.4 * 
+  length(unique(drug_resistant_haplotypes_plot$drug_phenotype_barplot$data$var2)) *
+  length(unique(drug_resistant_haplotypes_plot$drug_phenotype_barplot$data$Drug))
+
+fig3.height = 2 * 
+  length(unique(drug_resistant_haplotypes_plot$drug_phenotype_barplot$data$var1))
+```
+
+```{r, fig.width=fig3.width, fig.height=fig3.height, fig.cap="**Figure 3:** Bar plot showing the frequency of phenotypes (resistant vs. sensitive) classified based on amino acid changes in drug resistance-associated genes. y-axis shows the frequency in each population, x-axis shows the quarter of the year in which the sample was collected, horizontal sections correspond to the study areas, and vertical sections represents each Drug. Blue indicates sensitive and red indicates the presence of one or more resistance-associated mutations. Gold represents haplotypes carrying mutations with respect to the reference strain which have not been associated with resistance."}
+drug_resistant_haplotypes_plot$drug_phenotype_barplot
+```
+
+```{r, fig.width=fig3.width, fig.height=fig3.height, fig.cap = "**Figure 4:** Line plot showing the frequency of phenotypes (resistant vs. sensitive) classified based on amino acid changes in drug resistance-associated genes. y-axis shows the frequency in each population, x-axis shows the quarter of the year in which the sample was collected, horizontal sections correspond to the study areas, and vertical sections represents each Drug. Blue indicates sensitive and red indicates the presence of one or more resistance-associated mutations. Gold represents haplotypes carrying mutations with respect to the reference strain which have not been associated with resistance"}
+drug_resistant_haplotypes_plot$drug_phenotyope_lineplot
+```
+
+```{r, fig.width=10, fig.height=10, fig.cap = "**Figure 5:** Map showing the frequency of haplotypes carrying mutations associated with resistance to antimalarial drugs (panels). Dots represent study areas, color gradient represents the frequency, and the size of dots represents log-scaled sample size. The user can change the map's background layer by clicking the layer icon and zoom in/out by clicking the +/- symbol. If no resistance-associated polymorphism has been found for a particular drug, a map corrsponding to that drug is not generated."}
+if(!is.null(Longitude) & !is.null(Latitude)){
+  library(tmap)
+  tmap_mode('view')
+  drug_resistant_haplotypes_plot$i_drug_map  
+}
 ```

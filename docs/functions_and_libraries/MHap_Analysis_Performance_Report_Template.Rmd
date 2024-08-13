@@ -1,5 +1,5 @@
 ---
-title: '*MHap Analysis Report*: Performance'
+title: 'Performance Report'
 author: "Neafsey Lab"
 output:
   html_document:
@@ -26,122 +26,350 @@ load(params$RData_image)
 
 ```
 
-# Amplification success of the Samples
+# Content
 
--   Amplification success was **measured** by *Plamoudium* **hello**
+1.  Preliminary sequencing yield by Run and Variable1.
+2.  Identification of potential genotyping errors.
+3.  Read depth yield per sample and locus.
+4.  Retention of loci and samples for subsequent analysis.
 
-    $$
-    Hex = \frac{1}{2}
-    $$
+## Preliminary sequencing yield by Run and Variable1
 
-```{r, fig.width=7, fig.height=5, fig.cap = "**Figure 1:** Percentage of coverage"}
+Sample success was defined as the percentage of samples which amplify a
+specific percentage of loci given the allele detection coverage
+threshold or number of paired reads that support the allele or ASV in a
+sample. By default 6 different coverage threshold have been defined: 1,
+5, 10, 20, 50, and 100 paired reads. If user have apply a custom threshold in the
+inputs in Terra, it will also appear in each of the following plots.
+
+### Overall sequencing yield
+
+```{r, fig.width=7, fig.height=5, fig.cap = "**Figure 1:** Sample success rate based on different thresholds of minimum read depth coverage per allele (ASV or amplicon sequence variant observed in the sample). x-axis represents the percentage of loci (amplicon or marker) which contains alleles that pass the threshold. y-axis represents the percentage of samples which amplify a specific percentage of loci given the allele detection threshold mentioned above. The plot represents all analyzed samples (no subsetting based on run and additional variables)."}
 plot_precentage_of_samples_over_min_abd
 ```
 
-```{r, fig.width=10, fig.height=12, fig.cap = "**Figure 2:** Percentage of coverage per Run"}
+```{r, include=FALSE}
+fig2.height = 3*ceiling(length(unique(plot_precentage_of_samples_over_min_abd_byRun$data$Run))/3)
+
+```
+
+```{r, fig.width=10, fig.height=fig2.height, fig.cap = "**Figure 2:** Sample success rate by Sequencing Run based on different thresholds of minimum read depth coverage per allele (ASV or amplicon sequence variant observed in the sample). x-axis represents the percentage of loci (amplicon or marker) which contains alleles that pass the threshold. y-axis represents the percentage of samples which amplify a specific percentage of loci given the allele detection threshold mentioned above."}
 plot_precentage_of_samples_over_min_abd_byRun
 ```
 
-```{r, fig.width=10, fig.height=12, fig.cap="**Figure 3:** Percentage of coverage per catagories in Variable1"}
+```{r, include = FALSE}
+fig3.height = 3*ceiling(length(unique(plot_precentage_of_samples_over_min_abd_byVariable1$data$Variable1))/3)
+```
+
+```{r, fig.width=10, fig.height=fig3.height, fig.cap="**Figure 3:** Sample success rate by Sequencing Run based on different thresholds of minimum read depth coverage per allele (ASV or amplicon sequence variant observed in the sample). x-axis represents the percentage of loci (amplicon or marker) which contains alleles that pass the threshold. y-axis represents the percentage of samples which amplify a specific percentage of loci given the allele detection threshold mentioned above."}
 plot_precentage_of_samples_over_min_abd_byVariable1
 ```
 
+## Identifying likely genotyping errors
+
+After the denoising process of the fastq files, the cigar table might 
+contains some artefacts that affect downstream analysis.  These artifacts 
+include systematic PCR errors (off-target products and stutters in 
+INDELs) as well as stochastic PCR errors. All these artifacts 
+coexist with the true allele within the sample, causing the observation of 
+two or more alleles (the true allele plus the artifacts) in the particular 
+loci of the sample where the error has occurred, the increment of the 
+heterozygousity of the loci (if the error is systematic), and the increment
+of polyclonal infections in the population. 
+
+However, when analyzing a population we do not expect all samples to be
+polyclonal, and it should not be possible to find a locus that is
+heterozygous for all samples. Moreover, loci with alternative alleles
+only present in heterozygous samples should be rare as they are the
+result of *"de-novo"* mutations, and the frequency of heterozygous
+samples for that loci should be low because samples comes from different
+regions and we do not expect a wide geographic distribution of that
+genotype (This might not be true if only one population is been
+analyzed).
+
+Here the identification and removal of likely genotyping errors is done in
+three sequential steps: 1) Removal of off-target products, 2) masking of 
+INDELs present in flanking regions of the ASV, 3) and removal of stochastic 
+PCR errors (alleles mainly present as minor alleles).
+
+The identification of all these likely genotyping errors is based on the
+following parameters:
+
+1.  dVSITES_ij: Density of variant sites (SNPs and INDELs) in the allele (ASV) 
+    $j$ of the locus $i$.
+
+2.  P_ij ($P_{i,j}$): The total number of samples that amplified each
+    alternative allele $j$ in locus $i$.
+
+3.  H_ij ($H_{i,j}$): Number of heterozygous samples in the locus
+    $i$ that carry the alternative allele $j$.
+
+4.  H_ijminor ($H_{i,jminor}$): Number of heterozygous samples in the
+    locus $i$ where the alternative allele $j$ is the minor
+    Allele (the allele with the lower read counts).
+
+5.  h_ij ($h_{i,j}=H_{i,j}/P_{i,j}$): ratio of heterozygous samples in the 
+    locus that carry the alternative allele of interest respect to the
+    total number of samples that amplified alternative allele.
+
+6.  h_ijminor ($h_{i,jminor}=H_{i,jminor}/H_{i,j}$): ratio of heterozygous samples
+    where the alternative allele is the minor Allele respect to the
+    total number of heterozygous samples in the locus that carry
+    the alternative allele.
+
+7.  p_ij ($p_{i,j}$): population prevalence of the alternative allele $j$ in
+    locus $i$.
+    
+8.  flanking_INDEL: Boolean in indicating the presence of INDELs in the flanking region of the ASV.
+
+9.  SNV_in_homopolymer: Boolean in indicating the presence of a SNV in an homopolymer region in the ASV.
+
+10. INDL_in_homopolymer: Boolean in indicating the presence of an INDEL in an homopolymer region in the ASV.
+
+### Identification and removal of off-target products
+
+A non-specific product is the result of the amplification of a DNA template 
+that shares a certain degree of identity in the region of the primers with 
+the desired target. However, the degree of identity of these off-targets with 
+respect to the desired target tends to be low, generating a high density of 
+polymorphisms in the alignment between the off-target ASV and the reference 
+template. For that reason in this step we use the density of of variant sites 
+(dVSITES_ij) in order to identify alleles that are potentially off-target 
+products. The other parameters explained above can also be included to 
+constraint more the definition. The filtering criteria can be specified in 
+Terra with the argument "off_target_formula" (by default 
+`"off_target_formula": "dVSITES_ij>=0.3"`). 
+
 ```{r}
-
-print(paste0(length(n_off_target_alleles), ' allele(s) match(es) the criteria to define off-target products'))
-print(paste0(length(n_flanking_INDEL_alleles), ' allele(s) match(es) the criteria to identify products with flanking INDELs'))
-print(paste0(length(n_PCR_errors_alleles), ' allele(s) match(es) the criteria to identify PCR_errors'))
+print(paste0(n_off_target_alleles, ' allele(s) match(es) the criteria to define off-target products'))
 ```
 
-```{r, fig.width=6, fig.height=6, fig.cap="**Figure 4:** Off-target products"}
-
-if(length(n_off_target_alleles) > 0){
-  plot_off_target_stats
-}
-
+```{r, fig.width=8, fig.height=4, fig.cap="**Figure 4:** Identifcation of off-target products. Histogram represents the distribution of the densitity of variant sites in each allele in each locus (dVSITES_ij). The scatter plot shows the distribution of the prevalence of the alternative allele (p_ij), the frequency of the alternative allele as heterozygous (h_ij), the frequency of the alternative allele as minor allele (h_ijminor), and the density of variant sites (dVSITES_ij) of the alternative allele respect to the reference template."}
+plot_off_target_stats
 ```
 
-```{r,}
-
+```{r}
 if(length(n_off_target_alleles) > 0){
   off_target_stats%>%
   DT::datatable(extensions = 'Buttons',
                 options = list(dom = 'Blfrtip',
                   buttons = c('csv', 'excel')))
 }
-
 ```
 
-```{r, fig.width=7, fig.height=7, fig.cap="**Figure 5:** Flanking INDELs"}
+### Products with flanking INDELs
 
-if(length(n_flanking_INDEL_alleles) > 0){
-  plot_flanking_INDEL_stats
-}
+Flanking INDELs are defined as INDELs that occurs at the beginning or
+the end of the ASV attached to the primer area. Flanking INDELs can lead
+to primer miss binding during PCR by creating additional alleles which
+differs in the length of the INDEL in the same sample.
+The filtering criteria can be specified in Terra with the argument
+"flanking_INDEL_formula" (by default 
+`"flanking_INDEL_formula": "flanking_INDEL==TRUE&h_ij>=0.66"`). 
 
+Identified Flanking INDELs are masked, which means that the internal 
+region of the ASV is kept to define the allele.
+
+```{r}
+print(paste0(n_flanking_INDEL_alleles, ' allele(s) match(es) the criteria to identify products with flanking INDELs'))
+```
+
+```{r, fig.width=7, fig.height=7, fig.cap="**Figure 5:** Identification of flanking INDELs. The scatter plot shows the distribution of the prevalence of the alternative allele (p_ij), the frequency of the alternative allele as heterozygous (h_ij), and the frequency of the alternative allele as minor allele (h_ijminor). The panels FALSE and TRUE represent alleles that do not contain or contain flanking INDELs."}
+plot_flanking_INDEL_stats
 ```
 
 ```{r}
-
-if(length(n_flanking_INDEL_alleles) > 0){
+if(n_flanking_INDEL_alleles > 0){
   flanking_INDEL_stats%>%
   DT::datatable(extensions = 'Buttons',
                 options = list(dom = 'Blfrtip',
                   buttons = c('csv', 'excel')))
 }
-
 ```
 
-```{r, fig.width=7, fig.height=5, fig.cap="**Figure 5:** Flanking INDELs"}
+### Products with SNVs in homopolymer regions
 
-if(length(n_PCR_errors_alleles) > 0){
-  plot_PCR_errors_stats
-}
+Homopolymers are regions of low complexity formed by the tandem repetition of the same nucleotide. In these regions, DNA polymerase tends to make stuttering errors, generating INDELs or erroneous incorporation of nucleotides (SNVs). In this section, SNVs and INDELs in homopolymer regions is identified, and their frequency in samples (p_ij), in heterozygous samples (h_ij), and as a minor allele (h_ijminor) is described.
 
+For detecting and masking SNVs in homopolymer regions the filtering criteria can be specified in Terra with the argument
+"SNV_in_homopolymer_formula" (by default 
+`"SNV_in_homopolymer_formula": "SNV_in_homopolymer==TRUE"`). 
+
+Identified SNVs in homopolymer regions are masked, which means that the other 
+regions of the ASV are kept to define the cigar string of the allele.
+
+```{r}
+print(paste0(n_SNV_in_homopolymer_alleles, ' allele(s) match(es) the criteria to identify products with SNVs in homopolymers'))
+```
+
+```{r, fig.width=7, fig.height=7, fig.cap="**Figure 6:** Identification of SNVs in homopolymers. The scatter plot shows the distribution of the prevalence of the alternative allele (p_ij), the frequency of the alternative allele as heterozygous (h_ij), and the frequency of the alternative allele as minor allele (h_ijminor). The panels FALSE and TRUE represent alleles that do not contain or contain SNVs in homopolymers."}
+plot_SNV_in_homopolymer_stats
 ```
 
 ```{r}
+if(n_SNV_in_homopolymer_alleles > 0){
+  SNV_in_homopolymer_stats%>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+}
+```
 
-if(length(n_PCR_errors_alleles) > 0){
+### Products with INDELs in homopolymer regions
+
+For detecting and masking INDELs in homopolymer regions the filtering criteria can be specified in Terra with the argument
+"INDEL_in_homopolymer_formula" (by default 
+`"INDEL_in_homopolymer_formula": "INDEL_in_homopolymer==TRUE"`). 
+
+Identified INDELs in homopolymer regions are masked, which means that the other 
+regions of the ASV are kept to define the cigar string of the allele.
+
+```{r}
+print(paste0(n_INDEL_in_homopolymer_alleles, ' allele(s) match(es) the criteria to identify products with INDEL in homopolymers'))
+```
+
+```{r, fig.width=7, fig.height=7, fig.cap="**Figure 7:** Identification of INDELs in homopolymers. The scatter plot shows the distribution of the prevalence of the alternative allele (p_ij), the frequency of the alternative allele as heterozygous (h_ij), and the frequency of the alternative allele as minor allele (h_ijminor). The panels FALSE and TRUE represent alleles that do not contain or contain INDELs in homopolymers."}
+plot_INDEL_in_homopolymer_stats
+```
+
+```{r}
+if(n_INDEL_in_homopolymer_alleles > 0){
+  INDEL_in_homopolymer_stats %>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+}
+```
+
+### Products detected as potential bimeras
+
+A bimera is a single DNA sequence originating when multiple DNA sequences get joined during PCR amplification. Bimeras are artifacts and should be filtered out from the data during processing to prevent spurious inferences of biological variation.
+
+The filtering criteria can be specified in Terra with the argument
+"bimera_formula" (by default 
+`"bimera_formula": "bimera==TRUE"`). 
+
+Identified bimeras are removed, which means that the ASV and its cigar string is not considered in further analysis.
+
+```{r}
+print(paste0(length(n_flanking_INDEL_alleles), ' allele(s) match(es) the criteria to identify products with flanking INDELs'))
+```
+
+```{r, fig.width=7, fig.height=7, fig.cap="**Figure 8:** Identification of bimeras. The scatter plot shows the distribution of the prevalence of the alternative allele (p_ij), the frequency of the alternative allele as heterozygous (h_ij), and the frequency of the alternative allele as minor allele (h_ijminor). The panels FALSE and TRUE represent alleles that are bimeras."}
+plot_bimera_stats
+```
+
+```{r}
+if(n_bimera_alleles > 0){
+  bimera_stats%>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+}
+```
+
+```{r}
+if(n_bimera_alleles > 0){
+  bimera_stats%>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+}
+```
+
+### Stochastic PCR errors
+
+PCR errors introduce new alleles in both polymorphic and monomorphic
+sites. These errors depend on the error rate of the polymerases used in
+the sWGA and library generation steps, and they will generate
+alternative alleles that are mainly present as the minor allele at a
+heterozygous site and their frequency tends to be low in the population.
+By analyzing the distribution of population frequency of each
+alternative allele p_ij ($p_{i,j}$), the ratio of heterozygous samples in the
+locus that carry the alternative allele of interest respect to
+the total number of samples that amplified alternative allele h_ij
+($h_{i,j}$), and the ratio of heterozygous samples where the alternative
+allele is the minor allele respect to the total number of heterozygous
+samples h_ijminor ($h_{i,jminor}$), in this step we will remove all alternative
+alleles that match our filtering criteria. This filtering criteria can
+be specified in Terra with the argument "PCR_errors_formula" (by
+default "PCR_errors_formula": `"h_ij>=0.66&h_ijminor>= 0.66"`)
+
+```{r}
+print(paste0(n_PCR_errors_alleles, ' allele(s) match(es) the criteria to identify PCR_errors'))
+```
+
+```{r, fig.width=7, fig.height=5, fig.cap="**Figure 9:** Identification and removal of stochastic PCR errors. The scatter plot shows the distribution of the prevalence of the alternative allele (p_ij), the frequency of the alternative allele as heterozygous (h_ij), and the frequency of the alternative allele as minor allele (h_ijminor). The horizontal panels are defined based on the threshold stablished for h_ijminor."}
+plot_PCR_errors_stats
+```
+
+```{r}
+if(n_PCR_errors_alleles > 0){
   PCR_errors_stats%>%
   DT::datatable(extensions = 'Buttons',
                 options = list(dom = 'Blfrtip',
                   buttons = c('csv', 'excel')))
 }
-
 ```
 
-```{r, fig.width=12, fig.height=20, fig.cap="**Figure 5:** Read Coverage per sample per locus"}
+## Read depth yield per sample and locus
 
+```{r, include = FALSE}
+Fig5.height = length(unique(ReadDepth_coverage$plot_read_depth_heatmap$data$var))*3
+```
+
+```{r, fig.width=12, fig.height=Fig5.height, fig.cap="**Figure 10:** Read Coverage per sample per locus. The heatmaps show the number of read-pairs obtained per sample (rows) at each locus (columns). Separate panels are used for each value of Variable1 (e.g., sample geographic origin). Darker reds indicate higher read-depth. Grey indicates lack of signal for the locus/sample."}
 ReadDepth_coverage$plot_read_depth_heatmap
-
 ```
 
-```{r, fig.width=12, fig.height=20, fig.cap="**Figure 5:** Read Coverage per sample per locus by run"}
+```{r, include = FALSE}
+Fig6.height = length(unique(ReadDepth_coverage_by_run$plot_read_depth_heatmap$data$var))*3
+```
 
+```{r, fig.width=12, fig.height=Fig6.height, fig.cap="**Figure 11:** Read Coverage per sample per locus by run. The heatmaps show the number of read-pairs obtained per sample (rows) at each locus (columns). Separate panels are used for each sequencing run. Darker reds indicate higher read-depth. Grey indicates lack of signal for the locus/sample."}
 ReadDepth_coverage_by_run$plot_read_depth_heatmap
-
 ```
 
-```{r, fig.width=12, fig.height=10, fig.cap="**Figure 5:** Read Coverage of controls per locus by run"}
+```{r}
+Fig7.height = length(unique(ReadDepth_coverage_by_run_controls$plot_read_depth_heatmap$data$Sample_id))*0.1
+```
 
+```{r, fig.width=12, fig.height=10, fig.cap="**Figure 12:** Read Coverage for the controls in each sequencing run. The heatmaps show the number of read-pairs obtained per control (rows) at each locus (columns). Separate panels are used for each sequencing run. Darker reds indicate higher read-depth. Grey indicates lack of signal for the locus/sample. The name of positive controls indicates the strain that has been used and the tag 'pos' (e.g. dd2_pos2), while negative controls has the tag neg with the prefix that indicates the step on which it was incorporated to the plate (EXTR, PCR or sWGA)."}
 ReadDepth_coverage_by_run_controls$plot_read_depth_heatmap
-
 ```
 
-```{r, fig.width=7, fig.height=8, fig.cap="**Figure 5:** Locus amplification rate distribution"}
+## Retention of loci and samples for subsequent analysis
+
+Loci and samples with low amplicfication success will be discarded based on 
+the locus_ampl_rate and samp_ampl_rate parameter defined in Terra.
+
+### Locus performance across different categories for Variable1
+
+```{r}
+fig8.height = 2*length(unique(all_loci_amplification_rate$data$Strata))
+```
+
+```{r, fig.width=7, fig.height=fig8.height, fig.cap="**Figure 13:** Locus amplification rate distribution across categories in Variable1. Each panel represents the cateories of Variable1, and the bottom panel represents the total population and the actual number of loci that are retained. Vertical line represents the locus_ampl_rate threshold set by the user in Terra. Only "}
 
 all_loci_amplification_rate
 
 ```
 
-```{r, fig.width=7, fig.height=8, fig.cap="**Figure 5:** Sample amplification rate distribution"}
+### Retention of samples for subsequent analysis
+
+```{r}
+fig9.height = 2*length(unique(samples_amplification_rate$data$Strata))
+```
+
+```{r, fig.width=7, fig.height=fig9.height, fig.cap="**Figure 14:** Sample amplification rate distribution across categories in Variable1. Each panel represents the categories of Variable1 and the number within each panel represents the number of samples that are retained in each category."}
 
 samples_amplification_rate
 
 ```
 
-Cigar table without masking and filter
+## Exportable tables
 
+**Table 1: Cigar table without masking and filter**
 ```{r}
 cigar_table_unmasked_unfiltered %>%
   DT::datatable(extensions = 'Buttons',
@@ -149,8 +377,7 @@ cigar_table_unmasked_unfiltered %>%
                   buttons = c('csv', 'excel')))
 ```
 
-Masked and filtered cigar table without controls
-
+**Table 2: Masked and filtered cigar table without controls**
 ```{r}
 cigar_table_masked_filtered %>%
   DT::datatable(extensions = 'Buttons',
@@ -158,10 +385,25 @@ cigar_table_masked_filtered %>%
                   buttons = c('csv', 'excel')))
 ```
 
-Masked and filtered cigar table of controls
-
+**Table 3: Masked and filtered cigar table of controls**
 ```{r}
 cigar_table_controls_masked_filtered %>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(
+                  buttons = c('csv', 'excel')))
+```
+
+**Table 4: Metadata of kept samples**
+```{r}
+metadata_kept_samples %>%
+  DT::datatable(extensions = 'Buttons',
+                options = list(
+                  buttons = c('csv', 'excel')))
+```
+
+**Table 5: Metadata of removed samples**
+```{r}
+metadata_removed_samples %>%
   DT::datatable(extensions = 'Buttons',
                 options = list(
                   buttons = c('csv', 'excel')))
