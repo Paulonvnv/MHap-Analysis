@@ -1,0 +1,230 @@
+---
+title: "*MHap Analysis Report*: Complexity of infections (COI)"
+author: "Neafsey Lab"
+output:
+  html_document:
+    toc: yes
+    number_sections: no
+    toc_float: yes
+    code_folding: hide
+editor_options:
+  markdown:
+    wrap: 72
+  chunk_output_type: inline
+params:
+  RData_image: ""
+---
+
+In malaria epidemiology, the term polyclonality represents the
+co-occurrence of two or more different parasite clones (e.g.,
+haplotypes) within an infected individual. Polyclonality may occur due
+to the concurrent transmission of multiple parasite haplotypes from the
+same mosquito bite (co-infection) or the acquisition of different
+haplotypes through independent bites (super-infection). Both processes
+are related to the intensity of transmission. In low transmission
+settings, there are few infective bites and therefore little chance for
+super-infections or co-infections to occur. Most infections are
+therefore monoclonal. On the other hand, when conditions favor an
+increase in mosquito prevalence and human-mosquito interaction,
+super-infections and co-infections become more likely, generating an
+increase in the prevalence of polyclonal infections. Polyclonality rate
+is therefore generally considered a positive correlate of malaria
+transmission intensity (although other features such as case importation
+or relapse behavior in *P. vivax* may modify this relationship).
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, include = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(magrittr)
+load(params$RData_image)
+
+```
+
+## Differentiating monoclonal and polyclonal infections
+
+There are different ways to differentiate between monoclonal and
+polyclonal infections and/or define the number of strains present in a
+sample. An easy and widely used way to differentiate between monoclonal
+and polyclonal infections is based on the number of heterozygous loci
+within the sample ($N_{HetLoci}$),. By using a pre-defined threshold
+(e.g., $N_{HetLoci} \ge 1$), samples are classified as polyclonal if
+they meet or exceed the threshold and classified as monoclonal if not.
+That definition is correct when working with a small number of loci, and
+*de-novo* mutations and genotyping errors are not frequent for those
+loci. When working with whole-genome or amplicon sequencing
+(microhaplotype) information, a sample can contain some heterozygous
+loci as a product of the diversification of the parasite population
+within the infection (*de-novo* mutations that occurs in the human or in
+the mosquito) or due to genotyping errors that occurs during
+amplification steps (sWGA, PCR1, or PCR2). For this reason, other
+metrics have been proposed to infer polyclonality. One simple metric is
+the fraction of heterozygous loci per sample ($p_{Het_{(i)}}$), defined
+as:
+
+$$\text{Frac_HetLoci }(p_{Het_{(i)}}) = N_{HetLoci_{(i)}} /N_{(i)}$$$N_{HetLoci_{(i)}}$
+represents the number of heterozygous sites for sample $i$ and $N_{(i)}$
+represents the total number of observed sites for sample $i$.\
+\
+Another metric used to infer polyclonality is the within-host divergence
+($F_{WS_{(i)}}$) index, defined as follows:
+
+$$F_{WS_{(i)}} = \displaystyle{\sum_{j = 1}^{n}{(1 - \frac{H_{W_j}}{H_{exp_{(j)}}})}}$$
+
+$H_{W_j}$ represents the within-host heterozygosity:
+
+$$H_{W_j} = 1 - \displaystyle{\sum_{a = 1}^{b_j}{(\frac{({rd}_{a}^{j})}{RD_j})^2}}$$
+
+Here, for each sample ($i$), $rd_a^j$ represents the allele $a$ observed
+at locus $j$, $b_j$ represents the total number of alleles observed at
+locus $j$, and $RD_j$ represents the total read-depth observed at locus
+$j$.
+
+$H_{exp_{(j)}}$ is the within-population heterozygosity for locus $j$:
+
+$$H_{exp_{(j)}} = 1 - \displaystyle{\sum{p_j^2}}$$
+
+Here, $p_j$ represents the frequency of each of the alleles observed at
+locus $j$ at the population level.
+
+Another way to distinguish between monoclonal and polyclonal samples is
+to directly estimate the number of strains in each sample (i.e., define
+the 'complexity of the infection' (COI)). Samples with COI equal to 1
+are monoclonal, and samples with greater values of COI are polyclonal.
+The easiest way to define the COI is to assume that it is equal to the
+maximum number of alleles ($\text{max_nAlleles}$) observed at any of the
+loci in the sample. More sophisticated approaches based on Markov Chain
+Monte Carlo (MCMC) methods also exist to estimate COI from
+[biallelic](https://github.com/EPPIcenter/THEREALMcCOIL) and
+[multiallelic](https://github.com/EPPIcenter/moire) loci, but these
+methods are not currently incorporated in the workflow.
+
+In the current workflow, the user is able to set their own criteria to
+distinguish between monoclonal and polyclonal samples based on the
+combination of the metrics mentioned above. These criteria are set via
+the parameter `poly_formula` in Terra (default
+`"poly_formula": "NHetLoci>1"`).
+
+In the following plot you can inspect the distribution of the fraction
+of heterozygous loci by sample (Frac_HetLoci), within-host divergence
+(Fws), and the maximum number of alleles found in a sample at any locus.
+
+```{r, fig.width=6, fig.height=6, fig.cap = "**Figure 1:** Distribution of the fraction of heterozygous loci by sample (fracHetLoci), within-host divergence (Fws), and the maximum number of alleles found in a sample at any locus. Dotted lines represent the quantiles defined by the poly_quantile argument in Terra."}
+
+if(is.na(Variable1)){
+  
+  poly_total$plot_fracHet_vs_Fws
+  
+}else{
+  
+  poly_by_Var1$plot_fracHet_vs_Fws
+  
+}
+
+```
+
+All metrics are shown at the sample level in the following table.
+Information specifying which loci show heterozygosity in each sample is
+also presented.
+
+```{r}
+
+if(is.na(Variable1)){
+  
+  poly_total$coi_bySample %>% DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+  
+}else{
+  
+  poly_by_Var1$coi_bySample %>% DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+  
+}
+```
+
+The proportion of samples which show heterozygosity at each locus is
+specified below:
+
+```{r}
+
+if(is.na(Variable1)){
+  
+  poly_total$coi_byLoci %>% DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+  
+}else{
+  
+  poly_by_Var1$coi_byLoci %>% DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+  
+}
+```
+
+### Proportion of polyclonal infections by Variable1
+
+The proportion of polyclonal infections by each category of the
+Variable1 is presented in the following table and figure.
+
+```{r}
+
+if(is.na(Variable1)){
+  
+  poly_total$pop_summary %>% DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+  
+}else{
+  
+  poly_by_Var1$pop_summary %>% DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+  
+}
+```
+
+```{r}
+fig2.height = 2.5 + max(round(nchar(as.character(unique(plot_poly_by_pop$data$pop)))/10, 0))
+fig2.width = 1*length(unique(plot_poly_by_pop$data$pop))
+```
+
+```{r, fig.width=fig2.width, fig.height=fig2.height, fig.cap="**Figure 2:** Proportions of polyclonal infections by Variable1. 95% confidence intervals are computed using a Fisher exact test."}
+if(!is.na(Variable1)){
+  plot_poly_by_pop
+}
+
+```
+
+### Proportion of polyclonal infections by Variable1 and Variable2
+
+The proportion of polyclonal infections by each category of Variable1
+and Variable2 is presented in the following table and figure.
+
+```{r}
+if(!is.na(Variable1) & !is.na(Variable2)){
+  
+  poly_by_Var1_Var2$pop_summary %>% DT::datatable(extensions = 'Buttons',
+                options = list(dom = 'Blfrtip',
+                  buttons = c('csv', 'excel')))
+}
+```
+
+```{r, include=FALSE}
+fig3.height = 3*ceiling(length(unique(plot_poly_by_Var1_Var2$data$Variable1))/3)
+fig3.width = ceiling(3 *
+  0.5*length(unique(plot_poly_by_Var1_Var2$data$Variable2)))
+```
+
+```{r, fig.width=fig3.width, fig.height=fig3.height, fig.cap="**Figure 3:** Proportions of polyclonal infections by Variable1. 95% confidence intervals are computed using a Fisher exact test."}
+
+if(!is.na(Variable1) & !is.na(Variable2)){
+  
+  plot_poly_by_Var1_Var2
+}
+
+```

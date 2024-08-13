@@ -8,18 +8,18 @@
   "nTasks": 1,
   
   //PATHs to references and functions
-  "wd": "/Users/pam3650/Documents/Github/MHap-Analysis/docs/data/Pfal_example3/",
+  "wd": "/Users/pam3650/Documents/Github/MHap-Analysis/docs/data/Pfal_example2/",
   "fd": "/Users/pam3650/Documents/Github/MHap-Analysis/docs/functions_and_libraries/",
   "rd": "/Users/pam3650/Documents/Github/MHap-Analysis/docs/reference/Pfal_3D7/",
   
   //Upload of raw data
-  "cigar_paths": null, // Path to output folders of the denoising pipeline, e.i.: "Seq_runs", null
+  "cigar_paths": "Seq_runs", // Path to output folders of the denoising pipeline, e.i.: "Seq_runs", null
   
-  "cigar_files": "cigar_tables",//"cigar_tables", null
-  "asv_table_files": "asv_tables",//"asv_tables", null
-  "asv2cigar_files": "asv2cigar",//"asv2cigar", null
-  "asv_seq_files": "asv_seqs",//"asv_seqs", null
-  "zero_read_sample_list": "zeroReadSamples",//"zeroReadSamples", null
+  "cigar_files": null,//"cigar_tables", null
+  "asv_table_files": null,//"asv_tables", null
+  "asv2cigar_files": null,//"asv2cigar", null
+  "asv_seq_files": null,//"asv_seqs", null
+  "zero_read_sample_list": null,//"zeroReadSamples", null
   
   "ampseq_jsonfile": null,
   "ampseq_excelfile": null,
@@ -29,7 +29,7 @@
   "markers": "markers.csv",
   
   //Parameters to export data and results
-  "output": "MHap_test_excel",
+  "output": "MHap_Pfal_excel",
   "ampseq_export_format": "excel",//"csv", "excel", "json"  null
   
   //Removing or masking ASVs in the genotype table
@@ -60,10 +60,10 @@
   
   //Reports
   "PerformanceReport": true,
-  "Drug_Surveillance_Report": false,
+  "Drug_Surveillance_Report": true,
   "Variants_of_Interest_Report": false,
-  "ibd_thres": null,
-  "poly_formula": null,
+  "ibd_thres": null, // e.i. 0.99, null
+  "poly_formula": "NHetLoci>1", //e.i. "NHetLoci>1", "NHetLoci>1&Fws<0.97", null
   
   // Parameters for DSR
   "ref_gff": "PlasmoDB-59_Pfalciparum3D7.gff",
@@ -81,7 +81,7 @@
   "na_hap_rm": true,
   
   //Parameters for IBD and Conectivity report
-  "pairwise_relatedness_table": "pairwise_relatedness.csv",
+  "pairwise_relatedness_table": "Pfal_pairwise_relatedness.csv",
   "nchunks": 500,
   "parallel": true,
   "ibd_ncol": 4,
