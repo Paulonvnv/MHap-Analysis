@@ -719,7 +719,11 @@ coordinates of the each marker in the reference genome and the distance
 in bp between contiguous markers in a chromosome (This information is
 required for IBD estimation). If this table is not provided the slot in
 the AmpSeq object will be filled just with the list of the names of
-markers extracted from the cigar table.</li>
+markers extracted from the cigar table. The markers tables for the <a
+href="https://github.com/Paulonvnv/MHap-Analysis/blob/main/docs/reference/Pfal_3D7/markers.csv">AmplSeq</a>
+and <a
+href="https://github.com/Paulonvnv/MHap-Analysis/blob/main/docs/reference/Pviv_P01/PvGTSeq271_markersTable.csv">PvGTSeq</a>
+panels are in the MHap-Analysis repository.</li>
 </ol></li>
 <li>Metadata can be added using the following parameters:
 <ol style="list-style-type: decimal">
@@ -938,13 +942,13 @@ format to export the filtered and masked ampseq object, options are
   &quot;rd&quot;: &quot;/Users/pam3650/Documents/Github/MHap-Analysis/docs/reference/Pfal_3D7/&quot;,
   
   //Upload of raw data
-  &quot;cigar_paths&quot;: null, // Path to output folders of the denoising pipeline, e.i.: &quot;Seq_runs&quot;, null
+  &quot;cigar_paths&quot;: &quot;Seq_runs&quot;, // Path to output folders of the denoising pipeline, e.i.: &quot;Seq_runs&quot;, null
   
-  &quot;cigar_files&quot;: &quot;cigar_tables&quot;,//&quot;cigar_tables&quot;, null
-  &quot;asv_table_files&quot;: &quot;asv_tables&quot;,//&quot;asv_tables&quot;, null
-  &quot;asv2cigar_files&quot;: &quot;asv2cigar&quot;,//&quot;asv2cigar&quot;, null
-  &quot;asv_seq_files&quot;: &quot;asv_seqs&quot;,//&quot;asv_seqs&quot;, null
-  &quot;zero_read_sample_list&quot;: &quot;zeroReadSamples&quot;,//&quot;zeroReadSamples&quot;, null
+  &quot;cigar_files&quot;: null,//&quot;cigar_tables&quot;, null
+  &quot;asv_table_files&quot;: null,//&quot;asv_tables&quot;, null
+  &quot;asv2cigar_files&quot;: null,//&quot;asv2cigar&quot;, null
+  &quot;asv_seq_files&quot;: null,//&quot;asv_seqs&quot;, null
+  &quot;zero_read_sample_list&quot;: null,//&quot;zeroReadSamples&quot;, null
   
   &quot;ampseq_jsonfile&quot;: null,
   &quot;ampseq_excelfile&quot;: null,
@@ -985,10 +989,10 @@ format to export the filtered and masked ampseq object, options are
   
   //Reports
   &quot;PerformanceReport&quot;: true,
-  &quot;Drug_Surveillance_Report&quot;: false,
+  &quot;Drug_Surveillance_Report&quot;: true,
   &quot;Variants_of_Interest_Report&quot;: false,
-  &quot;ibd_thres&quot;: null,
-  &quot;poly_formula&quot;: null,
+  &quot;ibd_thres&quot;: null, // e.i. 0.99, null
+  &quot;poly_formula&quot;: &quot;NHetLoci&gt;1&quot;, //e.i. &quot;NHetLoci&gt;1&quot;, &quot;NHetLoci&gt;1&amp;Fws&lt;0.97&quot;, null
   
   // Parameters for DSR
   &quot;ref_gff&quot;: &quot;PlasmoDB-59_Pfalciparum3D7.gff&quot;,
@@ -1006,7 +1010,7 @@ format to export the filtered and masked ampseq object, options are
   &quot;na_hap_rm&quot;: true,
   
   //Parameters for IBD and Conectivity report
-  &quot;pairwise_relatedness_table&quot;: &quot;pairwise_relatedness.csv&quot;,
+  &quot;pairwise_relatedness_table&quot;: &quot;Pfal_pairwise_relatedness.csv&quot;,
   &quot;nchunks&quot;: 500,
   &quot;parallel&quot;: true,
   &quot;ibd_ncol&quot;: 4,
@@ -1026,14 +1030,42 @@ upload the data are mandatory in the json file (<code>wd</code>,
 <code>asv_seq_files</code>, <code>zero_read_sample_list</code>,
 <code>ampseq_jsonfile</code>, <code>ampseq_excelfile</code>,
 <code>ampseq_csvfolder</code>). The json file showed in the previous
-chunk of code can be downloaded from here.</p>
+chunk of code can be downloaded from <a
+href="https://github.com/Paulonvnv/MHap-Analysis/blob/main/docs/functions_and_libraries/MHap_Analysis_inputs.json">here</a>.</p>
 </div>
 <div id="running-the-mhap-analysis-pipeline" class="section level2">
 <h2>Running the MHap-Analysis pipeline</h2>
 <p>Once all parameters have been defined in the json file, the execution
-of the pipeline is controlled by the this bash script which can be
-launched from the terminal using the following line:</p>
-<pre class="bash"><code>./run_mhap.sh MHap_Analysis_inputs.json</code></pre>
+of the pipeline is controlled by the this <a
+href="https://github.com/Paulonvnv/MHap-Analysis/blob/main/docs/functions_and_libraries/run_MHap_Analysis_pipeline.sh">bash
+script</a> which can be launched from the terminal using the following
+line:</p>
+<pre class="bash"><code>./run_MHap_Analysis_pipeline.sh MHap_Analysis_inputs.json</code></pre>
+<p>So depending on how the parameters are set in the .json file the
+possible outputs of the pipeline are the following:</p>
+<ol style="list-style-type: decimal">
+<li>An ampseq_object exported in excel, csv or json format. <a
+href="https://github.com/Paulonvnv/MHap-Analysis/blob/main/docs/data/Pfal_example2/MHap_Pfal_excel.xlsx">Here</a>
+is an example of the output in excel format</li>
+<li>A report of the performance of the sequencing run in .html format.
+<a
+href="https://github.com/Paulonvnv/MHap-Analysis/blob/main/docs/data/Pfal_example2/MHap_Pfal_excel_Performance_Report.html">Here</a>
+is an example of the performance report.</li>
+<li>Two reports (a full report and a summary report) for drug resistance
+surveillance. <a
+href="https://github.com/Paulonvnv/MHap-Analysis/blob/main/docs/data/Pfal_example2/MHap_Pfal_excel_DRS_Report.html">Here</a>
+is an example of the full DRS report.</li>
+<li>A report of IBD and transmission intensity,</li>
+<li>A report of IBD and population structure and connectivity.</li>
+<li>And a report of Complexity of infection and proportion of polyclonal
+infections. <a
+href="https://github.com/Paulonvnv/MHap-Analysis/blob/main/docs/data/Pfal_example2/MHap_Pfal_excel_COI_Report.html">Here</a>
+is an example of the COI report.</li>
+</ol>
+<p>Notice that all this reports are generated by running an .rmd file
+template whose are located in <a
+href="https://github.com/Paulonvnv/MHap-Analysis/tree/main/docs/functions_and_libraries">this
+folder</a> in the repository.</p>
 </div>
 </div>
 
