@@ -1,2 +1,0 @@
-x
-1	HRP0170-R1_S50_prim_1.fq.gz
