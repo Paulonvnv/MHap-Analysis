@@ -14,7 +14,7 @@
 
 <title>Micro-Haplotype (MHap) Analysis</title>
 
-<script src="site_libs/header-attrs-2.14/header-attrs.js"></script>
+<script src="site_libs/header-attrs-2.26/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="site_libs/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
@@ -142,11 +142,15 @@ $(document).ready(function () {
     href = "index.html";
   var menuAnchor = $('a[href="' + href + '"]');
 
-  // mark it active
-  menuAnchor.tab('show');
-
-  // if it's got a parent navbar menu mark it active as well
-  menuAnchor.closest('li.dropdown').addClass('active');
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
 
   // Navbar adjustments
   var navHeight = $(".navbar").first().height() + 15;
@@ -175,8 +179,8 @@ $(document).ready(function () {
   border-radius: 4px;
 }
 
-.tabset-dropdown > .nav-tabs > li.active:before {
-  content: "";
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
   font-family: 'Glyphicons Halflings';
   display: inline-block;
   padding: 10px;
@@ -184,16 +188,9 @@ $(document).ready(function () {
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
-  content: "&#xe258;";
-  border: none;
-}
-
-.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
-  content: "";
+  content: "\e258";
   font-family: 'Glyphicons Halflings';
-  display: inline-block;
-  padding: 10px;
-  border-right: 1px solid #ddd;
+  border: none;
 }
 
 .tabset-dropdown > .nav-tabs > li.active {
@@ -250,10 +247,28 @@ $(document).ready(function () {
   <a href="index.html">Home</a>
 </li>
 <li>
-  <a href="MHapPfalciparum.html">MHap-Pfalciparum</a>
+  <a href="MHap_Analysis_pipeline.html">MHap-Analysis pipeline</a>
 </li>
 <li>
-  <a href="MHapPvivax.html">MHap-Pvivax</a>
+  <a href="Sequencing_Performance.html">Performance of amplicon sequencing data</a>
+</li>
+<li>
+  <a href="Drug_resistance_surveillance.html">Drug Resistance Surveillance</a>
+</li>
+<li>
+  <a href="Complexity_of_infection.html">Complexity of infection (COI)</a>
+</li>
+<li>
+  <a href="PopStructure_and_Connectivity.html">PopStructure and Connectivity</a>
+</li>
+<li>
+  <a href="IBD_and_Tranmission.html">Genetic Relatedness (IBD) and Tranmission</a>
+</li>
+<li>
+  <a href="MHapPfalciparum.html">MHap-Pfalciparum example</a>
+</li>
+<li>
+  <a href="MHapPvivax.html">MHap-Pvivax example</a>
 </li>
 <li>
   <a href="Intro_to_R.html">Intro to R</a>
@@ -282,20 +297,30 @@ $(document).ready(function () {
 <p>The purpose of this repository is to introduce researchers in Neafsey
 Lab in the analysis of genotyping information generated through amplicon
 sequencing (also called Microhaplotype genotyping).</p>
-<p>This covers 4 tutorials:</p>
+<p>This covers 8 tutorials:</p>
 <ul>
-<li><a
-href="https://paulonvnv.github.io/MHap-Analysis/Intro_to_R.html">Intro
-to R</a>,</li>
-<li><a
-href="https://paulonvnv.github.io/MHap-Analysis/basic_bash.html">Basic
-Bash</a>,</li>
-<li>The analysis of the <a
+<li><p><a
+href="https://paulonvnv.github.io/MHap-Analysis/MHap_Analysis_pipeline.html">Intro
+to MHap-Analysis pipeline</a>,</p></li>
+<li><p><a
+href="https://paulonvnv.github.io/MHap-Analysis/Sequencing_Performance.html">Performance
+of amplicon sequencing data</a>,</p></li>
+<li><p><a
+href="https://paulonvnv.github.io/MHap-Analysis/Drug_resistance_surveillance.html">Drug
+Resistance Surveillance</a>,</p></li>
+<li><p><a
+href="https://paulonvnv.github.io/MHap-Analysis/Complexity_of_infection.html">Complexity
+of Infection</a></p></li>
+<li><p>An example of a customized analysis of the <a
 href="https://paulonvnv.github.io/MHap-Analysis/MHapPfalciparum.html">AMPLseq</a>
-data for <em>Plasmodium falciparum</em>, and</li>
-<li>The analysis of the <a
-href="https://paulonvnv.github.io/MHap-Analysis/MHapPvivax.html"><em>PvGTSeq</em></a>
-data for <em>Plasmodium vivax</em>.</li>
+data for <em>Plasmodium falciparum</em>, and</p></li>
+<li><p>PvGTSeq data for <em>Plasmodium vivax</em>.</p></li>
+<li><p><a
+href="https://paulonvnv.github.io/MHap-Analysis/Intro_to_R.html">Intro
+to R</a>,</p></li>
+<li><p><a
+href="https://paulonvnv.github.io/MHap-Analysis/basic_bash.html">Basic
+Bash</a>,</p></li>
 </ul>
 <p>Our GitHub repository contains a set of functions that allows the
 user to upload and manipulate the genotypic information stored in .tsv
@@ -320,12 +345,16 @@ href="https://paulonvnv.github.io/MHap-Analysis/MHapPfalciparum.html">AMPLseq</a
 and <a
 href="https://paulonvnv.github.io/MHap-Analysis/MHapPvivax.html"><em>PvGTSeq</em></a>
 tutorials have been created to introduce the final users to all the set
-of functions in this repository. To run this tutorial a data sets are
-stored in the folder <a
+of functions in this repository, while the <a
+href="https://paulonvnv.github.io/MHap-Analysis/MHap_Analysis_pipeline.html">Intro
+to MHap-Analysis pipeline</a> tutorial shows how to generate automated
+reports. To run these tutorials data sets are stored in the folder <a
 href="https://github.com/Paulonvnv/MHap-Analysis/tree/main/docs/data"><code>doc/data</code></a>.
 The samples for these tutorials comes from a collaboration with the
 groups of Caucaseco in Colombia, Stella Chenet in Peru, and David Forero
 in Venezuela.</p>
+<p><a href="https://github.com/Paulonvnv/MHap-Analysis/tree/main">Go
+back to repository</a></p>
 
 
 
