@@ -16,7 +16,7 @@ Sample_id,order_in_plate,typeofSamp,Run,Country,Strata,sample_ampl_rate
 118-GZ-Control,15,Samples,Run1,Honduras,Honduras,0.484375
 127-GZ-Alt-sWGA-Dilution,104,Samples,Run1,Honduras,Honduras,0.375
 127-GZ-Alt-sWGA-bc,68,Samples,Run1,Honduras,Honduras,0.0416666666666666
-127-GZ-Control,32,Samples,Run1,Honduras,Honduras,0.348958333333333
+127-GZ-Control,32,Samples,Run1,Honduras,Honduras,0.34375
 159-GZ-Alt-sWGA-Dilution,100,Samples,Run1,Honduras,Honduras,0
 165-GZ-Alt-sWGA-Dilution,102,Samples,Run1,Honduras,Honduras,0.776041666666667
 165-GZ-Alt-sWGA-bc,66,Samples,Run1,Honduras,Honduras,0.255208333333333
@@ -30,9 +30,9 @@ Sample_id,order_in_plate,typeofSamp,Run,Country,Strata,sample_ampl_rate
 182-GZ-Alt-sWGA-Dilution,107,Samples,Run1,Honduras,Honduras,0.0208333333333334
 182-GZ-Alt-sWGA-bc,71,Samples,Run1,Honduras,Honduras,0.307291666666667
 182-GZ-Control,35,Samples,Run1,Honduras,Honduras,0.25
-183-GZ-Alt-sWGA-Dilution,96,Samples,Run1,Honduras,Honduras,0.760416666666667
-183-GZ-Alt-sWGA-bc,60,Samples,Run1,Honduras,Honduras,0.791666666666667
-183-GZ-Control,24,Samples,Run1,Honduras,Honduras,0.484375
+183-GZ-Alt-sWGA-Dilution,96,Samples,Run1,Honduras,Honduras,0.755208333333333
+183-GZ-Alt-sWGA-bc,60,Samples,Run1,Honduras,Honduras,0.786458333333333
+183-GZ-Control,24,Samples,Run1,Honduras,Honduras,0.479166666666667
 190-GZ-Alt-sWGA-Dilution,73,Samples,Run1,Honduras,Honduras,0.697916666666667
 190-GZ-Alt-sWGA-bc,37,Samples,Run1,Honduras,Honduras,0.614583333333333
 190-GZ-Control,1,Samples,Run1,Honduras,Honduras,0.260416666666667
@@ -121,7 +121,7 @@ G4G0916,274,Samples,Run2,Guyana,Guyana,0.00520833333333337
 G4G0929,271,Samples,Run2,Guyana,Guyana,0.0572916666666666
 G4G0933,133,Samples,Run2,Guyana,Guyana,0.234375
 G4G0943,252,Samples,Run2,Guyana,Guyana,0.567708333333333
-G4G0952,150,Samples,Run2,Guyana,Guyana,0.630208333333333
+G4G0952,150,Samples,Run2,Guyana,Guyana,0.625
 G4G0954,253,Samples,Run2,Guyana,Guyana,0.9375
 G4G0956,254,Samples,Run2,Guyana,Guyana,0.432291666666667
 G4G0958,272,Samples,Run2,Guyana,Guyana,0.234375
@@ -426,7 +426,7 @@ HRP0383,343,Samples,Run2,Venezuela,Venezuela,0.911458333333333
 HRP0384,344,Samples,Run2,Venezuela,Venezuela,0.994791666666667
 HRP0385,345,Samples,Run2,Venezuela,Venezuela,0.625
 HRP0386,346,Samples,Run2,Venezuela,Venezuela,0.90625
-HRP0387,347,Samples,Run2,Venezuela,Venezuela,0.09375
+HRP0387,347,Samples,Run2,Venezuela,Venezuela,0.0885416666666666
 HRP0388,348,Samples,Run2,Venezuela,Venezuela,0.90625
 HRP0389,349,Samples,Run2,Venezuela,Venezuela,0.359375
 HRP0390,351,Samples,Run2,Venezuela,Venezuela,0.984375
@@ -438,7 +438,7 @@ SP0101254378,319,Samples,Run2,Colombia,Colombia,0.34375
 SP0101254394,321,Samples,Run2,Colombia,Colombia,0.90625
 SP0101254422,322,Samples,Run2,Colombia,Colombia,0.994791666666667
 SP0112286510,299,Samples,Run2,Colombia,Colombia,0.911458333333333
-SP0112286511,296,Samples,Run2,Colombia,Colombia,0.6875
+SP0112286511,296,Samples,Run2,Colombia,Colombia,0.682291666666667
 SP0112286514,297,Samples,Run2,Colombia,Colombia,0.739583333333333
 SP0112286517,298,Samples,Run2,Colombia,Colombia,0.9375
 SP0112286518,314,Samples,Run2,Colombia,Colombia,0.822916666666667
@@ -452,7 +452,7 @@ SP0112286567,313,Samples,Run2,Colombia,Colombia,0.973958333333333
 SP0112286569,305,Samples,Run2,Colombia,Colombia,0.755208333333333
 SP0112286570,291,Samples,Run2,Colombia,Colombia,0.973958333333333
 SP0112286571,292,Samples,Run2,Colombia,Colombia,0.588541666666667
-SP0112286594,316,Samples,Run2,Colombia,Colombia,0.989583333333333
+SP0112286594,316,Samples,Run2,Colombia,Colombia,0.984375
 SP0112286615,317,Samples,Run2,Colombia,Colombia,0.807291666666667
 SP0112286616,303,Samples,Run2,Colombia,Colombia,0.90625
 SP0112286620,301,Samples,Run2,Colombia,Colombia,0.427083333333333

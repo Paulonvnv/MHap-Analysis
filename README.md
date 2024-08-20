@@ -6,29 +6,23 @@ sequencing (also called Microhaplotype genotyping).
 
 This covers 8 tutorials:
 
--   [Intro to MHap-Analysis
-    pipeline](https://paulonvnv.github.io/MHap-Analysis/MHap_Analysis_pipeline.html),
+-   [Intro to MHap-Analysis pipeline](https://paulonvnv.github.io/MHap-Analysis/MHap_Analysis_pipeline.html),
 
--   [Performance of amplicon sequencing
-    data](https://paulonvnv.github.io/MHap-Analysis/Sequencing_Performance.html),
+-   [Performance of amplicon sequencing data](https://paulonvnv.github.io/MHap-Analysis/Sequencing_Performance.html),
 
--   [Drug Resistance
-    Surveillance](https://paulonvnv.github.io/MHap-Analysis/Drug_resistance_surveillance.html),
+-   [Drug Resistance Surveillance](https://paulonvnv.github.io/MHap-Analysis/Drug_resistance_surveillance.html),
 
--   [Complexity of
-    Infection](https://paulonvnv.github.io/MHap-Analysis/Complexity_of_infection.html)
+-   [Complexity of Infection](https://paulonvnv.github.io/MHap-Analysis/Complexity_of_infection.html)
 
 -   An example of a customized analysis of the
     [AMPLseq](https://paulonvnv.github.io/MHap-Analysis/MHapPfalciparum.html)
     data for *Plasmodium falciparum*, and
 
--   PvGTSeq data for *Plasmodium vivax*.
+-   [*PvGTSeq*](https://paulonvnv.github.io/MHap-Analysis/MHapPvivax.html) data for *Plasmodium vivax*.
 
--   [Intro to
-    R](https://paulonvnv.github.io/MHap-Analysis/Intro_to_R.html),
+-   [Intro to R](https://paulonvnv.github.io/MHap-Analysis/Intro_to_R.html),
 
--   [Basic
-    Bash](https://paulonvnv.github.io/MHap-Analysis/basic_bash.html),
+-   [Basic Bash](https://paulonvnv.github.io/MHap-Analysis/basic_bash.html),
 
 Our GitHub repository contains a set of functions that allows the user
 to upload and manipulate the genotypic information stored in .tsv tables

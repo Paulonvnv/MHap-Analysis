@@ -309,6 +309,9 @@ Alt_ASVs_stats %>%
 
 There are no longer loci with high heterozygosity!!!
 
+NOTE: for more detail on removing PCR artifacts go to the following
+[tutorial](https://paulonvnv.github.io/MHap-Analysis/Sequencing_Performance.html).
+
 ### Read depth coverage
 
 Once the data has been converted to the ampseq format, we can explore
@@ -638,7 +641,8 @@ and its association with the number of samples collected.
 ampseq_filtered = get_polygenomic(ampseq_object = ampseq_filtered, 
                                   strata = "Subnational_level2",
                                   na.rm = FALSE,
-                                  filters = NULL)
+                                  filters = NULL, 
+                                  poly_formula = "NHetLoci > 1 & Fws < 0.99")
 ```
 
 The function `get_polygenomic` generates 3 tables:
@@ -666,7 +670,7 @@ ampseq_filtered@loci_performance %>%
 
 -   The observed alleles in each heterozygous loci (alleles_at_loci)
     where alleles within the same loci are separated by "\_", while
-    alleles from different loci are separated by"/".
+    alleles from different loci are separated by "/".
 
 -   The number of alleles observed in each heterozygous loci
     (nalleles_per_loci) where values from different loci are separated

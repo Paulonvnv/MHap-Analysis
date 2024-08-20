@@ -438,7 +438,6 @@ one folder, you can use the argument
 <code>cigar_files = list_of_files</code> instead of the argument
 <code>paths</code>, where <code>list_of_files</code> is a vector with
 the names of all files we want to read.</p>
-<pre class="r"><code>cigar_object = read_cigar_tables(paths = &quot;~/Documents/Github/MHap-Analysis/docs/data/Pviv_example&quot;, sample_id_pattern = &quot;.&quot;)</code></pre>
 <pre><code>## [1] &quot;Cigar file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/potential_markers.csv/dada2/run_dada2/CIGARVariants_Bfilter.out.tsv not found&quot;
 ## [1] &quot;asv2cigar file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/potential_markers.csv/dada2/run_dada2/ASVTable.txt not found&quot;
 ## [1] &quot;asv_table file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/potential_markers.csv/dada2/run_dada2/ASVTable.txt not found&quot;
@@ -469,11 +468,6 @@ the names of all files we want to read.</p>
 ## [1] &quot;asv_table file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3/dada2/run_dada2/ASVTable.txt not found&quot;
 ## [1] &quot;asv_seqs file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3/dada2/run_dada2/ASVSeqs.fasta not found&quot;
 ## [1] &quot;asv_seqs file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3/dada2/run_dada2/zeroReadSamples.txt not found&quot;
-## [1] &quot;Cigar file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3 (1).xlsx/dada2/run_dada2/CIGARVariants_Bfilter.out.tsv not found&quot;
-## [1] &quot;asv2cigar file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3 (1).xlsx/dada2/run_dada2/ASVTable.txt not found&quot;
-## [1] &quot;asv_table file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3 (1).xlsx/dada2/run_dada2/ASVTable.txt not found&quot;
-## [1] &quot;asv_seqs file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3 (1).xlsx/dada2/run_dada2/ASVSeqs.fasta not found&quot;
-## [1] &quot;asv_seqs file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3 (1).xlsx/dada2/run_dada2/zeroReadSamples.txt not found&quot;
 ## [1] &quot;Cigar file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3.xlsx/dada2/run_dada2/CIGARVariants_Bfilter.out.tsv not found&quot;
 ## [1] &quot;asv2cigar file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3.xlsx/dada2/run_dada2/ASVTable.txt not found&quot;
 ## [1] &quot;asv_table file ~/Documents/Github/MHap-Analysis/docs/data/Pviv_example/Pviv_ampseq_filtered3.xlsx/dada2/run_dada2/ASVTable.txt not found&quot;
@@ -1021,7 +1015,7 @@ plot_off_target_stats2 = off_target_stats %&gt;%
                 y = 0, height = 1)</code></pre>
 <pre class="r"><code>plot_off_target_stats</code></pre>
 <div class="figure">
-<img src="Sequencing_Performance_files/figure-html/unnamed-chunk-19-1.png" alt="**Figure 4:** Identifcation of off-target products. Histogram represents the distribution of the densitity of variant sites in each allele in each locus (dVSITES_ij). The scatter plot shows the distribution of the prevalence of the alternative allele (p_ij), the frequency of the alternative allele as heterozygous (h_ij), the frequency of the alternative allele as minor allele (h_ijminor), and the density of variant sites (dVSITES_ij) of the alternative allele respect to the reference template." width="768" />
+<img src="Sequencing_Performance_files/figure-html/unnamed-chunk-19-1.png" alt="**Figure 4:** Identifcation of off-target products. Histogram represents the distribution of the densitity of variant sites in each allele in each locus (dVSITES_ij). The scatter plot shows the distribution of the prevalence of the alternative allele (p_ij), the frequency of the alternative allele as heterozygous (h_ij), the frequency of the alternative allele as minor allele (h_ijminor), and the density of variant sites (dVSITES_ij) of the alternative allele respect to the reference template." width="1152" />
 <p class="caption">
 <strong>Figure 4:</strong> Identifcation of off-target products.
 Histogram represents the distribution of the densitity of variant sites
@@ -1190,7 +1184,10 @@ print(paste0(length(n_snv_in_homopolymer_alleles), &#39; allele(s) match(es) the
 print(paste0(length(n_indel_in_homopolymer_alleles), &#39; allele(s) match(es) the criteria to identify products with INDELs in homopolymers&#39;))</code></pre>
 <pre><code>## [1] &quot;1 allele(s) match(es) the criteria to identify products with INDELs in homopolymers&quot;</code></pre>
 <p>Mask alleles with SNVs or INDELs in homopolymers</p>
-<pre class="r"><code>ampseq_object = mask_alt_alleles(ampseq_object, mask_formula = &#39;(SNV_in_homopolymer == TRUE | INDEL_in_homopolymer == TRUE) &amp; h_ij &gt;= 0.5 &amp; h_ijminor &gt;= 0.5&#39;, ref_fasta = ref_fasta)</code></pre>
+<pre class="r"><code>ampseq_object = mask_alt_alleles(
+  ampseq_object, 
+  mask_formula = &#39;(SNV_in_homopolymer == TRUE | INDEL_in_homopolymer == TRUE) &amp; h_ij &gt;= 0.5 &amp; h_ijminor &gt;= 0.5&#39;, 
+  ref_fasta = ref_fasta)</code></pre>
 <pre><code>## [1] &quot;Filter SNV_in_homopolymer == TRUE will be applied&quot;
 ## [1] &quot;Filter INDEL_in_homopolymer == TRUE will be applied&quot;
 ## [1] &quot;Filter h_ij &gt;= 0.5 will be applied&quot;
@@ -1261,9 +1258,12 @@ print(paste0(length(n_PCR_errors_alleles), &#39; allele(s) match(es) the criteri
   PCR_errors_stats %&gt;%
     filter(h_ij &gt;= 0.66 &amp; h_ijminor &gt;= 0.66))</code></pre>
 <p>Remove stochastic PCR errors:</p>
-<pre class="r"><code>ampseq_object = mask_alt_alleles(ampseq_object, mask_formula = &#39;h_ij &gt;= 0.66 &amp; h_ijminor &gt;= 0.66&#39;, ref_fasta = ref_fasta)</code></pre>
-<pre><code>## [1] &quot;Filter h_ij &gt;= 0.66 will be applied&quot;
-## [1] &quot;Filter h_ijminor &gt;= 0.66 will be applied&quot;</code></pre>
+<pre class="r"><code>ampseq_object = mask_alt_alleles(
+  ampseq_object, 
+  mask_formula = &#39;h_ij &gt;= 0.5 &amp; h_ijminor &gt;= 0.5&#39;, 
+  ref_fasta = ref_fasta)</code></pre>
+<pre><code>## [1] &quot;Filter h_ij &gt;= 0.5 will be applied&quot;
+## [1] &quot;Filter h_ijminor &gt;= 0.5 will be applied&quot;</code></pre>
 <p>After removing and masking suspicious alleles, the distribution of
 the different metrics looks as follows:</p>
 <pre class="r"><code>Alt_ASVs_stats = 

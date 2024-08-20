@@ -25,7 +25,9 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, include = T
 4.  Read depth yield per sample and locus.
 5.  Retention of loci and samples for subsequent analysis.
 
-This tutorial is based on the output of the Dada2-based denoising pipeline. The main output (the cigar table) of the denoising pipeline has the following structure:
+This tutorial is based on the output of the Dada2-based denoising
+pipeline. The main output (the cigar table) of the denoising pipeline
+has the following structure:
 
 $\begin{array}{c|c:c:c:c:c:c} \text{sampleID}&Gene_1,Allele_1&Gene_1,Allele_2&...&Gene_1,Allele_k&... & Gene_m, Allele_{k_m}\\ \hline ID_1 & \text{Read counts} &&& \\ \hdashline ... &&&&\\ \hdashline ID_n &&&& \end{array}$
 
@@ -35,7 +37,11 @@ and $[0-9]*[D,I]=[A,T,C,G]*$ for indels (Insertions and Deletions). The
 numbers before the letters denotes the position in the amplicon where
 the polymorphism is located.
 
-Documentation of the denoising pipeline can be found in the repository  [malaria-amplicon-pipeline](https://github.com/broadinstitute/malaria-amplicon-pipeline), and the steps used to generate the inputs files for the current tutorial are in [Intro to MHap-Analysis pipeline](https://paulonvnv.github.io/MHap-Analysis/MHap_Analysis_pipeline.html)
+Documentation of the denoising pipeline can be found in the repository
+[malaria-amplicon-pipeline](https://github.com/broadinstitute/malaria-amplicon-pipeline),
+and the steps used to generate the inputs files for the current tutorial
+are in [Intro to MHap-Analysis
+pipeline](https://paulonvnv.github.io/MHap-Analysis/MHap_Analysis_pipeline.html)
 
 ## Importing and handling tables in CIGAR format in R environment
 
@@ -64,7 +70,7 @@ want to differentiate samples from controls, set this argument equals to
 `cigar_files = list_of_files` instead of the argument `paths`, where
 `list_of_files` is a vector with the names of all files we want to read.
 
-```{r 'Uploading data sets'}
+```{r 'Uploading data sets', echo = FALSE}
 cigar_object = read_cigar_tables(paths = "~/Documents/Github/MHap-Analysis/docs/data/Pviv_example", sample_id_pattern = ".")
 ```
 
@@ -482,14 +488,22 @@ following parameters:
 
 7.  p_ij ($p_{i,j}$): population prevalence of the alternative allele
     $j$ in locus $i$.
-    
-8. flanking_INDEL: Boolean that specify if there are INDELs in the flanking region of the ASV.
 
-9. SNV_in_homopolymer: Boolean that specify if there are SNVs in an homopolymer region. By default and homopolymer is defined as a region of a single nucleotide repeated 5 times in tandem.
+8.  flanking_INDEL: Boolean that specify if there are INDELs in the
+    flanking region of the ASV.
 
-10. INDEL_in_homopolymer: Boolean that specify if there are SNVs in an homopolymer region. By default and homopolymer is defined as a region of a single nucleotide repeated 5 times in tandem.
+9.  SNV_in_homopolymer: Boolean that specify if there are SNVs in an
+    homopolymer region. By default and homopolymer is defined as a
+    region of a single nucleotide repeated 5 times in tandem.
 
-One of the consequences of the geontyping erros, is the increment of heterozygousity in the loci where those errors occurs. Lets check the distribution of the observed heterozygosity by locus, and the distribution of other metrics of the alternative alleles.
+10. INDEL_in_homopolymer: Boolean that specify if there are SNVs in an
+    homopolymer region. By default and homopolymer is defined as a
+    region of a single nucleotide repeated 5 times in tandem.
+
+One of the consequences of the geontyping erros, is the increment of
+heterozygousity in the loci where those errors occurs. Lets check the
+distribution of the observed heterozygosity by locus, and the
+distribution of other metrics of the alternative alleles.
 
 ```{r}
 
@@ -640,7 +654,7 @@ plot_off_target_stats2 = off_target_stats %>%
 
 ```
 
-```{r, fig.width=8, fig.height=4, fig.cap="**Figure 4:** Identifcation of off-target products. Histogram represents the distribution of the densitity of variant sites in each allele in each locus (dVSITES_ij). The scatter plot shows the distribution of the prevalence of the alternative allele (p_ij), the frequency of the alternative allele as heterozygous (h_ij), the frequency of the alternative allele as minor allele (h_ijminor), and the density of variant sites (dVSITES_ij) of the alternative allele respect to the reference template."}
+```{r, fig.width=12, fig.height=4, fig.cap="**Figure 4:** Identifcation of off-target products. Histogram represents the distribution of the densitity of variant sites in each allele in each locus (dVSITES_ij). The scatter plot shows the distribution of the prevalence of the alternative allele (p_ij), the frequency of the alternative allele as heterozygous (h_ij), the frequency of the alternative allele as minor allele (h_ijminor), and the density of variant sites (dVSITES_ij) of the alternative allele respect to the reference template."}
 plot_off_target_stats
 ```
 
@@ -722,7 +736,7 @@ plot_flanking_INDEL_stats = flanking_INDEL_stats %>%
 
 ```
 
-```{r, fig.width=7, fig.height=7, fig.cap="**Figure 5:** Identification of flanking INDELs. The scatter plot shows the distribution of the prevalence of the alternative allele (p_ij), the frequency of the alternative allele as heterozygous (h_ij), and the frequency of the alternative allele as minor allele (h_ijminor). The panels FALSE and TRUE represent alleles that do not contain or contain flanking INDELs."}
+```{r, fig.width=7, fig.height=4, fig.cap="**Figure 5:** Identification of flanking INDELs. The scatter plot shows the distribution of the prevalence of the alternative allele (p_ij), the frequency of the alternative allele as heterozygous (h_ij), and the frequency of the alternative allele as minor allele (h_ijminor). The panels FALSE and TRUE represent alleles that do not contain or contain flanking INDELs."}
 plot_flanking_INDEL_stats
 ```
 
@@ -836,7 +850,10 @@ print(paste0(length(n_indel_in_homopolymer_alleles), ' allele(s) match(es) the c
 Mask alleles with SNVs or INDELs in homopolymers
 
 ```{r}
-ampseq_object = mask_alt_alleles(ampseq_object, mask_formula = '(SNV_in_homopolymer == TRUE | INDEL_in_homopolymer == TRUE) & h_ij >= 0.5 & h_ijminor >= 0.5', ref_fasta = ref_fasta)
+ampseq_object = mask_alt_alleles(
+  ampseq_object, 
+  mask_formula = '(SNV_in_homopolymer == TRUE | INDEL_in_homopolymer == TRUE) & h_ij >= 0.5 & h_ijminor >= 0.5', 
+  ref_fasta = ref_fasta)
 ```
 
 ### Stochastic PCR errors
@@ -913,10 +930,14 @@ View(
 Remove stochastic PCR errors:
 
 ```{r}
-ampseq_object = mask_alt_alleles(ampseq_object, mask_formula = 'h_ij >= 0.66 & h_ijminor >= 0.66', ref_fasta = ref_fasta)
+ampseq_object = mask_alt_alleles(
+  ampseq_object, 
+  mask_formula = 'h_ij >= 0.5 & h_ijminor >= 0.5', 
+  ref_fasta = ref_fasta)
 ```
 
-After removing and masking suspicious alleles, the distribution of the different metrics looks as follows:
+After removing and masking suspicious alleles, the distribution of the
+different metrics looks as follows:
 
 ```{r}
 Alt_ASVs_stats = 
