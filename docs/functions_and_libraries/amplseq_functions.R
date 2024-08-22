@@ -564,6 +564,50 @@ cigar2ampseq = function(cigar_object, min_abd = 1, min_ratio = .1, markers = NUL
   
 }
 
+## ampseq2cigar----
+
+ampseq2cigar = function(ampseq_object){
+  
+  cigar_object = create_cigar()
+  
+  gt = ampseq_object@gt
+  
+  long_cigar = NULL
+  
+  for(mhap in 1:ncol(gt)){
+    
+    temp_cigar_long = unlist(strsplit(gt[,mhap], '_'))
+    
+    temp_cigar_long = data.frame(Sample_id = names(temp_cigar_long),
+                                 Amplicon = colnames(gt)[mhap],
+                                 Cigar_allele = gsub(':\\d+$', '', temp_cigar_long),
+                                 Read_depth = as.integer(gsub('^.+:', '', temp_cigar_long))
+                                 )
+    
+    temp_cigar_long %<>% filter(!is.na(Cigar_allele))
+    
+    long_cigar = rbind(long_cigar,
+                       temp_cigar_long)
+     
+  }
+  
+  long_cigar %<>% mutate(Cigar_allele = paste(Amplicon, Cigar_allele, sep = ','))
+  
+  long_cigar$Amplicon = NULL
+  
+  wide_cigar = pivot_wider(long_cigar,
+                           names_from = 'Cigar_allele',
+                           values_from = 'Read_depth')
+  
+  cigar_object@cigar_table = wide_cigar
+  cigar_object@metadata = ampseq_object@metadata
+  cigar_object@asv_table = ampseq_object@asv_table
+  cigar_object@asv_seqs = ampseq_object@asv_seqs
+  
+  return(cigar_object)
+  
+}
+
 ## join_ampseq----
 
 join_ampseq = function(ampseq_obj_list = NULL){
@@ -818,7 +862,10 @@ write_ampseq = function(ampseq_object, format = c('excel', 'csv', 'json'), name 
       }else if(temp_slot == 'markers'){
         
         temp_sheet = as.data.frame(slot(ampseq_object, temp_slot))
-        temp_sheet[is.infinite(temp_sheet[['distance']]),][['distance']] = NA
+        
+        if(sum(is.infinite(temp_sheet[['distance']])) > 0){
+          temp_sheet[is.infinite(temp_sheet[['distance']]),][['distance']] = NA
+        }
         
       }else if(temp_slot == 'discarded_loci'){
         
@@ -843,7 +890,10 @@ write_ampseq = function(ampseq_object, format = c('excel', 'csv', 'json'), name 
           # write markers
           
           temp_discarded_loci_markers = as.data.frame(temp_discarded_loci[['markers']])
-          temp_discarded_loci_markers[is.infinite(temp_discarded_loci_markers[['distance']]),][['distance']] = NA
+          
+          if(sum(is.infinite(temp_discarded_loci_markers[['distance']])) > 0){
+            temp_discarded_loci_markers[is.infinite(temp_discarded_loci_markers[['distance']]),][['distance']] = NA
+          }
           
           createSheet(excel_wb, name = 'discarded_loci_markers')
           
@@ -992,7 +1042,11 @@ write_ampseq = function(ampseq_object, format = c('excel', 'csv', 'json'), name 
       }else if(temp_slot == 'markers'){
         
         temp_sheet = as.data.frame(slot(ampseq_object, temp_slot))
-        temp_sheet[is.infinite(temp_sheet[['distance']]),][['distance']] = NA
+        
+        if(sum(is.infinite(temp_sheet[['distance']])) > 0){
+          temp_sheet[is.infinite(temp_sheet[['distance']]),][['distance']] = NA
+        }
+        
         
       }else if(temp_slot == 'discarded_loci'){
         
@@ -1014,7 +1068,10 @@ write_ampseq = function(ampseq_object, format = c('excel', 'csv', 'json'), name 
           # write markers
           
           temp_discarded_loci_markers = as.data.frame(temp_discarded_loci[['markers']])
-          temp_discarded_loci_markers[is.infinite(temp_discarded_loci_markers[['distance']]),][['distance']] = NA
+          
+          if(sum(is.infinite(temp_discarded_loci_markers[['distance']])) > 0){
+            temp_discarded_loci_markers[is.infinite(temp_discarded_loci_markers[['distance']]),][['distance']] = NA  
+          }
           
           write.csv(temp_discarded_loci_markers,
                     file.path(name, 'discarded_loci_markers.csv'), 
@@ -1106,6 +1163,144 @@ write_ampseq = function(ampseq_object, format = c('excel', 'csv', 'json'), name 
     
   }else if(format == 'json'){
     # In development
+    
+    # library(jsonlite)
+    # 
+    # ampseq_object2 = NULL
+    # 
+    # for(temp_slot in slotNames(ampseq_object)){
+    #   
+    #   ampseq_object2[[temp_slot]] = slot(ampseq_object, temp_slot)
+    #   
+    # }
+    # 
+    # ampseq_json =  toJSON(ampseq_object2$asv_table)
+  }
+  
+}
+
+## write_cigar----
+
+write_cigar = function(cigar_object, format = c('excel', 'csv', 'json'), name = 'wb.xlsx'){
+  
+  if(format == 'excel'){
+    
+    if(file.exists(name)){
+      system(paste0('rm ', name))
+    }
+    
+    excel_wb = loadWorkbook(name, create = T)
+    
+    for(temp_slot in c('cigar_table', 
+                       'metadata', 
+                       'asv_table',
+                       'asv_seqs')){
+      
+      if(temp_slot == 'cigar_table'){
+        
+        temp_sheet = data.frame(Sample_id = rownames(slot(cigar_object, temp_slot)),
+                                as.data.frame(slot(cigar_object, temp_slot)))
+        
+      }else if(temp_slot == 'asv_seqs'){
+        
+        if(!is.null(slot(cigar_object, temp_slot))){
+          
+          temp_sheet = data.frame(asv_id = names(slot(cigar_object, temp_slot)),
+                                  asv_seq = as.character(slot(cigar_object, temp_slot)))
+          
+        }else{
+          temp_sheet = NULL
+        }
+        
+      }else{
+        
+        if(!is.null(slot(cigar_object, temp_slot))){
+          temp_sheet = as.data.frame(slot(cigar_object, temp_slot))
+        }else{
+          temp_sheet = NULL
+        }
+        
+        
+      }
+      
+      if(!is.null(temp_sheet)){
+        createSheet(excel_wb, name = temp_slot)
+        
+        writeWorksheet(excel_wb,
+                       temp_sheet,
+                       sheet = temp_slot,
+                       header = T)
+      }
+      
+      
+    }
+    
+    saveWorkbook(excel_wb)
+    
+  }else if(format == 'csv'){
+    
+    if(file.exists(name)){
+      system(paste0('rm -r ', name))
+    }
+    
+    system(paste0('mkdir ', name))
+    
+    for(temp_slot in c('cigar_table', 
+                       'metadata',
+                       'asv_table', 
+                       'asv_seqs')){
+      
+      if(temp_slot == 'cigar_table'){
+        
+        temp_sheet = data.frame(Sample_id = rownames(slot(cigar_object, temp_slot)),
+                                as.data.frame(slot(cigar_object, temp_slot)))
+        
+      }else if(temp_slot == 'asv_seqs'){
+        
+        if(!is.null(slot(cigar_object, temp_slot))){
+          
+          temp_sheet = data.frame(asv_id = names(slot(cigar_object, temp_slot)),
+                                  asv_seq = as.character(slot(cigar_object, temp_slot)))
+          
+        }else{
+          temp_sheet = NULL
+        }
+        
+      }else{
+        
+        if(!is.null(slot(cigar_object, temp_slot))){
+          temp_sheet = as.data.frame(slot(cigar_object, temp_slot))
+        }else{
+          temp_sheet = NULL
+        }
+        
+        
+      }
+      
+      if(!is.null(temp_sheet)){
+        
+        write.csv(temp_sheet, paste0(file.path(name, temp_slot), '.csv'), quote = F, row.names = F)
+        
+      }
+      
+      
+    }
+    
+    
+  }else if(format == 'json'){
+    # In development
+    
+    # library(jsonlite)
+    # 
+    # cigar_object2 = NULL
+    # 
+    # for(temp_slot in slotNames(cigar_object)){
+    #   
+    #   ampseq_object2[[temp_slot]] = slot(cigar_object, temp_slot)
+    #   
+    # }
+    # 
+    # ampseq_json =  toJSON(cigar_object2$asv_table)
   }
   
 }
@@ -2048,7 +2243,7 @@ setMethod("mask_alt_alleles", signature(obj = "ampseq"),
                       
                       asv_table[asv_table[['Amplicon']] == unique(ASVs_attributes_table_temp[['MHap']]) &
                                   !is.na(asv_table[['Amplicon']]) &
-                                  asv_table[['CIGAR_masked']] == temp_replaced_allele
+                                  replace_na(asv_table[['CIGAR_masked']], 'NAs') == temp_replaced_allele
                                 ,][['CIGAR_masked']] = temp_replacement_allele
                       
                       for(sample in 1:nrow(gt_masked)){
@@ -2057,7 +2252,7 @@ setMethod("mask_alt_alleles", signature(obj = "ampseq"),
                         
                         if(!is.na(replaced_pattern)){
                           
-                          replacement_pattern = paste0(temp_replacement_allele, ':')
+                          replacement_pattern = gsub(temp_replaced_allele, temp_replacement_allele, replaced_pattern)
                           gt_masked[sample,mhap] = gsub(replaced_pattern, replacement_pattern, gt_masked[sample,mhap])
                         }
                         
@@ -2115,7 +2310,7 @@ setMethod("mask_alt_alleles", signature(obj = "ampseq"),
                       
                       asv_table[asv_table[['Amplicon']] == unique(ASVs_attributes_table_temp[['MHap']]) &
                                   !is.na(asv_table[['Amplicon']]) &
-                                  asv_table[['CIGAR_masked']] == temp_replaced_allele
+                                  replace_na(asv_table[['CIGAR_masked']], 'NAs') == temp_replaced_allele
                                 ,][['CIGAR_masked']] = temp_replacement_allele
                       
                       for(sample in 1:nrow(gt_masked)){
@@ -2124,7 +2319,7 @@ setMethod("mask_alt_alleles", signature(obj = "ampseq"),
                         
                         if(!is.na(replaced_pattern)){
                           
-                          replacement_pattern = paste0(temp_replacement_allele, ':')
+                          replacement_pattern = gsub(temp_replaced_allele, temp_replacement_allele, replaced_pattern)
                           gt_masked[sample,mhap] = gsub(replaced_pattern, replacement_pattern, gt_masked[sample,mhap])
                         }
                         
