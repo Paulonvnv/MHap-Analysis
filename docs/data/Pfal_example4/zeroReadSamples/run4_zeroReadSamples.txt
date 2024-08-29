@@ -1,0 +1,7 @@
+x
+1	AMPL_neg4_S161_prim_1.fq.gz
+2	EXTR_neg1_S10_prim_1.fq.gz
+3	AMPL_neg3_S137_prim_1.fq.gz
+4	AMPL_neg2_S71_prim_1.fq.gz
+5	EXTR_neg2_S106_prim_1.fq.gz
+6	AMPL_neg1_S44_prim_1.fq.gz

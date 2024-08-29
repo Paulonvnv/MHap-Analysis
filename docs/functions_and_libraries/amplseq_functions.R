@@ -88,7 +88,7 @@ read_cigar_tables = function(paths = NULL,
       if(file.exists(file.path(paths, Run, "dada2/run_dada2/zeroReadSamples.txt"))){
         ZeroReadSamples = read.table(file.path(paths, Run, "dada2/run_dada2/zeroReadSamples.txt") , header = T)
       }else{
-        print(paste0('asv_seqs file ', file.path(paths, Run, "dada2/run_dada2/zeroReadSamples.txt"), ' not found'))
+        print(paste0('ZeroReadSamples file ', file.path(paths, Run, "dada2/run_dada2/zeroReadSamples.txt"), ' not found'))
       }
       
       # Formating CIGAR table
@@ -175,21 +175,22 @@ read_cigar_tables = function(paths = NULL,
           
           ZeroReadSamples = read.table(zero_read_sample_list[file], header = T)
           
-          ZeroReadSamples = matrix(0, nrow = length(ZeroReadSamples[[1]]),
-                                   ncol = ncol(cigar_tables[[cigar_files[file]]][['cigar_table']]),
-                                   dimnames = list(paste((nrow(cigar_tables[[cigar_files[file]]][['cigar_table']]) + 
-                                                            1):(nrow(cigar_tables[[cigar_files[file]]][['cigar_table']]) + 
-                                                                  length(ZeroReadSamples[[1]])), 
-                                                         cigar_files[file], 
-                                                         gsub('_prim_1.fq.gz$', '', ZeroReadSamples[[1]]), sep = '/'),
-                                                   
-                                                   colnames(cigar_tables[[cigar_files[file]]][['cigar_table']]))
-          )
-          
-          cigar_tables[[cigar_files[file]]][['cigar_table']] = rbind(cigar_tables[[cigar_files[file]]][['cigar_table']],
-                                                                     ZeroReadSamples
-          )
-          
+          if(nrow(ZeroReadSamples) > 0){
+            ZeroReadSamples = matrix(0, nrow = length(ZeroReadSamples[[1]]),
+                                     ncol = ncol(cigar_tables[[cigar_files[file]]][['cigar_table']]),
+                                     dimnames = list(paste((nrow(cigar_tables[[cigar_files[file]]][['cigar_table']]) + 
+                                                              1):(nrow(cigar_tables[[cigar_files[file]]][['cigar_table']]) + 
+                                                                    length(ZeroReadSamples[[1]])), 
+                                                           cigar_files[file], 
+                                                           gsub('_prim_1.fq.gz$', '', ZeroReadSamples[[1]]), sep = '/'),
+                                                     
+                                                     colnames(cigar_tables[[cigar_files[file]]][['cigar_table']]))
+            )
+            
+            cigar_tables[[cigar_files[file]]][['cigar_table']] = rbind(cigar_tables[[cigar_files[file]]][['cigar_table']],
+                                                                       ZeroReadSamples
+            )
+          }
           
           #rm(list = c("asv2cigar_run", "asv_table_run", "asv_seqs"))
           
@@ -222,6 +223,8 @@ read_cigar_tables = function(paths = NULL,
     cigar_table = rbind(cigar_table, temp_cigar_table)
     
     if(!is.null(asv_table_files) | !is.null(paths)){
+      
+      # ASVs in the new data set
       temp_asv_seqs1 = cigar_tables[[Run]][['asv_seqs']]
       temp_asv_table1 = cigar_tables[[Run]][['asv_table']]
       
@@ -234,11 +237,18 @@ read_cigar_tables = function(paths = NULL,
         temp_asv_table2 = temp_asv_table1[as.character(temp_asv_seqs1) %in% as.character(asv_seqs),]
         temp_asv_seqs2 = temp_asv_seqs1[as.character(temp_asv_seqs1) %in% as.character(asv_seqs)]
         rownames(temp_asv_table2) = as.character(temp_asv_seqs2)
+        # temp_asv_table2$asvs = as.character(temp_asv_seqs2)
+        # 
+        # temp_asv_table2 = temp_asv_table2[order(temp_asv_table2$asvs),]
         
         # asvs in the previous data set present in the new data set
         temp_asv_table3 = asv_table[as.character(asv_seqs) %in% as.character(temp_asv_seqs1),]
         temp_asv_seqs3 = asv_seqs[as.character(asv_seqs) %in% as.character(temp_asv_seqs1)]
         rownames(temp_asv_table3) = as.character(temp_asv_seqs3)
+        # temp_asv_table3$asvs = as.character(temp_asv_seqs3)
+        # 
+        # temp_asv_table3 = temp_asv_table3[order(temp_asv_table3$asvs),]
+        
         
         # Update the unique identifier of the asv (hapid)
         temp_asv_table2 = temp_asv_table2[rownames(temp_asv_table3),]
@@ -250,7 +260,10 @@ read_cigar_tables = function(paths = NULL,
         temp_asv_table3[['bimera']] = temp_asv_table3[['bimera']] | temp_asv_table2[['bimera']]
         
         # Impute the inconsistent cigar_strings in the cigar_table
-        unconsitent_cigar_strings = data.frame(temp_asv_table2[temp_asv_table2$CIGAR != temp_asv_table3$CIGAR,], CIGAR2 = temp_asv_table3[temp_asv_table3$CIGAR != temp_asv_table2$CIGAR,][['CIGAR']])
+        # unconsitent_cigar_strings = full_join(temp_asv_table2, temp_asv_table3[,c('asvs', 'Amplicon', 'CIGAR')], by = 'asvs')
+        
+        unconsitent_cigar_strings = data.frame(temp_asv_table2[temp_asv_table2$CIGAR != temp_asv_table3$CIGAR,], 
+                                               CIGAR2 = temp_asv_table3[temp_asv_table3$CIGAR != temp_asv_table2$CIGAR,][['CIGAR']])
         
         for(allele in unconsitent_cigar_strings$CIGAR){
           
@@ -276,6 +289,8 @@ read_cigar_tables = function(paths = NULL,
       asv_seqs = DNAStringSet(c(as.character(asv_seqs), as.character(temp_asv_seqs1)))
       
       asv_table = rbind(asv_table, temp_asv_table1)
+      
+      asv_table = asv_table[order(as.integer(gsub('ASV','',asv_table$hapid))),]
       
       rm(list = c('Run', 'temp_cigar_table', 'temp_asv_seqs1', 'temp_asv_table1'))
     }else{
@@ -663,6 +678,12 @@ join_ampseq = function(ampseq_obj_list = NULL){
         temp_asv_table3[['bimera']] = temp_asv_table3[['bimera']] | temp_asv_table2[['bimera']]
         
         # Impute the inconsistent cigar_strings in the cigar_table
+        
+        # unconsitent_cigar_strings = data.frame(temp_asv_table2[temp_asv_table2$CIGAR != temp_asv_table3$CIGAR,], 
+        #                                        Amplicon2 = temp_asv_table3[temp_asv_table3$CIGAR != temp_asv_table2$CIGAR,][['Amplicon']],
+        #                                        CIGAR2 = temp_asv_table3[temp_asv_table3$CIGAR != temp_asv_table2$CIGAR,][['CIGAR']],
+        #                                        CIGAR_masked2 = temp_asv_table3[temp_asv_table3$CIGAR != temp_asv_table2$CIGAR,][['CIGAR']])
+        
         unconsitent_cigar_strings = data.frame(temp_asv_table2[temp_asv_table2$CIGAR != temp_asv_table3$CIGAR,], 
                                                CIGAR2 = temp_asv_table3[temp_asv_table3$CIGAR != temp_asv_table2$CIGAR,][['CIGAR']],
                                                CIGAR_masked2 = temp_asv_table3[temp_asv_table3$CIGAR != temp_asv_table2$CIGAR,][['CIGAR']])
@@ -728,6 +749,7 @@ join_ampseq = function(ampseq_obj_list = NULL){
       
       # merging asv_table
       asv_table = rbind(asv_table, temp_asv_table1)
+      asv_table = asv_table[order(as.integer(gsub('ASV','',asv_table$hapid))),]
       
       # merging marker table
       unshared_attributes = names(temp_markers1)[!(names(temp_markers1) %in% names(markers))]
