@@ -37,7 +37,7 @@ Upload the data in ampseq format from the file
 `Pfal_ampseq_filtered.xlsx`
 
 ```{r 'uploading filtered amplicon sequencing data'}
-ampseq_object = read_ampseq('~/Documents/Github/MHap-Analysis/docs/data/Pfal_example/Pfal_ampseq_filtered', format = 'csv')
+ampseq_object = read_ampseq(file = '~/Documents/Github/MHap-Analysis/docs/data/Pfal_example/ampseq_filtered_csv', format = 'csv')
 ```
 
 Inspect the metadata, and gnerate a bar plot of the number of sequenced
@@ -144,7 +144,7 @@ drug_resistant_haplotypes_plot = drug_resistant_haplotypes(
   na.var.rm = FALSE,
   na.hap.rm = FALSE,
   filters = c(
-    'Subnational_level2;Municipality 1,Municipality 2,Municipality 3,Municipality 4,Municipality 5',
+    'Subnational_level2;Buenaventura,Quibdó,Guapi,Tumaco,Puerto Inírida',
     'Quarter_of_Collection;2020-Q4,2021-Q1,2021-Q2,2021-Q3,2021-Q4,2022-Q1,2022-Q2,2022-Q3'),
   hap_color_palette = 'auto')
 

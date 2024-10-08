@@ -1,0 +1,53 @@
+Chromosome,Gene_Id,Description,Mutation,Annotation
+Pf3D7_07_v3,PF3D7_0709000,crt,C350R,Chloroquine resistance
+Pf3D7_07_v3,PF3D7_0709000,crt,F145I,Chloroquine resistance
+Pf3D7_07_v3,PF3D7_0709000,crt,G353V,Chloroquine resistance
+Pf3D7_07_v3,PF3D7_0709000,crt,H97Y,Chloroquine resistance
+Pf3D7_07_v3,PF3D7_0709000,crt,I218F,Chloroquine resistance
+Pf3D7_07_v3,PF3D7_0709000,crt,K76T,Chloroquine resistance
+Pf3D7_07_v3,PF3D7_0709000,crt,M343L,Chloroquine resistance
+Pf3D7_07_v3,PF3D7_0709000,crt,T93S,Chloroquine resistance
+Pf3D7_04_v3,PF3D7_0417200,dhfr,A16V,Proguanil resistance
+Pf3D7_04_v3,PF3D7_0417200,dhfr,C59R,Pyrimethamine and Proguanil resistance
+Pf3D7_04_v3,PF3D7_0417200,dhfr,I164L,Pyrimethamine and Proguanil resistance
+Pf3D7_04_v3,PF3D7_0417200,dhfr,N51I,Pyrimethamine resistance
+Pf3D7_04_v3,PF3D7_0417200,dhfr,N51L,Proguanil resistance
+Pf3D7_04_v3,PF3D7_0417200,dhfr,S108N,Pyrimethamine and Proguanil resistance
+Pf3D7_08_v3,PF3D7_0810800,dhps,A437G,Sulfadoxine resistance
+Pf3D7_08_v3,PF3D7_0810800,dhps,A581G,Sulfadoxine resistance
+Pf3D7_08_v3,PF3D7_0810800,dhps,A613S,Sulfadoxine resistance
+Pf3D7_08_v3,PF3D7_0810800,dhps,A613T,Sulfadoxine resistance
+Pf3D7_08_v3,PF3D7_0810800,dhps,K540E,Sulfadoxine resistance
+Pf3D7_08_v3,PF3D7_0810800,dhps,S436A,Sulfadoxine resistance
+Pf3D7_08_v3,PF3D7_0810800,dhps,S436F,Sulfadoxine resistance
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,A481V,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,A675V,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,C469F,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,C469Y,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,C580Y,Artemisin resistance
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,F446I,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,G449A,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,G538V,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,I543T,Artemisin resistance
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,M476I,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,N458Y,Artemisin resistance
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,N537D,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,N537I,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,P441L,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,P527H,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,P553L,Artemisin resistance
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,P574L,Artemisin resistance
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,R515K,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,R539T,Artemisin resistance
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,R561H,Artemisin resistance
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,R622I,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,V568G,Delayed clearance in vivo by Artemisinin
+Pf3D7_13_v3,PF3D7_1343700,Kelch13,Y493H,Artemisin resistance
+Pf3D7_05_v3,PF3D7_0523000,mdr1,D1246Y,"Amodiquine, Chloroquine, and Lumefantrine resistance"
+Pf3D7_05_v3,PF3D7_0523000,mdr1,N1042D,Amodiquine and Lumefantrine resistance
+Pf3D7_05_v3,PF3D7_0523000,mdr1,N86Y,"Amodiquine, Chloroquine and Mefloquine resistance"
+Pf3D7_05_v3,PF3D7_0523000,mdr1,S1034C,"Amodiquine, Chloroquine, and Lumefantrine resistance"
+Pf3D7_05_v3,PF3D7_0523000,mdr1,Y184F,"Amodiquine, Chloroquine, and Lumefantrine resistance"
+Pf3D7_mt_v3,PF3D7-MIT02300,Pfcytb,Y268C,Atovaquone resistance
+Pf3D7_mt_v3,PF3D7-MIT02300,Pfcytb,Y268N,Atovaquone resistance
+Pf3D7_mt_v3,PF3D7-MIT02300,Pfcytb,Y268S,Atovaquone resistance
