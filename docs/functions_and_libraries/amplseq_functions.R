@@ -3561,7 +3561,7 @@ haplotypes_respect_to_reference = function(ampseq_object,
   markers = ampseq_object@markers
   
   ## Filter Drug resistant markers---
-  
+  print("Filtering drug resistant markers...")
   if('gene_id' %in% colnames(markers)){
     markers_of_interest = markers[grep(paste(gene_ids, collapse = "|"), markers$gene_id),]
   }else{
@@ -3586,7 +3586,7 @@ haplotypes_respect_to_reference = function(ampseq_object,
   markers_of_interest[['intronic_pos']] = NA
   markers_of_interest[['length']] = markers_of_interest[['end']] - markers_of_interest[['start']] + 1
   
-  
+  print("Analyzing each amplicon in drug resistance markers...")
   for(amplicon in markers_of_interest$amplicon){ # for each drugR marker
     
     # Gene where the drugR marker is located
@@ -3685,6 +3685,7 @@ haplotypes_respect_to_reference = function(ampseq_object,
         #   markers_of_interest[markers_of_interest$amplicon== amplicon,]$end - temp_gff[cds_end,][['start']] + 1 # nucleotides in the exon where end position is located
         
         if(cds_end - cds_start > 1){
+          print("cds_end - cds_start > 1")
           
           intronic_pos = NULL
           
@@ -3802,6 +3803,7 @@ haplotypes_respect_to_reference = function(ampseq_object,
     
   }
   
+  print("Generating the reference sequences")
   names(ref_seqs) = unique(markers_of_interest$gene_id)
   ref_seqs = DNAStringSet(ref_seqs)
   
@@ -3810,6 +3812,7 @@ haplotypes_respect_to_reference = function(ampseq_object,
   
   ## Filter drugR markers---
   # markers of interest loci abundance table
+  print("Filter drugR markers")
   if(length(gene_ids) > 1){
     moi_loci_abd_table = ampseq_object@gt[, markers$gene_id %in% gene_ids]  
   }else{
@@ -3821,6 +3824,7 @@ haplotypes_respect_to_reference = function(ampseq_object,
   
   
   ## Remove read abundace---
+  print("Removing read abundance...")
   moi_loci_abd_table = gsub(":[0-9]+", "", moi_loci_abd_table)
   
   moi_loci_dna_table = moi_loci_abd_table
