@@ -11012,7 +11012,7 @@ rGenome2ampseq = function(rGenome_object,
       
       # rGenome_gt_amplicon_alleles[grepl(amplicon_position, rownames(rGenome_gt_amplicon_alleles)),]
       
-      for(amplicon_position in rGenome_loci_table_amplicon$POS){
+      for(amplicon_position in rGenome_loci_table_amplicon$POS){ # Replace alternative alleles
         
         alt_alleles = strsplit(rGenome_loci_table_amplicon[rGenome_loci_table_amplicon$POS == amplicon_position, ][['ALT']], ',')[[1]]
         ref_allele = rGenome_loci_table_amplicon[rGenome_loci_table_amplicon$POS == amplicon_position, ][['REF']]
@@ -11305,8 +11305,10 @@ rGenome2ampseq = function(rGenome_object,
                 
               }
               
-              if(sum(grepl("26I=CG29G30G32D=C32I=CG33G", paste(sample_polymorphic_positions_alleles, collapse = ''))) > 0){
-                stop('Problematic string')
+              if(sum(grepl("54A65T:NA", paste(paste0(paste(sample_polymorphic_positions_alleles, collapse = ''),
+                                                     ":",
+                                                     min(as.integer(rGenome_gt_amplicon_rd[,Sample_id]))), collapse = ''))) > 0){
+                stop('Problematic string 1')
               }
               
               amplicon_cigarstrings = 
@@ -11453,8 +11455,8 @@ rGenome2ampseq = function(rGenome_object,
               
             }
             
-            if(sum(grepl("26I=CG29G30G32D=C32I=CG33G", clone_cigarstring)) > 0){
-              stop('Problematic string')
+            if(sum(grepl("54A65T:NA", paste0(clone_cigarstring, collapse = "_"))) > 0){
+              stop('Problematic string 2')
             }
             
             amplicon_cigarstrings = c(amplicon_cigarstrings, paste0(clone_cigarstring, collapse = "_"))
@@ -11468,8 +11470,8 @@ rGenome2ampseq = function(rGenome_object,
         
       } # Finish getting cigarstring for the amplicon in all samples
       
-      if(sum(grepl("26I=CG29G30G32D=C32I=CG33G", amplicon_cigarstrings)) > 0){
-        stop('Problematic string')
+      if(sum(grepl("54A65T:NA", amplicon_cigarstrings)) > 0){
+        stop('Problematic string 3')
       }
       
       ampseq_gt_table[, amplicon] = amplicon_cigarstrings
