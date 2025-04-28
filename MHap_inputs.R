@@ -1,9 +1,9 @@
 args = list(NULL)
 
 
-args$wd = '~/Documents/Github/MADHATTER_Senegal/SENEGAL_Test/cromwell-executions/ampseq/fdb7d896-3dbb-47e2-9074-c6e14c7c3d69/call-t_005_asv_filtering/execution/Results/'
+args$wd = '~/Documents/Github/MADHATTER_Senegal/Senegal_test3/cromwell-executions/ampseq/2f726715-08dc-48b7-80a4-fcf5c5f843db/call-t_005_asv_filtering/execution/Results/'
 args$fd = '~/Documents/Github/malaria/WDL/Tasks/ASV_Filtering/malaria_asvfiltering/Code/'
-args$rd = '~/Documents/Github/MADHATTER_Senegal/SENEGAL_Test/cromwell-executions/ampseq/fdb7d896-3dbb-47e2-9074-c6e14c7c3d69/call-t_005_asv_filtering/execution/references/'
+args$rd = '~/Documents/Github/MADHATTER_Senegal/Senegal_test3/cromwell-executions/ampseq/2f726715-08dc-48b7-80a4-fcf5c5f843db/call-t_005_asv_filtering/execution/references/'
 args$cigar_paths = 'null'
 args$cigar_files = 'cigar_variants'
 args$asv_table_files = 'asv_tables'
@@ -679,8 +679,30 @@ print(paste0('poly_quantile: ', poly_quantile))
 
 print("All variables checked")
 
-ampseq_object@asv_table$Amplicon
+# ampseq_object@asv_table$Amplicon
+# 
+# ampseq_object@asv_table$CIGAR_masked
+# 
+# test = cigar_strings2fasta(obj = ampseq_object@asv_table, ref_fasta = amplicon_fasta, cigar_string_col = 'CIGAR_masked', amplicon_col = 'Amplicon', format = 'DNAStringSet')
 
-ampseq_object@asv_table$CIGAR_masked
 
-test = cigar_strings2fasta(obj = ampseq_object@asv_table, ref_fasta = amplicon_fasta, cigar_string_col = 'CIGAR_masked', amplicon_col = 'Amplicon', format = 'DNAStringSet')
+# # 
+# if(length(slot(ampseq_object, 'asv_seqs')) != length(slot(ampseq_object, 'asv_seqs_masked'))){
+#   stop('masked and unmasked fastas with different length')
+# }
+
+# if(length(slot(ampseq_object, 'asv_seqs')) != length(slot(ampseq_object, 'asv_seqs_masked'))){
+#   stop('masked and unmasked fastas with different length')
+# }
+# 
+# if(sum(names(slot(ampseq_object, 'asv_seqs')) != names(slot(ampseq_object, 'asv_seqs_masked'))) > 0){
+#   stop('masked and unmasked fastas with different length')
+# }
+
+
+
+
+
+
+
+

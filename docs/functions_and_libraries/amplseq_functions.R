@@ -11003,11 +11003,11 @@ rGenome2ampseq = function(rGenome_object,
       rGenome_gt_amplicon_alleles = gsub(':\\d+', '', rGenome_gt_amplicon)
       rGenome_gt_amplicon_rd = gsub('\\d+:', '', rGenome_gt_amplicon)
       
-      # rGenome_gt_amplicon[,Sample_id]
-      # rGenome_gt_amplicon_alleles[,Sample_id]
-      # rGenome_gt_amplicon_rd[,Sample_id]
+      rGenome_gt_amplicon[,Sample_id]
+      rGenome_gt_amplicon_alleles[,Sample_id]
+      rGenome_gt_amplicon_rd[,Sample_id]
       # 
-      # amplicon_position = 459958
+      # amplicon_position = 2442390
       # amplicon_position = 459959
       
       # rGenome_gt_amplicon_alleles[grepl(amplicon_position, rownames(rGenome_gt_amplicon_alleles)),]
@@ -11100,6 +11100,23 @@ rGenome2ampseq = function(rGenome_object,
                                                  grepl(paste0('^', alt_allele, '$'),rGenome_gt_amplicon_alleles[which(rGenome_loci_table_amplicon$POS == amplicon_position),])])
 
               # For first clone
+              
+              read1 = gsub('/\\d+', '', rGenome_gt_amplicon_rd[which(rGenome_loci_table_amplicon$POS == amplicon_position),
+                                     grepl(paste0('^', alt_allele, '/'),rGenome_gt_amplicon_alleles[which(rGenome_loci_table_amplicon$POS == amplicon_position),])
+              ])
+              
+              read2 = gsub('\\d+/', '', rGenome_gt_amplicon_rd[which(rGenome_loci_table_amplicon$POS == amplicon_position),
+                                                             grepl(paste0('^', alt_allele, '/'),rGenome_gt_amplicon_alleles[which(rGenome_loci_table_amplicon$POS == amplicon_position),])
+              ])
+              
+              
+              rGenome_gt_amplicon_rd[which(rGenome_loci_table_amplicon$POS == amplicon_position),
+                                          grepl(paste0('^', alt_allele, '/'),rGenome_gt_amplicon_alleles[which(rGenome_loci_table_amplicon$POS == amplicon_position),])
+              ] = as.integer(read1) + as.integer(read2)
+              
+              rm(read1)
+              rm(read2)
+              
               rGenome_gt_amplicon_alleles[which(rGenome_loci_table_amplicon$POS == amplicon_position),
                                           grepl(paste0('^', alt_allele, '/'),rGenome_gt_amplicon_alleles[which(rGenome_loci_table_amplicon$POS == amplicon_position),])
               ] =
@@ -11108,8 +11125,26 @@ rGenome2ampseq = function(rGenome_object,
                      rGenome_gt_amplicon_alleles[which(rGenome_loci_table_amplicon$POS == amplicon_position),
                                                  grepl(paste0('^', alt_allele, '/'),rGenome_gt_amplicon_alleles[which(rGenome_loci_table_amplicon$POS == amplicon_position),])])
 
-
+              
+              
               # For second clone
+              
+              read1 = gsub('/\\d+', '', rGenome_gt_amplicon_rd[which(rGenome_loci_table_amplicon$POS == amplicon_position),
+                                          grepl(paste0('/', alt_allele, '$'),rGenome_gt_amplicon_alleles[which(rGenome_loci_table_amplicon$POS == amplicon_position),])
+              ])
+              
+              read2 = gsub('\\d+/', '', rGenome_gt_amplicon_rd[which(rGenome_loci_table_amplicon$POS == amplicon_position),
+                                                               grepl(paste0('/', alt_allele, '$'),rGenome_gt_amplicon_alleles[which(rGenome_loci_table_amplicon$POS == amplicon_position),])
+              ])
+              
+              
+              rGenome_gt_amplicon_rd[which(rGenome_loci_table_amplicon$POS == amplicon_position),
+                                          grepl(paste0('/', alt_allele, '$'),rGenome_gt_amplicon_alleles[which(rGenome_loci_table_amplicon$POS == amplicon_position),])
+              ] = as.integer(read1) + as.integer(read2)
+              
+              rm(read1)
+              rm(read2)
+              
               rGenome_gt_amplicon_alleles[which(rGenome_loci_table_amplicon$POS == amplicon_position),
                                           grepl(paste0('/', alt_allele, '$'),rGenome_gt_amplicon_alleles[which(rGenome_loci_table_amplicon$POS == amplicon_position),])
               ] =
@@ -11305,7 +11340,7 @@ rGenome2ampseq = function(rGenome_object,
                 
               }
               
-              if(sum(grepl("54A65T:NA", paste(paste0(paste(sample_polymorphic_positions_alleles, collapse = ''),
+              if(sum(grepl("109I=TG116D=A116G141C", paste(paste0(paste(sample_polymorphic_positions_alleles, collapse = ''),
                                                      ":",
                                                      min(as.integer(rGenome_gt_amplicon_rd[,Sample_id]))), collapse = ''))) > 0){
                 stop('Problematic string 1')
@@ -11425,7 +11460,11 @@ rGenome2ampseq = function(rGenome_object,
                       }
                       
                       
-                    }else if(sum(grepl('D', duplicated_positions_alleles)) > 0 & sum(grepl('I', duplicated_positions_alleles)) > 0 & length(duplicated_positions_alleles) > 2){
+                    }else if(sum(grepl('D', duplicated_positions_alleles[1])) > 0 & sum(!grepl('I|D', duplicated_positions_alleles[2])) > 0 & length(duplicated_positions_alleles) == 2){# Deletion and then substitution
+                      
+                      stop('4 or more duplicated sites with deletions and insertions')
+                      
+                    }else if(sum(grepl('D', duplicated_positions_alleles)) > 0 & sum(grepl('I', duplicated_positions_alleles)) > 0 & length(duplicated_positions_alleles) > 2){ 
                       
                       stop('3 or more duplicated sites with deletions and insertions')
                       
@@ -11455,7 +11494,7 @@ rGenome2ampseq = function(rGenome_object,
               
             }
             
-            if(sum(grepl("54A65T:NA", paste0(clone_cigarstring, collapse = "_"))) > 0){
+            if(sum(grepl("109I=TG116D=A116G141C", paste0(clone_cigarstring, collapse = "_"))) > 0){
               stop('Problematic string 2')
             }
             
@@ -11470,7 +11509,7 @@ rGenome2ampseq = function(rGenome_object,
         
       } # Finish getting cigarstring for the amplicon in all samples
       
-      if(sum(grepl("54A65T:NA", amplicon_cigarstrings)) > 0){
+      if(sum(grepl("109I=TG116D=A116G141C", amplicon_cigarstrings)) > 0){
         stop('Problematic string 3')
       }
       
@@ -11518,7 +11557,7 @@ rGenome2ampseq = function(rGenome_object,
   
   asv_seqs = NULL
   
-  asv = 'ASV4780'
+  #asv = 'ASV4780'
   
   for(asv in asv_table$hapid){
     
