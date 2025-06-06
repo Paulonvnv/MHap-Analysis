@@ -174,3 +174,34 @@ if(!require(sp)){
 }
 
 
+# if(!require(progressr)){
+#   install.packages('progressr')
+#   library(progressr)
+# }else{
+#   library(progressr)
+# }
+
+
+# 
+# library(foreach)
+# library(progressr)
+# library(doParallel) # For parallel backend
+# 
+# # Set up parallel processing
+# num_cores <- detectCores() - 1  # Leave one core for the main process
+# cl <- makeCluster(num_cores)  # Create a cluster
+# registerDoParallel(cl)
+# 
+# # Set up progressr
+# pb <- progressr()
+# pb$start(total = 100,  # Total number of tasks
+#          message = "Running parallel loop",
+#          style = 1)  # Progress bar style
+# 
+# # Parallel loop
+# result <- foreach(i = 1:100,
+#                   .packages = c("base")) %dopar% {
+#                     # Your function to be executed in parallel
+#                     pb$inc(1)  # Increment the progress bar
+#                     return(i * 2)  # Example return value
+#                   }
