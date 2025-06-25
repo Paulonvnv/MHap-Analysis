@@ -2783,7 +2783,7 @@ filter_samples = function(obj, v, update_cigars = TRUE){
     if(is.logical(v)){
       if(sum(v) > 1){
         
-        gt = (obj@gt[,v])
+        gt = obj@gt[,v]
         
       }else if(sum(v) == 1){
         
@@ -2801,7 +2801,7 @@ filter_samples = function(obj, v, update_cigars = TRUE){
     }
     
     
-    obj2 = rGenome(gt = gt,
+    obj2 = rGenome(gt = obj@gt[,v],
                    loci_table = obj@loci_table,
                    metadata = obj@metadata[v,])
     
@@ -6100,14 +6100,18 @@ haplotypes_respect_to_reference = function(ampseq_object,
         
         # if the gene is located in the positive strand
         # sort the amplicons in ascending order
-        gene_of_interest_info %<>% arrange(pos)
+        if(nrow(gene_of_interest_info) > 1){
+          gene_of_interest_info %<>% arrange(pos)
+        }
         amplicons = gene_of_interest_info$amplicon
         
       }else if(strand == '-'){
         
         # if the gene is located in the negative strand
         # sort the amplicons in descending order
-        gene_of_interest_info %<>% arrange(desc(pos))
+        if(nrow(gene_of_interest_info) > 1){
+          gene_of_interest_info %<>% arrange(desc(pos))
+        }
         amplicons = gene_of_interest_info$amplicon
         
       }
@@ -10299,7 +10303,7 @@ get_loci_diversity = function(loci_abd_table = NULL, variance = TRUE){
 }
 
 ### get_pop_diversity----
-get_pop_diversity = function(ampseq_object, strata, poly_formula = "Frac_HetLoci >= 0.05 & Fws < 0.975"){
+get_pop_diversity = function(ampseq_object, strata, poly_formula = "Frac_HetLoci >= 0.05 & Fws < 0.975", by_locus = TRUE){
   
   if(!('Clonality' %in% names(ampseq_object@metadata))){
   ploygenomic_information = get_polygenomic(ampseq_object, strata = NULL, update_popsummary = F, poly_formula = poly_formula)
@@ -10336,6 +10340,13 @@ get_pop_diversity = function(ampseq_object, strata, poly_formula = "Frac_HetLoci
                              Hexp = mean(loci_diversity$Hexp)
   )
   
+  
+  
+  names(loci_diversity) = paste('Total_', names(loci_diversity), sep = '')
+  
+  loci_diversity = data.frame(Marker = rownames(loci_diversity),
+                              loci_diversity)
+  
   for(pop in levels(as.factor(metadata[[strata]]))){
     
     if(is.null(nrow(ampseq_loci_abd_table[metadata[[strata]] == pop & metadata[["Clonality"]] == 'Monoclonal', ]))){
@@ -10365,7 +10376,7 @@ get_pop_diversity = function(ampseq_object, strata, poly_formula = "Frac_HetLoci
       H = -sum(p*log(p)) # Shannon
       E = H/log(n_mlg) # Evenness: from 0 to 1
       
-      loci_diversity = get_loci_diversity(loci_abd_table = ampseq_loci_abd_table[metadata[[strata]] == pop, ], variance = F)
+      pop_loci_diversity = get_loci_diversity(loci_abd_table = ampseq_loci_abd_table[metadata[[strata]] == pop, ], variance = F)
       
       pop_diversity = rbind(pop_diversity,data.frame(pop = pop,
                                                      Samples = n,
@@ -10375,15 +10386,27 @@ get_pop_diversity = function(ampseq_object, strata, poly_formula = "Frac_HetLoci
                                                      Simpson = D,
                                                      Shannon = H,
                                                      Evenness = E,
-                                                     n.all = mean(loci_diversity$n.all, na.rm = T),
-                                                     na.e = mean(loci_diversity$na.e, na.rm = T),
-                                                     Hexp = mean(loci_diversity$Hexp, na.rm = T)))
+                                                     n.all = mean(pop_loci_diversity$n.all, na.rm = T),
+                                                     na.e = mean(pop_loci_diversity$na.e, na.rm = T),
+                                                     Hexp = mean(pop_loci_diversity$Hexp, na.rm = T)))
+      
+      
+      names(pop_loci_diversity) = paste(pop, names(pop_loci_diversity), sep = '_')
+      
+      loci_diversity = cbind(loci_diversity, pop_loci_diversity)
+      
     }
     
   }
   
-  return(pop_diversity)
-
+  
+  if(by_locus){
+    return(list(pop_diversity = pop_diversity,
+                loci_diversity = loci_diversity))
+  }else{
+    return(pop_diversity)  
+  }
+  
 }
 
 
@@ -10692,6 +10715,8 @@ remove_replicates = function(ampseq_object, v){
   }
   
   consistency_between_gt_and_asvtab(ampseq_object)
+  
+  rownames(ampseq_object@gt) = ampseq_object@metadata$Sample_id
   
   return(ampseq_object)
   
@@ -14335,6 +14360,94 @@ fix_wrong_assigned_asvs = function(cigar_object, asvs_fasta, correct_amplicons, 
   
 }
 
+# get_AC----
+
+setGeneric("get_AC", function(obj = NULL, w = 1, n = 1,
+                              update_alleles = TRUE,
+                              monoclonals = NULL, 
+                              polyclonals = NULL
+) standardGeneric("get_AC"))
+
+setMethod("get_AC", signature(obj = "rGenome"),
+          function(obj = NULL, w = 1, n = 1,
+                   update_alleles = TRUE,
+                   monoclonals = NULL, 
+                   polyclonals = NULL){
+            
+            gt = obj@gt
+            loci = obj@loci_table
+            
+            s = round(seq(1,nrow(gt)+1, length.out=n+1))
+            low = s[w]
+            high = s[w+1]-1
+            
+            gt3 = handle_ploidy(gt = gt, w = w, n = n, monoclonals = monoclonals, polyclonals = polyclonals)
+            
+            if(update_alleles){
+              if('Alleles' %in% colnames(loci)){
+                loci2 = loci[low:high,'Alleles']
+                loci2 = matrix(loci2, ncol = 1,
+                               dimnames = list(
+                                 rownames(loci[low:high,]),
+                                 'Alleles'
+                               ))
+              }else{
+                loci2 = loci[low:high,c('REF', 'ALT')]
+                
+                loci2[['Alleles']] = apply(loci2, 1, function(variant_site){
+                  alleles = c(variant_site['REF'], strsplit(variant_site['ALT'], ',')[[1]])
+                  paste(paste(alleles, 0:(length(alleles) - 1), sep = ':'), collapse = ',')
+                })
+                
+              }
+            }
+            
+            
+            
+            alleles = t(sapply(1:nrow(gt3), function(locus){
+              alleles = unique(gt3[locus,])
+              alleles = sort(alleles[!is.na(alleles)])
+              
+              if(update_alleles){
+                original_alleles = gsub(':\\d+', '', strsplit(loci2[locus,'Alleles'], ',')[[1]])
+                names(original_alleles) = gsub('.+:', '', strsplit(loci2[locus,'Alleles'], ',')[[1]])
+              }
+              
+              
+              
+              nalleles = length(alleles)
+              AC = sapply(alleles, function(allele){
+                sum(gt3[locus,] == allele, na.rm = T)
+              })
+              
+              AC = paste(paste(alleles, AC, sep = ':'), collapse = ',')
+              
+              if(update_alleles){
+                alleles = paste(
+                  paste(
+                    original_alleles[alleles], alleles, sep = ':'), collapse = ',')}
+              
+              if(update_alleles){
+                c(nalleles, alleles, AC)}else{
+                  c(nalleles, AC)
+                }
+            }))
+            
+            alleles = as.data.frame(alleles)
+            
+            if(update_alleles){
+              colnames(alleles) = c('Cardinality', 'Alleles', 'Allele_Counts')
+            }else{
+              colnames(alleles) = c('Cardinality', 'Allele_Counts')
+            }
+            rownames(alleles) = rownames(gt3)
+            alleles$Cardinality = as.integer(alleles$Cardinality)
+            
+            
+            return(alleles)
+            
+          }
+)
 
 # get_nuc_div----
 
@@ -14451,23 +14564,23 @@ setMethod("get_nuc_div", signature(obj = "rGenome"),
               
             }
             
-            
-            
-            
             # If calculation have to be done individually by each population
             
             if(!is.null(by)){
               
               populations = t(table(metadata[[by]]))
               populations = data.frame(population = colnames(populations), nsamples = populations[1,])
+              populations = populations[populations$population != 'unassigned',]
               
               # for each provided population calculates pi and pi_var
               for(pop in populations$population){
                 
+                print(paste0('Analysing ', pop, ' population...'))
+                
                 # if population has at least two samples (min_samp_size can be modified)
                 if(populations[pop,][['nsamples']] >= min_samp_size){
                   
-                  samples = metadata[metadata[[by]] == pop,][['Sample_id']]
+                  samples = metadata[metadata[[by]] == pop & !is.na(metadata[[by]]),][['Sample_id']]
                   temp_pop = filter_samples(obj = obj, v = samples)
                   
                   temp_monoclonals = monoclonals[monoclonals %in% samples]
@@ -14479,13 +14592,20 @@ setMethod("get_nuc_div", signature(obj = "rGenome"),
                     temp_polyclonals = NULL
                   }
                   
+                  allele_counts = get_AC(obj = temp_pop, w = 1, n = 1, update_alleles = T, monoclonals = temp_monoclonals, polyclonals = temp_polyclonals)
+                  
+                  temp_pop = filter_loci(obj = temp_pop, v = allele_counts$Cardinality > 1)
+                  
                   gt = temp_pop@gt
+                  pop_loci = temp_pop@loci_table
                   
                   gt3 = handle_ploidy(gt, monoclonals = temp_monoclonals, polyclonals = temp_polyclonals)
                   gt3 = as.data.frame(gt3)
                   
                   pi = NULL
                   var = NULL
+                  nVSites = NULL
+                  nSNVSites = NULL
                   
                   for(region in 1:nrow(dna_regions)){
                     positions = paste(dna_regions[region, ][['seqid']], dna_regions[region, ][['start']]:dna_regions[region, ][['end']], sep = '_')
@@ -14494,15 +14614,19 @@ setMethod("get_nuc_div", signature(obj = "rGenome"),
                     
                     temp_gt = gt3[rownames(gt3) %in% positions,]
                     
+                    temp_nVSites = nrow(temp_gt)
+                    
                     n = ncol(temp_gt)
                     
                     if(nrow(temp_gt)>0){
                       
-                      temp_loci = loci[rownames(loci) %in% positions,]
+                      temp_loci = pop_loci[rownames(pop_loci) %in% positions,]
                       
                       temp_indels = temp_loci[temp_loci$Type_of_polymorphism != 'SNP',]
                       
                       temp_gt = temp_gt[temp_loci$Type_of_polymorphism == 'SNP',] # Keep only SNPs
+                      
+                      temp_nSNVSites = nrow(temp_gt)
                       
                       if(nrow(temp_gt)>0){
                         
@@ -14566,12 +14690,19 @@ setMethod("get_nuc_div", signature(obj = "rGenome"),
                         var = c(var, NA)
                       }
                       
+                      nSNVSites = c(nSNVSites, temp_nSNVSites)
+                      
+                      
                     }else{
                       
                       pi = c(pi, NA)
                       var = c(var, NA)
+                      nSNVSites = c(nSNVSites, 0)
                       
                     }
+                    
+                    nVSites = c(nVSites, temp_nVSites)
+                    
                     
                   }
                   
@@ -14581,21 +14712,30 @@ setMethod("get_nuc_div", signature(obj = "rGenome"),
                   
                 }
                 
-                temp_dna_regions_pi = data.frame(pi, var)
+                temp_dna_regions_pi = data.frame(nVSites, nSNVSites, pi, var)
                 
-                names(temp_dna_regions_pi) = c(paste0(pop, '_pi'),
+                names(temp_dna_regions_pi) = c(paste0(pop, '_nVSites'),
+                                               paste0(pop, '_nSNVSites'),
+                                               paste0(pop, '_pi'),
                                                paste0(pop, '_pi_var'))
                 
                 dna_regions = cbind(dna_regions, temp_dna_regions_pi)
               }
               
-              gt = obj@gt
+              allele_counts = get_AC(obj = obj, w = 1, n = 1, update_alleles = T, monoclonals = monoclonals, polyclonals = polyclonals)
+              
+              totalpop_rGenome = filter_loci(obj = obj, v = allele_counts$Cardinality > 1)
+              
+              gt = totalpop_rGenome@gt
+              pop_loci = totalpop_rGenome@loci_table
               
               gt3 = handle_ploidy(gt, monoclonals = monoclonals, polyclonals = polyclonals)
               gt3 = as.data.frame(gt3)
               
               pi = NULL
               var = NULL
+              nVSites = NULL
+              nSNVSites = NULL
               
               for(region in 1:nrow(dna_regions)){
                 positions = paste(dna_regions[region, ][['seqid']],dna_regions[region, ][['start']]:dna_regions[region, ][['end']], sep = '_')
@@ -14604,15 +14744,19 @@ setMethod("get_nuc_div", signature(obj = "rGenome"),
                 
                 temp_gt = gt3[rownames(gt3) %in% positions,]
                 
+                temp_nVSites = nrow(temp_gt)
+                
                 n = ncol(temp_gt)
                 
                 if(nrow(temp_gt)>0){
                   
-                  temp_loci = loci[rownames(loci) %in% positions,]
+                  temp_loci = pop_loci[rownames(pop_loci) %in% positions,]
                   
                   temp_indels = temp_loci[temp_loci$Type_of_polymorphism != 'SNP',]
                   
                   temp_gt = temp_gt[temp_loci$Type_of_polymorphism == 'SNP',] # Keep only SNPs
+                  
+                  temp_nSNVSites = nrow(temp_gt)
                   
                   if(nrow(temp_gt)>0){
                     
@@ -14676,27 +14820,38 @@ setMethod("get_nuc_div", signature(obj = "rGenome"),
                     var = c(var, NA)
                   }
                   
+                  nSNVSites = c(nSNVSites, temp_nSNVSites)
+                  
                 }else{
                   
                   pi = c(pi, NA)
                   var = c(var, NA)
-                  
+                  nSNVSites = c(nSNVSites, 0)
                 }
+                
+                nVSites = c(nVSites, temp_nVSites)
                 
               }
               
-              dna_regions = cbind(dna_regions, data.frame(Total_pi = pi, Total_pi_var = var))
+              dna_regions = cbind(dna_regions, data.frame(Total_nVSites = nVSites, Total_nSNVSites = nSNVSites, Total_pi = pi, Total_pi_var = var))
               
               
             }else{
               
-              gt = obj@gt
+              allele_counts = get_AC(obj = obj, w = 1, n = 1, update_alleles = T, monoclonals = monoclonals, polyclonals = polyclonals)
+              
+              totalpop_rGenome = filter_loci(obj = obj, v = allele_counts$Cardinality > 1)
+              
+              gt = totalpop_rGenome@gt
+              pop_loci = totalpop_rGenome@loci_table
               
               gt3 = handle_ploidy(gt, monoclonals = monoclonals, polyclonals = polyclonals)
               gt3 = as.data.frame(gt3)
               
               pi = NULL
               var = NULL
+              nVSites = NULL
+              nSNVSites = NULL
               
               for(region in 1:nrow(dna_regions)){
                 positions = paste(dna_regions[region, ][['seqid']], dna_regions[region, ][['start']]:dna_regions[region, ][['end']], sep = '_')
@@ -14705,15 +14860,19 @@ setMethod("get_nuc_div", signature(obj = "rGenome"),
                 
                 temp_gt = gt3[rownames(gt3) %in% positions,]
                 
+                temp_nVSites = nrow(temp_gt)
+                
                 n = ncol(temp_gt)
                 
                 if(nrow(temp_gt)>0){
                   
-                  temp_loci = loci[rownames(loci) %in% positions,]
+                  temp_loci = pop_loci[rownames(pop_loci) %in% positions,]
                   
                   temp_indels = temp_loci[temp_loci$Type_of_polymorphism != 'SNP',]
                   
                   temp_gt = temp_gt[temp_loci$Type_of_polymorphism == 'SNP',] # Keep only SNPs
+                  
+                  temp_nSNVSites = nrow(temp_gt)
                   
                   if(nrow(temp_gt)>0){
                     
@@ -14777,15 +14936,651 @@ setMethod("get_nuc_div", signature(obj = "rGenome"),
                     var = c(var, NA)
                   }
                   
+                  nSNVSites = c(nSNVSites, temp_nSNVSites)
+                  
                 }else{
                   
                   pi = c(pi, NA)
                   var = c(var, NA)
+                  nSNVSites = c(nSNVSites, 0)
                   
                 }
                 
+                nVSites = c(nVSites, temp_nVSites)
+              
               }
               
+              dna_regions$nVSites = nVSites
+              dna_regions$nSNVSites = nSNVSites
+              dna_regions$pi = pi
+              dna_regions$pi_var = var
+              
+            }
+            
+            return(dna_regions)
+          })
+
+# get_TajimasD----
+
+setGeneric("get_TajimasD", function(obj = NULL, monoclonals = NULL, polyclonals = NULL, gff = NULL, dna_regions = NULL, type_of_region = NULL, window = NULL, by = NULL, min_samp_size = 2) standardGeneric("get_TajimasD"))
+
+setMethod("get_TajimasD", signature(obj = "rGenome"),
+          function(obj = NULL, monoclonals = NULL, polyclonals = NULL, gff = NULL, dna_regions = NULL, type_of_region = NULL,  window = NULL, by = NULL, min_samp_size = 2){
+            
+            loci = obj@loci_table
+            metadata = obj@metadata
+            
+            # Define DNA regions to calculate their nucleotide diversity
+            # It could be by gene or by fixed size windows
+            
+            # By gene region specified by a gff object
+            
+            if(is.null(dna_regions)){
+              
+              if(is.object(gff) & is.null(window)){
+                
+                dna_regions = gff
+                
+                # By gene region specified by a gff file
+              }else if(file.exists(gff) & is.null(window)){
+                
+                ref_gff = ape::read.gff(gff)
+                dna_regions = ref_gff[grepl(type_of_region, ref_gff$type)&
+                                        !grepl('^Transfer',ref_gff$seqid),
+                                      c('seqid', 'start', 'end', 'attributes')]
+                
+                dna_regions = dna_regions[order(dna_regions$start),]
+                dna_regions = dna_regions[order(dna_regions$seqid),]
+                rownames(dna_regions) = 1:nrow(dna_regions)
+                
+                dna_regions = cbind(dna_regions, as.data.frame(t(sapply(1:nrow(dna_regions), function(gene){
+                  attributes = strsplit(dna_regions[gene,][['attributes']], ';')[[1]]
+                  c(gene_id = gsub('^ID=','',attributes[grep('^ID=', attributes)]),
+                    gene_description = gsub('^description=','',attributes[grep('^description=', attributes)]))
+                }))))
+                
+                dna_regions = dna_regions[,c('seqid', 'start', 'end', 'gene_id', 'gene_description')]
+                
+                # By fixed size window
+              }else if(!is.null(window)){
+                
+                ref_gff = ape::read.gff(gff)
+                ref_gff = ref_gff[grepl(type_of_region, ref_gff$type)&
+                                    !grepl('^Transfer',ref_gff$seqid),
+                                  c('seqid', 'start', 'end', 'attributes')]
+                
+                ref_gff = ref_gff[order(ref_gff$start),]
+                ref_gff = ref_gff[order(ref_gff$seqid),]
+                rownames(ref_gff) = 1:nrow(ref_gff)
+                
+                ref_gff = cbind(ref_gff, as.data.frame(t(sapply(1:nrow(ref_gff), function(gene){
+                  attributes = strsplit(ref_gff[gene,][['attributes']], ';')[[1]]
+                  c(gene_id = gsub('^ID=','',attributes[grep('^ID=', attributes)]),
+                    gene_description = gsub('^description=','',attributes[grep('^description=', attributes)]))
+                }))))
+                
+                chrom_length = loci %>% group_by(CHROM) %>% summarise(length = max(POS))
+                
+                chrom_intervals = sapply(chrom_length$length, function(chrom){
+                  seq(1, chrom, window)
+                })
+                
+                
+                dna_regions = NULL
+                
+                for(chrom in 1:length(chrom_intervals)){
+                  dna_regions = rbind(dna_regions, data.frame(seqid = chrom_length[chrom,][['CHROM']],
+                                                              start = chrom_intervals[[chrom]],
+                                                              end = chrom_intervals[[chrom]] - 1 + window))
+                  
+                }
+                
+                
+                dna_regions$gene_ids = sapply(1:nrow(dna_regions),function(bin){
+                  paste(ref_gff[ref_gff[['seqid']] == dna_regions[bin,][['seqid']] &
+                                  ((ref_gff[['start']] > dna_regions[bin,][['start']] &
+                                      ref_gff[['start']] < dna_regions[bin,][['end']])|
+                                     
+                                     (ref_gff[['end']] > dna_regions[bin,][['start']] &
+                                        ref_gff[['end']] < dna_regions[bin,][['end']])|
+                                     
+                                     (dna_regions[bin,][['start']] > ref_gff[['start']] &
+                                        dna_regions[bin,][['start']] < ref_gff[['end']])|
+                                     
+                                     (dna_regions[bin,][['end']] > ref_gff[['start']] &
+                                        dna_regions[bin,][['end']] < ref_gff[['end']])
+                                  ),][['gene_id']], collapse = ',')}, simplify = T)
+                
+                ###### Add gene_description
+                dna_regions$genes_description = sapply(1:nrow(dna_regions),function(bin){
+                  paste(ref_gff[ref_gff[['seqid']] == dna_regions[bin,][['seqid']] &
+                                  ((ref_gff[['start']] > dna_regions[bin,][['start']] &
+                                      ref_gff[['start']] < dna_regions[bin,][['end']])|
+                                     
+                                     (ref_gff[['end']] > dna_regions[bin,][['start']] &
+                                        ref_gff[['end']] < dna_regions[bin,][['end']])|
+                                     
+                                     (dna_regions[bin,][['start']] > ref_gff[['start']] &
+                                        dna_regions[bin,][['start']] < ref_gff[['end']])|
+                                     
+                                     (dna_regions[bin,][['end']] > ref_gff[['start']] &
+                                        dna_regions[bin,][['end']] < ref_gff[['end']])
+                                  ),][['gene_description']], collapse = ',')}, simplify = T)
+                
+              }else if(is.null(gff) & is.null(window) & is.null(dna_regions)){
+                
+                print('You must provide a dna_regions table, a gff file or define a window size')
+                
+              }
+              
+            }
+            
+            # If calculation have to be done individually by each population
+            
+            if(!is.null(by)){
+              
+              populations = t(table(metadata[[by]]))
+              populations = data.frame(population = colnames(populations), nsamples = populations[1,])
+              populations = populations[populations$population != 'unassigned',]
+              
+              # for each provided population calculates pi and pi_var
+              for(pop in populations$population){
+                
+                print(paste0('Analysing ', pop, ' population...'))
+                
+                # if population has at least two samples (min_samp_size can be modified)
+                if(populations[pop,][['nsamples']] >= min_samp_size){
+                  
+                  samples = metadata[metadata[[by]] == pop & !is.na(metadata[[by]]),][['Sample_id']]
+                  temp_pop = filter_samples(obj = obj, v = samples)
+                  
+                  temp_monoclonals = monoclonals[monoclonals %in% samples]
+                  if(length(temp_monoclonals) == 0){
+                    temp_monoclonals = NULL
+                  }
+                  temp_polyclonals = polyclonals[polyclonals %in% samples]
+                  if(length(temp_polyclonals) == 0){
+                    temp_polyclonals = NULL
+                  }
+                  
+                  allele_counts = get_AC(obj = temp_pop, w = 1, n = 1, update_alleles = T, monoclonals = temp_monoclonals, polyclonals = temp_polyclonals)
+                  
+                  temp_pop = filter_loci(obj = temp_pop, v = allele_counts$Cardinality > 1)
+                  
+                  gt = temp_pop@gt
+                  pop_loci = temp_pop@loci_table
+                  
+                  gt3 = handle_ploidy(gt, monoclonals = temp_monoclonals, polyclonals = temp_polyclonals)
+                  gt3 = as.data.frame(gt3)
+                  
+                  pi = NULL
+                  var = NULL
+                  khat = NULL
+                  var_khat = NULL
+                  nVSites = NULL
+                  nSNVSites = NULL
+                  TajimaD = NULL
+                  
+                  for(region in 1:nrow(dna_regions)){
+                    positions = paste(dna_regions[region, ][['seqid']], dna_regions[region, ][['start']]:dna_regions[region, ][['end']], sep = '_')
+                    
+                    region_length = dna_regions[region, ][['end']] - dna_regions[region, ][['start']] + 1
+                    
+                    temp_gt = gt3[rownames(gt3) %in% positions,]
+                    
+                    temp_nVSites = nrow(temp_gt)
+                    
+                    n = ncol(temp_gt)
+                    
+                    if(nrow(temp_gt)>0){
+                      
+                      temp_loci = pop_loci[rownames(pop_loci) %in% positions,]
+                      
+                      temp_indels = temp_loci[temp_loci$Type_of_polymorphism != 'SNP',]
+                      
+                      temp_gt = temp_gt[temp_loci$Type_of_polymorphism == 'SNP',] # Keep only SNPs
+                      
+                      temp_nSNVSites = nrow(temp_gt)
+                      
+                      if(nrow(temp_gt)>0){
+                        
+                        if(length(temp_indels$ALT) > 0){
+                          
+                          ALTs = temp_indels$ALT
+                          
+                          ALTs = strsplit(ALTs, ',')
+                          
+                          gaps =  nchar(as.character(temp_indels$REF)) - sapply(ALTs, function(alt){
+                            max(nchar(alt))
+                          })
+                          
+                          gaps[gaps < 0] = 0
+                          
+                          region_length = region_length - sum(gaps) # remove deletions from the total size of the region
+                          
+                        }
+                        
+                        haplotypes_counts =  summary(as.factor(sapply(1:ncol(temp_gt), function(x){paste(temp_gt[,x], collapse = '')})),
+                                                     maxsum = ncol(temp_gt))
+                        
+                        if(length(haplotypes_counts) > 1){
+                          
+                          names(haplotypes_counts) = gsub('NA', "_", names(haplotypes_counts))
+                          
+                          haplotypes_freqs = haplotypes_counts/sum(haplotypes_counts)
+                          haplotypes = names(haplotypes_counts)
+                          
+                          combinations = combn(1:length(haplotypes),2)
+                          
+                          temp_pi = NULL
+                          temp_khat = NULL
+                          for(comb in 1:ncol(combinations)){
+                            
+                            x_i = haplotypes_freqs[combinations[1,comb]]
+                            x_j = haplotypes_freqs[combinations[2,comb]]
+                            
+                            seq_i = unlist(strsplit(haplotypes[combinations[1,comb]], ''))
+                            seq_i[seq_i == '_'] = NA
+                            seq_j = unlist(strsplit(haplotypes[combinations[2,comb]], ''))
+                            seq_j[seq_j == '_'] = NA
+                            
+                            pi_ij = sum(seq_i != seq_j, na.rm = T)/(region_length - sum(is.na(seq_i != seq_j)))
+                            khat_ij = sum(seq_i != seq_j, na.rm = T)
+                            temp_pi = c(temp_pi, 2*x_i*x_j*pi_ij)
+                            temp_khat = c(temp_khat, 2*x_i*x_j*khat_ij)
+                          }
+                          
+                          a_1 = sum((1:(n-1))^(-1))
+                          a_2 = sum((1:(n-1))^(-2))
+                          
+                          b_1 = (n + 1)/(3*(n-1))
+                          b_2 = 2*(n^2 + n + 3)/(9*(n-1))
+                          
+                          c_1 = b_1 - 1/a_1
+                          c_2 = b_2 - (n + 2)/(a_1*n) + a_2/(a_1^2)
+                          
+                          e_1 = c_1/a_1
+                          e_2 = c_2/(a_1^2 + a_2)
+                          
+                          d_1 = (n/(n-1))*(sum(temp_khat)) - temp_nSNVSites/a_1
+                          
+                          temp_D_1 = d_1/sqrt(e_1*temp_nSNVSites + e_2*temp_nSNVSites*(temp_nSNVSites - 1))
+                          
+                          
+                          pi = c(pi, (n/(n-1))*(sum(temp_pi)))
+                          var = c(var, (n + 1)*sum(temp_pi)/(3*(n - 1)*region_length) + 2*(n^2 + n + 3)*sum(temp_pi)^2/(9*n*(n - 1)))
+                          
+                          khat = c(khat, (n/(n-1))*(sum(temp_khat)))
+                          var_khat = c(var_khat, (n + 1)*sum(temp_khat)/(3*(n - 1)) + 2*(n^2 + n + 3)*sum(temp_khat)^2/(9*n*(n - 1)))
+                          
+                          TajimaD = c(TajimaD, temp_D_1)
+                          
+                        }else{
+                          
+                          pi = c(pi, 0)
+                          var = c(var, 0)
+                          khat = c(khat, 0)
+                          var_khat = c(var_khat, 0)
+                          TajimaD = c(TajimaD, 0)
+                        }
+                        
+                      }else{
+                        
+                        pi = c(pi, 0)
+                        var = c(var, 0)
+                        khat = c(khat, 0)
+                        var_khat = c(var_khat, 0)
+                        TajimaD = c(TajimaD, 0)
+                        
+                      }
+                      
+                      nSNVSites = c(nSNVSites, temp_nSNVSites)
+                      
+                      
+                    }else{
+                      
+                      pi = c(pi, 0)
+                      var = c(var, 0)
+                      khat = c(khat, 0)
+                      var_khat = c(var_khat, 0)
+                      TajimaD = c(TajimaD, 0)
+                      nSNVSites = c(nSNVSites, 0)
+                      
+                    }
+                    
+                    nVSites = c(nVSites, temp_nVSites)
+                    
+                    
+                  }
+                  
+                  temp_dna_regions_pi = data.frame(nVSites, nSNVSites, pi, var, khat, var_khat, TajimaD)
+                  
+                  
+                  names(temp_dna_regions_pi) = c(paste0(pop, '_nVSites'),
+                                                 paste0(pop, '_nSNVSites'),
+                                                 paste0(pop, '_pi'),
+                                                 paste0(pop, '_pi_var'),
+                                                 paste0(pop, '_khat'),
+                                                 paste0(pop, '_khat_var'),
+                                                 paste0(pop, '_TajimaD'))
+                  
+                  dna_regions = cbind(dna_regions, temp_dna_regions_pi)
+                  
+                }else{
+                  
+                  print(paste0(pop, ' will be excluded because sample size is less than ', min_samp_size, ' individuals'))
+                  
+                }
+                
+                
+              }
+              
+              allele_counts = get_AC(obj = obj, w = 1, n = 1, update_alleles = T, monoclonals = monoclonals, polyclonals = polyclonals)
+              
+              totalpop_rGenome = filter_loci(obj = obj, v = allele_counts$Cardinality > 1)
+              
+              gt = totalpop_rGenome@gt
+              pop_loci = totalpop_rGenome@loci_table
+              
+              gt3 = handle_ploidy(gt, monoclonals = monoclonals, polyclonals = polyclonals)
+              gt3 = as.data.frame(gt3)
+              
+              pi = NULL
+              var = NULL
+              khat = NULL
+              var_khat = NULL
+              nVSites = NULL
+              nSNVSites = NULL
+              TajimaD = NULL
+              
+              for(region in 1:nrow(dna_regions)){
+                positions = paste(dna_regions[region, ][['seqid']],dna_regions[region, ][['start']]:dna_regions[region, ][['end']], sep = '_')
+                
+                region_length = dna_regions[region, ][['end']] - dna_regions[region, ][['start']] + 1
+                
+                temp_gt = gt3[rownames(gt3) %in% positions,]
+                
+                temp_nVSites = nrow(temp_gt)
+                
+                n = ncol(temp_gt)
+                
+                if(nrow(temp_gt)>0){
+                  
+                  temp_loci = pop_loci[rownames(pop_loci) %in% positions,]
+                  
+                  temp_indels = temp_loci[temp_loci$Type_of_polymorphism != 'SNP',]
+                  
+                  temp_gt = temp_gt[temp_loci$Type_of_polymorphism == 'SNP',] # Keep only SNPs
+                  
+                  temp_nSNVSites = nrow(temp_gt)
+                  
+                  if(nrow(temp_gt)>0){
+                    
+                    if(length(temp_indels$ALT) > 0){
+                      
+                      ALTs = temp_indels$ALT
+                      
+                      ALTs = strsplit(ALTs, ',')
+                      
+                      gaps =  nchar(as.character(temp_indels$REF)) - sapply(ALTs, function(alt){
+                        max(nchar(alt))
+                      })
+                      
+                      gaps[gaps < 0] = 0
+                      
+                      region_length = region_length - sum(gaps) # remove deletions from the total size of the region
+                      
+                    }
+                    
+                    haplotypes_counts =  summary(as.factor(sapply(1:ncol(temp_gt), function(x){paste(temp_gt[,x], collapse = '')})),
+                                                 maxsum = ncol(temp_gt))
+                    
+                    if(length(haplotypes_counts) > 1){
+                      
+                      names(haplotypes_counts) = gsub('NA', "_", names(haplotypes_counts))
+                      
+                      haplotypes_freqs = haplotypes_counts/sum(haplotypes_counts)
+                      haplotypes = names(haplotypes_counts)
+                      
+                      combinations = combn(1:length(haplotypes),2)
+                      
+                      temp_pi = NULL
+                      temp_khat = NULL
+                      for(comb in 1:ncol(combinations)){
+                        
+                        x_i = haplotypes_freqs[combinations[1,comb]]
+                        x_j = haplotypes_freqs[combinations[2,comb]]
+                        
+                        seq_i = unlist(strsplit(haplotypes[combinations[1,comb]], ''))
+                        seq_i[seq_i == '_'] = NA
+                        seq_j = unlist(strsplit(haplotypes[combinations[2,comb]], ''))
+                        seq_j[seq_j == '_'] = NA
+                        
+                        pi_ij = sum(seq_i != seq_j, na.rm = T)/(region_length - sum(is.na(seq_i != seq_j)))
+                        khat_ij = sum(seq_i != seq_j, na.rm = T)
+                        temp_pi = c(temp_pi, 2*x_i*x_j*pi_ij)
+                        temp_khat = c(temp_khat, 2*x_i*x_j*khat_ij)
+                      }
+                      
+                      a_1 = sum((1:(n-1))^(-1))
+                      a_2 = sum((1:(n-1))^(-2))
+                      
+                      b_1 = (n + 1)/(3*(n-1))
+                      b_2 = 2*(n^2 + n + 3)/(9*(n-1))
+                      
+                      c_1 = b_1 - 1/a_1
+                      c_2 = b_2 - (n + 2)/(a_1*n) + a_2/(a_1^2)
+                      
+                      e_1 = c_1/a_1
+                      e_2 = c_2/(a_1^2 + a_2)
+                      
+                      d_1 = (n/(n-1))*(sum(temp_khat)) - temp_nSNVSites/a_1
+                      
+                      temp_D_1 = d_1/sqrt(e_1*temp_nSNVSites + e_2*temp_nSNVSites*(temp_nSNVSites - 1))
+                      
+                      pi = c(pi, (n/(n-1))*(sum(temp_pi)))
+                      var = c(var, (n + 1)*sum(temp_pi)/(3*(n - 1)*region_length) + 2*(n^2 + n + 3)*sum(temp_pi)^2/(9*n*(n - 1)))
+                      
+                      khat = c(khat, (n/(n-1))*(sum(temp_khat)))
+                      var_khat = c(var_khat, (n + 1)*sum(temp_khat)/(3*(n - 1)) + 2*(n^2 + n + 3)*sum(temp_khat)^2/(9*n*(n - 1)))
+                      
+                      TajimaD = c(TajimaD, temp_D_1)
+                      
+                    }else{
+                      
+                      pi = c(pi, 0)
+                      var = c(var, 0)
+                      khat = c(khat, 0)
+                      var_khat = c(var_khat, 0)
+                      TajimaD = c(TajimaD, 0)
+                    }
+                    
+                  }else{
+                    
+                    pi = c(pi, 0)
+                    var = c(var, 0)
+                    khat = c(khat, 0)
+                    var_khat = c(var_khat, 0)
+                    TajimaD = c(TajimaD, 0)
+                  }
+                  
+                  nSNVSites = c(nSNVSites, temp_nSNVSites)
+                  
+                }else{
+                  
+                  pi = c(pi, 0)
+                  var = c(var, 0)
+                  khat = c(khat, 0)
+                  var_khat = c(var_khat, 0)
+                  TajimaD = c(TajimaD, 0)
+                  nSNVSites = c(nSNVSites, 0)
+                }
+                
+                nVSites = c(nVSites, temp_nVSites)
+                
+              }
+              
+              dna_regions = cbind(dna_regions, 
+                                  data.frame(Total_nVSites = nVSites, 
+                                             Total_nSNVSites = nSNVSites, 
+                                             Total_pi = pi, 
+                                             Total_pi_var = var,
+                                             Total_khat = khat,
+                                             Total_khat_var = var_khat,
+                                             Total_TajimaD = TajimaD
+                                  ))
+              
+              
+            }else{
+              
+              allele_counts = get_AC(obj = obj, w = 1, n = 1, update_alleles = T, monoclonals = monoclonals, polyclonals = polyclonals)
+              
+              totalpop_rGenome = filter_loci(obj = obj, v = allele_counts$Cardinality > 1)
+              
+              gt = totalpop_rGenome@gt
+              pop_loci = totalpop_rGenome@loci_table
+              
+              gt3 = handle_ploidy(gt, monoclonals = monoclonals, polyclonals = polyclonals)
+              gt3 = as.data.frame(gt3)
+              
+              pi = NULL
+              var = NULL
+              khat = NULL
+              var_khat = NULL
+              nVSites = NULL
+              nSNVSites = NULL
+              TajimaD = NULL
+              
+              for(region in 1:nrow(dna_regions)){
+                positions = paste(dna_regions[region, ][['seqid']], dna_regions[region, ][['start']]:dna_regions[region, ][['end']], sep = '_')
+                
+                region_length = dna_regions[region, ][['end']] - dna_regions[region, ][['start']] + 1
+                
+                temp_gt = gt3[rownames(gt3) %in% positions,]
+                
+                temp_nVSites = nrow(temp_gt)
+                
+                n = ncol(temp_gt)
+                
+                if(nrow(temp_gt)>0){
+                  
+                  temp_loci = pop_loci[rownames(pop_loci) %in% positions,]
+                  
+                  temp_indels = temp_loci[temp_loci$Type_of_polymorphism != 'SNP',]
+                  
+                  temp_gt = temp_gt[temp_loci$Type_of_polymorphism == 'SNP',] # Keep only SNPs
+                  
+                  temp_nSNVSites = nrow(temp_gt)
+                  
+                  if(nrow(temp_gt)>0){
+                    
+                    if(length(temp_indels$ALT) > 0){
+                      
+                      ALTs = temp_indels$ALT
+                      
+                      ALTs = strsplit(ALTs, ',')
+                      
+                      gaps =  nchar(as.character(temp_indels$REF)) - sapply(ALTs, function(alt){
+                        max(nchar(alt))
+                      })
+                      
+                      gaps[gaps < 0] = 0
+                      
+                      region_length = region_length - sum(gaps) # remove deletions from the total size of the region
+                      
+                    }
+                    
+                    haplotypes_counts =  summary(as.factor(sapply(1:ncol(temp_gt), function(x){paste(temp_gt[,x], collapse = '')})),
+                                                 maxsum = ncol(temp_gt))
+                    
+                    if(length(haplotypes_counts) > 1){
+                      
+                      names(haplotypes_counts) = gsub('NA', "_", names(haplotypes_counts))
+                      
+                      haplotypes_freqs = haplotypes_counts/sum(haplotypes_counts)
+                      haplotypes = names(haplotypes_counts)
+                      
+                      combinations = combn(1:length(haplotypes),2)
+                      
+                      temp_pi = NULL
+                      temp_khat = NULL
+                      for(comb in 1:ncol(combinations)){
+                        
+                        x_i = haplotypes_freqs[combinations[1,comb]]
+                        x_j = haplotypes_freqs[combinations[2,comb]]
+                        
+                        seq_i = unlist(strsplit(haplotypes[combinations[1,comb]], ''))
+                        seq_i[seq_i == '_'] = NA
+                        seq_j = unlist(strsplit(haplotypes[combinations[2,comb]], ''))
+                        seq_j[seq_j == '_'] = NA
+                        
+                        pi_ij = sum(seq_i != seq_j, na.rm = T)/(region_length - sum(is.na(seq_i != seq_j)))
+                        khat_ij = sum(seq_i != seq_j, na.rm = T)
+                        temp_pi = c(temp_pi, 2*x_i*x_j*pi_ij)
+                        temp_khat = c(temp_khat, 2*x_i*x_j*khat_ij)
+                      }
+                      
+                      a_1 = sum((1:(n-1))^(-1))
+                      a_2 = sum((1:(n-1))^(-2))
+                      
+                      b_1 = (n + 1)/(3*(n-1))
+                      b_2 = 2*(n^2 + n + 3)/(9*(n-1))
+                      
+                      c_1 = b_1 - 1/a_1
+                      c_2 = b_2 - (n + 2)/(a_1*n) + a_2/(a_1^2)
+                      
+                      e_1 = c_1/a_1
+                      e_2 = c_2/(a_1^2 + a_2)
+                      
+                      d_1 = (n/(n-1))*(sum(temp_khat)) - temp_nSNVSites/a_1
+                      
+                      temp_D_1 = d_1/sqrt(e_1*temp_nSNVSites + e_2*temp_nSNVSites*(temp_nSNVSites - 1))
+                      
+                      pi = c(pi, (n/(n-1))*(sum(temp_pi)))
+                      var = c(var, (n + 1)*sum(temp_pi)/(3*(n - 1)*region_length) + 2*(n^2 + n + 3)*sum(temp_pi)^2/(9*n*(n - 1)))
+                      
+                      khat = c(khat, (n/(n-1))*(sum(temp_khat)))
+                      var_khat = c(var_khat, (n + 1)*sum(temp_khat)/(3*(n - 1)) + 2*(n^2 + n + 3)*sum(temp_khat)^2/(9*n*(n - 1)))
+                      
+                      TajimaD = c(TajimaD, temp_D_1)
+                      
+                    }else{
+                      
+                      pi = c(pi, 0)
+                      var = c(var, 0)
+                      khat = c(khat, 0)
+                      var_khat = c(var_khat, 0)
+                      TajimaD = c(TajimaD, 0)
+                    }
+                    
+                  }else{
+                    
+                    pi = c(pi, 0)
+                    var = c(var, 0)
+                    khat = c(khat, 0)
+                    var_khat = c(var_khat, 0)
+                    TajimaD = c(TajimaD, 0)
+                  }
+                  
+                  nSNVSites = c(nSNVSites, temp_nSNVSites)
+                  
+                }else{
+                  
+                  pi = c(pi, 0)
+                  var = c(var, 0)
+                  khat = c(khat, 0)
+                  var_khat = c(var_khat, 0)
+                  TajimaD = c(TajimaD, 0)
+                  nSNVSites = c(nSNVSites, 0)
+                  
+                }
+                
+                nVSites = c(nVSites, temp_nVSites)
+                
+              }
+              
+              dna_regions$nVSites = nVSites
+              dna_regions$nSNVSites = nSNVSites
               dna_regions$pi = pi
               dna_regions$pi_var = var
               
@@ -15007,6 +15802,291 @@ get_mhap_NucDiv = function(ampseq_object,
 
 
 
+merge_replicates = function(ampseq_object, v, min_ratio = 0.1){
+  
+  gt = ampseq_object@gt
+  metadata = ampseq_object@metadata
+  markers = ampseq_object@markers
+  
+  # Remove duplicates
+  
+  duplicated_samples = metadata[duplicated(metadata[[v]]),][[v]]
+  
+  duplicated_samples = unique(duplicated_samples)
+  
+  gt_replicates = gt[duplicated(metadata[[v]]),]
+  gt = gt[!duplicated(metadata[[v]]),]
+  
+  metadata_replicates = metadata[duplicated(metadata[[v]]),]
+  metadata = metadata[!duplicated(metadata[[v]]),]
+  
+  sample = duplicated_samples[1]
+  
+  amplicon =  markers$amplicon[1]
+  
+  for(sample in duplicated_samples){
+    
+    #if(grepl('kali0364-3', sample)){stop('1')}
+    
+    new_amplicon_data = NULL
+    
+    for(amplicon in markers$amplicon){
+      
+      #if(amplicon == 'Pfsa_4'){stop('2')}
+      
+      temp_amplicon_data = c(gt[metadata[metadata[[v]] == sample, ][['Sample_id']], amplicon],
+                             gt_replicates[metadata_replicates[metadata_replicates[[v]] == sample, ][["Sample_id"]], amplicon]
+                             )
+      
+      temp_amplicon_data = temp_amplicon_data[!is.na(temp_amplicon_data)]
+      
+      temp_amplicon_data = unlist(str_split(temp_amplicon_data, '_'))
+      
+      temp_amplicon_data_rd = as.numeric(str_extract(temp_amplicon_data, '\\d+$'))
+      
+      temp_amplicon_data_cigars = gsub(':\\d+$', '', temp_amplicon_data)
+      
+      temp_unique_cigars = unique(temp_amplicon_data_cigars)
+      
+      temp_unique_rd = NULL
+      
+      for(cigar_string in temp_unique_cigars){
+        
+        temp_unique_rd = c(temp_unique_rd , sum(temp_amplicon_data_rd[which(temp_amplicon_data_cigars == cigar_string)]))
+        
+      }
+      
+      temp_new_amplicon_data = data.frame(cigar = temp_unique_cigars,
+                                          rd = temp_unique_rd
+                                          )
+      
+      if(nrow(temp_new_amplicon_data) > 1){
+        temp_new_amplicon_data = temp_new_amplicon_data[order(temp_new_amplicon_data$rd, decreasing = T),]
+        temp_new_amplicon_data = temp_new_amplicon_data[temp_new_amplicon_data$rd/max(temp_new_amplicon_data$rd) >= min_ratio, , drop = T]
+        
+        }
+      
+      new_amplicon_data = c(new_amplicon_data, paste(paste(temp_new_amplicon_data$cigar, temp_new_amplicon_data$rd, sep = ':'), collapse = '_'))
+      
+      new_amplicon_data[new_amplicon_data == ''] = NA
+      
+    }
+    
+    gt[metadata[metadata[[v]] == sample, ][['Sample_id']],] = new_amplicon_data
+    
+  }  
+  
+  ampseq_object@gt = gt
+  ampseq_object@metadata = metadata
+  
+  
+  cigars_gt = get_cigar_alleles(ampseq_object, 
+                                from = 'gt',
+                                as = 'vector')
+  
+  cigars_asvtab = get_cigar_alleles(ampseq_object, 
+                                    from = 'asv_table',
+                                    as = 'vector',
+                                    col = 'CIGAR_masked')
+  
+  if(sum(!(cigars_gt %in% cigars_asvtab)) > 0 & 
+     sum(!(cigars_asvtab %in% cigars_gt)) > 0){
+    
+    cat(paste0('Cigar strings in gt matrix that are not present in asv_table are:\n',
+               paste(cigars_gt[!(cigars_gt %in% cigars_asvtab)], collapse = '\n'),
+               '\n\n',
+               'Cigar strings in asv_table that are not present in gt matrix are:\n',
+               paste(cigars_asvtab[!(cigars_asvtab %in% cigars_gt)], collapse = '\n'),
+               '\n'
+    ))
+    
+    stop('There are cigar strings that are different in the gt and the asv_table')
+    
+  }else if(sum(!(cigars_gt %in% cigars_asvtab)) > 0){
+    
+    cat(paste0('Cigar strings in gt matrix that are not present in asv_table are:\n',
+               paste(cigars_gt[!(cigars_gt %in% cigars_asvtab)], collapse = '\n'),
+               '\n'))
+    
+    stop('There are cigar strings in the gt that are not present in the asv_table')
+    
+  }else if(sum(!(cigars_asvtab %in% cigars_gt)) > 0){
+    
+    cat(paste0('The following cigar strings in asv_table are not longer present in gt matrix:\n',
+               paste(cigars_asvtab[!(cigars_asvtab %in% cigars_gt)], collapse = '\n'),
+               '\n'))
+    
+    cigar_strings_to_remove = cigars_asvtab[!(cigars_asvtab %in% cigars_gt)]
+    
+    for(cigar_string_to_remove in unique(cigar_strings_to_remove)){
+      
+      Amplicon = gsub(';.+$', '', cigar_string_to_remove)
+      CIGAR = gsub('^.+;', '', cigar_string_to_remove)
+      
+      ampseq_object@asv_table = 
+        ampseq_object@asv_table[!(ampseq_object@asv_table[['Amplicon']] == Amplicon &
+                                    ampseq_object@asv_table[['CIGAR_masked']] == CIGAR),]
+      
+      ampseq_object@asv_seqs = ampseq_object@asv_seqs[
+        names(ampseq_object@asv_seqs) %in% ampseq_object@asv_table$hapid]
+      
+      ampseq_object@asv_seqs_masked = ampseq_object@asv_seqs_masked[
+        names(ampseq_object@asv_seqs_masked) %in% ampseq_object@asv_table$hapid]
+      
+      ampseq_object@asv_table$hapid = paste0('ASV', 1:nrow(ampseq_object@asv_table))
+      names(ampseq_object@asv_seqs) = ampseq_object@asv_table$hapid
+      names(ampseq_object@asv_seqs_masked) = ampseq_object@asv_table$hapid
+      
+    }
+    
+    
+  }else{
+    print('cigar strings are consistent between gt and asv_table')
+  }
+  
+  consistency_between_gt_and_asvtab(ampseq_object)
+  
+  return(ampseq_object)
+  
+}
+
+# get_codon_change-----
+
+get_codon_change = function(genome_ref_fasta,
+                            genome_ref_gff,
+                            position_of_interest = 631190,
+                            gene_id_of_interest,
+                            type_of_molecule = 'CDS',
+                            mutation_of_interst = 'A'
+){
+  
+  # Get reference files
+  ref_genome = Biostrings::readDNAStringSet(genome_ref_fasta)
+  gff_object = ape::read.gff(genome_ref_gff)
+  
+  # Get coordinates of the coding sequences
+  sequence_of_interest_coordinates = gff_object %>% filter(type == type_of_molecule,
+                                                           grepl(gene_id_of_interest, attributes))
+  
+  chromosome_of_interest = sequence_of_interest_coordinates[1,]$seqid
+  
+  # Identify the CDS where the position of interest is located
+  
+  sequence_of_interest_coordinates %<>% 
+    mutate(is_there_a_position_of_interest = case_when(
+      start <= position_of_interest & end >= position_of_interest ~ TRUE,
+      .default = FALSE
+    ))
+  
+  
+  # Get gene sequence
+  
+  ref_gene_sequence = NULL
+  
+  for(exon in 1:nrow(sequence_of_interest_coordinates)){
+    
+    ref_gene_sequence = paste0(ref_gene_sequence,
+                               as.character(Biostrings::substr(ref_genome[[grep(chromosome_of_interest, names(ref_genome))]],
+                                                               start = sequence_of_interest_coordinates[exon,]$start,
+                                                               stop = sequence_of_interest_coordinates[exon,]$end)))
+    
+  }
+  
+  if(sequence_of_interest_coordinates[1,]$strand == '-'){
+    ref_gene_sequence = Biostrings::reverseComplement(Biostrings::DNAString(ref_gene_sequence))
+  }
+  
+  # translate(ref_gene_sequence)
+  
+  
+  # Identify the position of interest in the gene of interest
+  if(sequence_of_interest_coordinates[1,]$strand == '+'){
+    
+    sequence_of_interest_coordinates %<>% arrange(start)
+    
+    pos_interest_in_gene = 0
+    
+    exon = 1
+    is_there_a_position_of_interest = sequence_of_interest_coordinates[exon,][['is_there_a_position_of_interest']]
+    
+    while(is_there_a_position_of_interest == FALSE){
+      pos_interest_in_gene = pos_interest_in_gene +  sequence_of_interest_coordinates[exon,][['end']] - sequence_of_interest_coordinates[exon,][['start']] + 1
+      exon = exon + 1
+      is_there_a_position_of_interest = sequence_of_interest_coordinates[exon,][['is_there_a_position_of_interest']]
+    }
+    
+    pos_interest_in_gene = pos_interest_in_gene +  position_of_interest - sequence_of_interest_coordinates[exon,][['start']] + 1
+    
+  }else if(sequence_of_interest_coordinates[1,]$strand == '-'){
+    
+    sequence_of_interest_coordinates %<>% arrange(desc(start))
+    
+    pos_interest_in_gene = 0
+    
+    exon = 1
+    is_there_a_position_of_interest = sequence_of_interest_coordinates[exon,][['is_there_a_position_of_interest']]
+    
+    while(is_there_a_position_of_interest == FALSE){
+      pos_interest_in_gene = pos_interest_in_gene +  sequence_of_interest_coordinates[exon,][['end']] - sequence_of_interest_coordinates[exon,][['start']] + 1
+      exon = exon + 1
+      is_there_a_position_of_interest = sequence_of_interest_coordinates[exon,][['is_there_a_position_of_interest']]
+    }
+    
+    pos_interest_in_gene = pos_interest_in_gene +  sequence_of_interest_coordinates[exon,][['end']] - position_of_interest + 1
+    
+  }
+  
+  # Get Codon of interest
+  codon_position = ceiling(pos_interest_in_gene/3)
+  codon_start = codon_position*3 - 2
+  codon_end = codon_position*3
+  
+  ref_Nuc = Biostrings::substr(ref_genome[[grep(chromosome_of_interest, names(ref_genome))]],
+                               start = position_of_interest,
+                               stop = position_of_interest)
+  
+  ref_codon = Biostrings::substr(ref_gene_sequence,
+                                 start = codon_start,
+                                 stop = codon_end)
+  
+  if(sequence_of_interest_coordinates[1,]$strand == '-'){
+    mutation_of_interst_in_strand = as.character(Biostrings::reverseComplement(Biostrings::DNAString(mutation_of_interst)))
+  }
+  
+  sample_gene_sequence = ref_gene_sequence
+  sample_gene_sequence = unlist(strsplit(as.character(sample_gene_sequence), ''))
+  sample_gene_sequence[pos_interest_in_gene] = mutation_of_interst_in_strand
+  sample_gene_sequence = Biostrings::DNAString(paste(sample_gene_sequence, collapse = ''))
+  sample_codon = Biostrings::substr(sample_gene_sequence,
+                                    start = codon_start,
+                                    stop = codon_end)
+  
+  output = data.frame(
+    strand = sequence_of_interest_coordinates[1,]$strand,
+    reference_codon = paste(ref_codon, collapse = ''),
+    sample_codon = paste(sample_codon, collapse = ''),
+    cDNA_change = paste0(
+      'c',
+      pos_interest_in_gene,
+      Biostrings::substr(ref_gene_sequence,
+                         start = pos_interest_in_gene,
+                         stop = pos_interest_in_gene),
+      '>'
+      ,mutation_of_interst_in_strand),
+    gDNA_change = paste0(
+      'g',
+      position_of_interest,
+      as.character(ref_Nuc),
+      '>'
+      ,mutation_of_interst),
+    aa_change =
+      paste0(
+        Biostrings::translate(ref_codon),
+        codon_position
+        ,Biostrings::translate(sample_codon))
+  )
+  return(output)
+}
 
 
 # END ----
