@@ -4483,8 +4483,7 @@ locus_amplification_rate = function(ampseq_object, threshold = .65, update_loci 
       
       for(chromosome in levels(as.factor(markers[["chromosome"]]))){
         for(amplicon in 1:(nrow(markers[markers[["chromosome"]] == chromosome, ,drop=FALSE])-1)){
-          markers[
-            markers[["chromosome"]] == chromosome, , drop=FALSE][amplicon, "distance"] = 
+          markers[markers[["chromosome"]] == chromosome, ][amplicon, "distance"] = 
             markers[markers[["chromosome"]] == chromosome, , drop=FALSE][amplicon + 1, "pos"] - 
             markers[markers[["chromosome"]] == chromosome, , drop=FALSE][amplicon, "pos"]
         }
