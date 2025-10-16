@@ -2905,6 +2905,8 @@ filter_loci = function(obj, v, update_cigars = TRUE){
         
         for(cigar_string_to_remove in unique(cigar_strings_to_remove)){
           
+          #if(which(unique(cigar_strings_to_remove) == cigar_string_to_remove) == 2920){stop()}
+          
           Amplicon = gsub(';.+$', '', cigar_string_to_remove)
           CIGAR = gsub('^.+;', '', cigar_string_to_remove)
           
@@ -5508,7 +5510,8 @@ haplotypes_respect_to_reference = function(ampseq_object,
                                            plot_haplo_freq = FALSE,
                                            variables = c('Sample_id', 'Population'),
                                            filters = NULL,
-                                           na.var.rm = FALSE){
+                                           na.var.rm = FALSE,
+                                           string_style = 'compact'){
   library(ape)
   library(Biostrings)
   
@@ -5658,8 +5661,8 @@ haplotypes_respect_to_reference = function(ampseq_object,
             last_intronic_pos_in_amplicon = first_intronic_pos_in_amplicon + temp_gff[cds_end,][['start']] - temp_gff[cds_start,][['end']] - 1 - 1
             
             temp_intronic_pos = paste(first_intronic_pos_in_amplicon,
-                                 last_intronic_pos_in_amplicon,
-                                 sep = ',')
+                                      last_intronic_pos_in_amplicon,
+                                      sep = ',')
             
             if(internal_cds > cds_start + 1){
               intronic_pos = temp_intronic_pos
@@ -5778,7 +5781,7 @@ haplotypes_respect_to_reference = function(ampseq_object,
     moi_loci_abd_table = ampseq_object@gt[, markers$gene_id %in% gene_ids]  
   }else{
     moi_loci_abd_table = matrix(ampseq_object@gt[, markers$gene_id %in% gene_ids],
-                                ncol = 1,
+                                ncol = sum(markers$gene_id %in% gene_ids),
                                 dimnames = list(rownames(ampseq_object@gt),
                                                 colnames(ampseq_object@gt)[markers$gene_id %in% gene_ids]))
   }
@@ -5794,31 +5797,33 @@ haplotypes_respect_to_reference = function(ampseq_object,
   for(amplicon in colnames(moi_loci_abd_table)){ # For each amplicon in columns
     for(sample in (1:nrow(moi_loci_abd_table))){ # For each sample in rows
       
+      #if(sample == 10 & amplicon == 'pvdhps_4'){stop()}
+      
       locus = moi_loci_abd_table[sample, amplicon] # Get the genotype in the locus
       
       
       locus = gsub('\\d+(D|I)=[ATGC]+', '', locus) # REMOVE WHEN INDELs DETECTION IS IMPLEMENTED
-
+      
       if(!is.na(locus)){# REMOVE WHEN INDELs DETECTION IS IMPLEMENTED
-
+        
         if(locus == ''){
           locus = '.'
         }
-
+        
         if(grepl('^_', locus)){
           locus = gsub('^_', '._', locus)
         }
-
+        
         if(grepl('\\._\\.', locus)){
           locus = '.'
         }
-
+        
         if(grepl('_', locus)){
           locus = gsub('^_', '._', locus)
         }
-
+        
       }
-
+      
       
       if(is.na(locus)){ # if the locus is NULL complete the cell with NA
         
@@ -6078,6 +6083,12 @@ haplotypes_respect_to_reference = function(ampseq_object,
                            dimnames = list(rownames(moi_loci_aa_table),
                                            gene_ids))
     
+    dnacigar_table = matrix(NA,
+                            nrow = nrow(moi_loci_dna_table),
+                            ncol = length(gene_ids),
+                            dimnames = list(rownames(moi_loci_dna_table),
+                                            gene_ids))
+    
     
     for(gene in 1:length(gene_ids)){
       
@@ -6089,6 +6100,13 @@ haplotypes_respect_to_reference = function(ampseq_object,
                                        colnames(moi_loci_aa_table)[colnames(moi_loci_aa_table) %in% 
                                                                      markers_of_interest[markers_of_interest$gene_id == gene_ids[gene],][['amplicon']]]))
       
+      gene_dna = matrix(moi_loci_dna_table[, colnames(moi_loci_dna_table) %in% 
+                                             markers_of_interest[markers_of_interest$gene_id == gene_ids[gene],][['amplicon']]],
+                        ncol = sum(colnames(moi_loci_dna_table) %in% 
+                                     markers_of_interest[markers_of_interest$gene_id == gene_ids[gene],][['amplicon']]),
+                        dimnames = list(rownames(moi_loci_dna_table),
+                                        colnames(moi_loci_dna_table)[colnames(moi_loci_dna_table) %in% 
+                                                                       markers_of_interest[markers_of_interest$gene_id == gene_ids[gene],][['amplicon']]]))
       
       # filter amplicons for the gene of interest
       gene_of_interest_info = markers_of_interest[markers_of_interest[['gene_id']] == gene_ids[gene],]
@@ -6123,24 +6141,40 @@ haplotypes_respect_to_reference = function(ampseq_object,
         #positions = stringr::str_extract(unique(gene_aa[,amplicon]), '\\d+')
         positions = unlist(stringr::str_extract(gene_aa[,amplicon], '\\d+'))
         positions = positions[!is.na(positions)]
+        
+        positions_dna = unlist(stringr::str_extract(gene_dna[,amplicon], '\\d+'))
+        positions_dna = positions_dna[!is.na(positions_dna)]
+        
         if(sum(positions != "p.(=)") > 0){
+          
           positions = unique(positions)
           positions = sort(positions)
         }else{
           positions = NULL
         }
         
+        if(sum(positions_dna != "c.(=)") > 0){
+          positions_dna = unique(positions_dna)
+          positions_dna = sort(positions_dna)
+          
+        }else{
+          positions_dna = NULL
+        }
+        
         # for each sample
         for(sample in 1:nrow(gene_aa)){
           
+          #if(sample == 13 & amplicon == 'pvdhps_2'){stop()}
+          
           # get the full genotype (combination of haplotypes for each observed clone)
           sample_clones = gene_aa[sample, amplicon]
+          sample_clones_dna = gene_dna[sample, amplicon]
           
           
           if(!is.na(sample_clones)){# if the genotype is not NA
             
             # Split the observed haplotypes of each clone
-            clones = unlist(strsplit(sample_clones, ' / ')) 
+            clones = unlist(strsplit(sample_clones, ' / '))
             
             # empty vector to write the final genotype
             clone_alleles = NULL
@@ -6174,7 +6208,7 @@ haplotypes_respect_to_reference = function(ampseq_object,
                     sample_allele = unique(sample_allele) # remove duplicates
                     sample_allele = sample_allele[grepl(position, sample_allele)] # filter the allele at the desire position
                     sample_allele = gsub('\\d+.','',sample_allele) # get the reference allele at the polymorphic position
-                    
+                    sample_allele = unique(sample_allele)
                     sample_alleles = c(sample_alleles, paste0(sample_allele, position, sample_allele)) # define the sample allele equals to the reference
                     
                   }
@@ -6193,7 +6227,7 @@ haplotypes_respect_to_reference = function(ampseq_object,
                   sample_allele = unique(sample_allele) # remove duplicates
                   sample_allele = sample_allele[grepl(position, sample_allele)] # filter the allele at the desire position
                   sample_allele = gsub('\\d+.','',sample_allele)# get the reference allele at the polymorphic position
-                  
+                  sample_allele = unique(sample_allele)
                   sample_alleles = c(sample_alleles, paste0(sample_allele, position, sample_allele)) # define the sample allele equals to the reference
                   
                 }
@@ -6226,7 +6260,7 @@ haplotypes_respect_to_reference = function(ampseq_object,
               sample_allele = unique(sample_allele) # remove duplicates
               sample_allele = sample_allele[grepl(position, sample_allele)]# filter the allele at the desire position
               sample_allele = gsub('\\d+.','',sample_allele)# get the reference allele at the polymorphic position
-              
+              sample_allele = unique(sample_allele)
               sample_alleles = c(sample_alleles, paste0(sample_allele, position, "?"))# define the sample allele equals to "?"
               
             }
@@ -6242,14 +6276,127 @@ haplotypes_respect_to_reference = function(ampseq_object,
             
             aacigar_table[sample, gene] = paste(aacigar_table[sample, gene], paste(sample_alleles, collapse = ' '), sep = ' ')
             
+          }
+          
+          if(!is.na(sample_clones_dna)){# if the genotype is not NA
+            
+            # Split the observed haplotypes of each clone
+            clones_dna = unlist(strsplit(sample_clones_dna, ' / '))
+            
+            # empty vector to write the final genotype
+            clone_alleles_dna = NULL
+            
+            #lone_dna = clones_dna
+            # for each observed haplotype
+            for(clone_dna in clones_dna){
+              
+              # if the haplotype is not equal to the reference
+              if(clone_dna != 'c.(=)'){
+                
+                # get the splited polymorphism of the clone in the sample
+                sample_obs_alleles_dna = unlist(strsplit(clone_dna, ' '))
+                
+                # get the sorted polymorphism of the clone in the sample
+                sample_alleles_dna = NULL
+                
+                # for each polymorphic position in the population
+                for(position_dna in positions_dna){
+                  
+                  # get the allele of the sample at the polymorphic position
+                  temp_sample_allele_dna = sample_obs_alleles_dna[grepl(position_dna, sample_obs_alleles_dna)]
+                  
+                  # if the position was polymorphic
+                  if(length(temp_sample_allele_dna) > 0){
+                    sample_alleles_dna = c(sample_alleles_dna, temp_sample_allele_dna) 
+                  }else{
+                    
+                    # if the position wasn't polymorphic
+                    sample_allele_dna = stringr::str_extract(unique(gene_dna[,amplicon]), '\\d+.')#get all polymorphic sites
+                    sample_allele_dna = sample_allele_dna[!is.na(sample_allele_dna)]# remove empty data and haplotypes equals to the reference (p.(=))
+                    sample_allele_dna = unique(sample_allele_dna) # remove duplicates
+                    sample_allele_dna = sample_allele_dna[grepl(position_dna, sample_allele_dna)] # filter the allele at the desire position
+                    sample_allele_dna = gsub('^\\d+','',sample_allele_dna)# get the reference allele at the polymorphic position
+                    sample_allele_dna = unique(sample_allele_dna)
+                    sample_alleles_dna = c(sample_alleles_dna, paste0('c.', position_dna, sample_allele_dna, '>', sample_allele_dna)) # define the sample allele equals to the reference
+                    
+                  }
+                }
+                
+              }else{
+                
+                # if the full haplotype was equals to the reference
+                sample_positions_dna = NULL
+                sample_alleles_dna = NULL
+                #position_dna = positions_dna[1]
+                for(position_dna in positions_dna){
+                  
+                  sample_allele_dna = stringr::str_extract(unique(gene_dna[,amplicon]), '\\d+.')#get all polymorphic sites
+                  sample_allele_dna = sample_allele_dna[!is.na(sample_allele_dna)]# remove empty data and haplotypes equals to the reference (p.(=))
+                  sample_allele_dna = unique(sample_allele_dna) # remove duplicates
+                  sample_allele_dna = sample_allele_dna[grepl(position_dna, sample_allele_dna)] # filter the allele at the desire position
+                  sample_allele_dna = gsub('^\\d+','',sample_allele_dna)# get the reference allele at the polymorphic position
+                  sample_allele_dna = unique(sample_allele_dna)
+                  sample_alleles_dna = c(sample_alleles_dna, paste0('c.', position_dna, sample_allele_dna, '>', sample_allele_dna)) # define the sample allele equals to the reference
+                  
+                }
+              }
+              
+              clone_alleles_dna = rbind(clone_alleles_dna, sample_alleles_dna) # bind haplotypes of each clone 
+              
+            }
+            
+            if(length(clones_dna) > 1){ #if there are multiple clones
+              
+              # paste each clone allele with |
+              sample_alleles_dna = apply(clone_alleles_dna, 2, function(x) ifelse(x[1] == x[2], x[1], paste(x[1], x[2], sep = '|')))
+              
+            }else{ # if there is only one clone
+              
+              sample_alleles_dna = clone_alleles_dna
+              
+            }
+            
+          }else{ # if the full haplotye was missing
+            
+            sample_positions_dna = NULL
+            sample_alleles_dna = NULL
+            
+            for(position_dna in positions_dna){
+              
+              sample_allele_dna = stringr::str_extract(unique(gene_dna[,amplicon]), '\\d+.')#get all polymorphic sites
+              sample_allele_dna = sample_allele[!is.na(sample_allele_dna)]# remove empty data and haplotypes equals to the reference (p.(=))
+              sample_allele_dna = unique(sample_allele_dna) # remove duplicates
+              sample_allele_dna = sample_allele[grepl(position_dna, sample_allele_dna)] # filter the allele at the desire position
+              sample_allele_dna = gsub('^\\d+','',sample_allele_dna)# get the reference allele at the polymorphic position
+              sample_allele_dna = unique(sample_allele_dna)
+              sample_alleles_dna = c(sample_alleles_dna, paste0('c.', position_dna, sample_allele_dna, '>?'))# define the sample allele equals to "?"
+              
+            }
+            
+          }
+          
+          # if no data has been previously added to the cell in the dnacigar_table
+          if(is.na(dnacigar_table[sample, gene])){
+            
+            dnacigar_table[sample, gene] = paste(sample_alleles_dna, collapse = ' ')
+            
+          }else{
+            
+            dnacigar_table[sample, gene] = paste(dnacigar_table[sample, gene], paste(sample_alleles_dna, collapse = ' '), sep = ' ')
+            
           } 
         }
       }
     }
     
+    
     if(length(gene_ids) > 1){
       mon_aacigar_table = aacigar_table[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) == 0),]
       poly_aacigar_table = aacigar_table[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) != 0),]  
+      
+      mon_dnacigar_table = dnacigar_table[(apply(dnacigar_table, 1, function(i){sum(grepl("\\|",i))}) == 0),]
+      poly_dnacigar_table = dnacigar_table[(apply(dnacigar_table, 1, function(i){sum(grepl("\\|",i))}) != 0),]  
+      
     }else{
       mon_aacigar_table = aacigar_table[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) == 0),]
       mon_aacigar_table = matrix(mon_aacigar_table, ncol = 1,
@@ -6258,20 +6405,45 @@ haplotypes_respect_to_reference = function(ampseq_object,
                                    gene_ids
                                  ))
       poly_aacigar_table = aacigar_table[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) != 0),]
+      poly_aacigar_table_sampnames = rownames(aacigar_table)[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) != 0)]
+      
+      mon_dnacigar_table = dnacigar_table[(apply(dnacigar_table, 1, function(i){sum(grepl("\\|",i))}) == 0),]
+      mon_dnacigar_table = matrix(mon_dnacigar_table, ncol = 1,
+                                  dimnames = list(
+                                    names(mon_dnacigar_table),
+                                    gene_ids
+                                  ))
+      poly_dnacigar_table = dnacigar_table[(apply(dnacigar_table, 1, function(i){sum(grepl("\\|",i))}) != 0),]
+      poly_dnacigar_table_sampnames = rownames(dnacigar_table)[(apply(dnacigar_table, 1, function(i){sum(grepl("\\|",i))}) != 0)]
       
       if(!isEmpty(poly_aacigar_table)){
         poly_aacigar_table = matrix(poly_aacigar_table, ncol = 1,
                                     dimnames = list(
-                                      names(mon_aacigar_table),
+                                      poly_aacigar_table_sampnames,
                                       gene_ids
                                     ))
       }
+      
+      
+      if(!isEmpty(poly_dnacigar_table)){
+        poly_dnacigar_table = matrix(poly_dnacigar_table, ncol = 1,
+                                     dimnames = list(
+                                       poly_dnacigar_table_sampnames,
+                                       gene_ids
+                                     ))
+      }
+      
     }
     
     
-    if(isEmpty(poly_aacigar_table)){
-      poly1 = gsub('\\|([a-z])', '', poly_aacigar_table, ignore.case = T)
-      poly2 = gsub('([a-z]\\|)', '', poly_aacigar_table, ignore.case = T)
+    if(!isEmpty(poly_aacigar_table)){
+      poly1 = gsub('\\|[a-z].+', '', poly_aacigar_table, ignore.case = T)
+      
+      rownames(poly1) = paste0(rownames(poly1), '_CLONE1')
+      
+      poly2 = gsub('.+[a-z]\\|', '', poly_aacigar_table, ignore.case = T)
+      
+      rownames(poly2) = paste0(rownames(poly2), '_CLONE2')
       
       extended_aacigar_table = rbind(mon_aacigar_table,
                                      poly1,
@@ -6281,7 +6453,38 @@ haplotypes_respect_to_reference = function(ampseq_object,
     }
     
     
+    if(!isEmpty(poly_dnacigar_table)){
+      
+      poly1 = gsub('\\|c\\.\\d+[ACTG]>[ACTG]', '', poly_dnacigar_table, ignore.case = T)
+      rownames(poly1) = paste0(rownames(poly1), '_CLONE1')
+      
+      poly2 = gsub('c\\.\\d+[ACTG]>[ACTG]\\|', '', poly_dnacigar_table, ignore.case = T)
+      rownames(poly2) = paste0(rownames(poly2), '_CLONE2')
+      
+      extended_dnacigar_table = rbind(mon_dnacigar_table,
+                                      poly1,
+                                      poly2)
+    }else{
+      extended_dnacigar_table = mon_dnacigar_table
+    }
+    
     extended_aacigar_table = data.frame(samples = rownames(extended_aacigar_table), extended_aacigar_table)
+    
+    extended_aacigar_table %<>% 
+      mutate(Clone = case_when(
+        grepl('CLONE', samples) ~ str_extract(samples, 'CLONE\\d+$'),
+        .default = 'CLONE1'
+      ),
+      samples =  gsub('_CLONE\\d+$', '', samples))
+    
+    extended_dnacigar_table = data.frame(samples = rownames(extended_dnacigar_table), extended_dnacigar_table)
+    
+    extended_dnacigar_table %<>% 
+      mutate(Clone = case_when(
+        grepl('CLONE', samples) ~ str_extract(samples, 'CLONE\\d+$'),
+        .default = 'CLONE1'
+      ),
+      samples =  gsub('_CLONE\\d+$', '', samples))
     
     metadata = ampseq_object@metadata[,variables]
     
@@ -6303,6 +6506,25 @@ haplotypes_respect_to_reference = function(ampseq_object,
                                              names_to = 'gene_ids',
                                              values_to = 'haplotype')
     
+    extended_dnacigar_table %<>% pivot_longer(cols = all_of(gene_ids),
+                                              names_to = 'gene_ids',
+                                              values_to = 'dna_haplotype')
+    
+    extended_aacigar_table = left_join(extended_dnacigar_table, extended_aacigar_table, by = join_by('samples', 'Clone', 'gene_ids'))
+    
+    samples_w_silent_snps = extended_aacigar_table %>% filter(is.na(haplotype)) %>%select(samples) %>% unlist()
+    
+    for(silent_sample in samples_w_silent_snps){
+      
+      extended_aacigar_table[extended_aacigar_table$samples == silent_sample &
+                               is.na(extended_aacigar_table$haplotype),
+                             c('var1', 'var2', 'haplotype')
+      ] = extended_aacigar_table[extended_aacigar_table$samples == silent_sample &
+                                   !is.na(extended_aacigar_table$haplotype),
+                                 c('var1', 'var2', 'haplotype')
+      ]
+    }
+    
     extended_aacigar_table$gene_names = NA
     
     for(gene in 1:length(gene_ids)){
@@ -6320,7 +6542,7 @@ haplotypes_respect_to_reference = function(ampseq_object,
           !is.na(var1) ~ var1))
       }
       
-      haplotype_counts = extended_aacigar_table %>% group_by(gene_names, var1, haplotype)%>%
+      haplotype_counts = extended_aacigar_table %>% group_by(gene_names, var1, dna_haplotype, haplotype)%>%
         summarise(count = n())
       
     }else if(length(variables)==3){
@@ -6337,7 +6559,7 @@ haplotypes_respect_to_reference = function(ampseq_object,
             (!is.na(var2))&(!grepl('NA',var2)) ~ var2))
       }
       
-      haplotype_counts = extended_aacigar_table %>% group_by(gene_names, var1, var2, haplotype)%>%
+      haplotype_counts = extended_aacigar_table %>% group_by(gene_names, var1, var2, dna_haplotype, haplotype)%>%
         summarise(count = n())
       
     }else if(length(variables) > 3){print('This function allows up to 2 variables plus the sample_id variable')
@@ -6412,34 +6634,110 @@ haplotypes_respect_to_reference = function(ampseq_object,
       colors = c(colors, max_ncolors[1:nhaplo[n,][['nhaplo']]])
     }
     
+    #HERE
+    
+    
+    haplotype_counts$haplotype_compact = sapply(haplotype_counts$haplotype, function(haplotype){
+      
+      polymorphism = unlist(strsplit(haplotype, ' '))
+      
+      polymorphism = polymorphism[polymorphism != '']
+      
+      polymorphism = polymorphism[str_extract(polymorphism, '^[A-Z]') != str_extract(polymorphism, '[A-Z]$')]
+      
+      polymorphism = paste(polymorphism, collapse = ' ')
+      
+      if(polymorphism == ''){
+        polymorphism = 'p.(=)'
+      }
+      
+      polymorphism
+      
+    })
+    
+    haplotype_counts$gene_haplo_compact = paste(haplotype_counts$gene_names, haplotype_counts$haplotype_compact, sep = ': ')
+    
+    
+    haplotype_counts$dna_haplotype_compact = sapply(haplotype_counts$dna_haplotype, function(haplotype){
+      
+      polymorphism = unlist(strsplit(haplotype, ' '))
+      
+      polymorphism = polymorphism[polymorphism != '']
+      
+      polymorphism = polymorphism[gsub('>', '', str_extract(polymorphism, '[ATGC]>')) != gsub('>', '', str_extract(polymorphism, '>[ATGC]$'))]
+      
+      polymorphism = paste(polymorphism, collapse = ' ')
+      
+      if(polymorphism == ''){
+        polymorphism = 'c.(=)'
+      }
+      
+      polymorphism
+      
+    })
+    
+    #haplotype_counts %>% ungroup() %>%select(dna_haplotype, dna_haplotype_compact) %>% View()
     
     if(length(variables) == 2){
       
-      haplo_freq_plot = haplotype_counts%>%
-        ggplot(aes(y = freq, x = var1, fill  = gene_haplo)) +
-        geom_col()+
-        facet_grid(.~ gene_names)+
-        scale_fill_manual(values = colors)+
-        theme_bw()+
-        theme(axis.text.x = element_text(angle = 45, vjust = 0.5))+
-        labs(y = 'Frequency in population',
-             x = 'Population',
-             fill = 'Gene: Haplotype')
+      if(string_style == 'compact'){
+        
+        haplo_freq_plot = haplotype_counts%>%
+          ggplot(aes(y = freq, x = var1, fill  = gene_haplo_compact)) +
+          geom_col()+
+          facet_grid(.~ gene_names)+
+          scale_fill_manual(values = colors)+
+          theme_bw()+
+          theme(axis.text.x = element_text(angle = 45, vjust = 0.5))+
+          labs(y = 'Frequency in population',
+               x = 'Population',
+               fill = 'Gene: Haplotype')
+        
+      }else if(string_style == 'full'){
+        
+        haplo_freq_plot = haplotype_counts%>%
+          ggplot(aes(y = freq, x = var1, fill  = gene_haplo)) +
+          geom_col()+
+          facet_grid(.~ gene_names)+
+          scale_fill_manual(values = colors)+
+          theme_bw()+
+          theme(axis.text.x = element_text(angle = 45, vjust = 0.5))+
+          labs(y = 'Frequency in population',
+               x = 'Population',
+               fill = 'Gene: Haplotype')
+        
+      }
       
       names(haplotype_counts) = c(names(haplotype_counts)[1], variables[2], names(haplotype_counts)[-1:-2])
       
     }else if(length(variables) == 3){
       
-      haplo_freq_plot = haplotype_counts%>%
-        ggplot(aes(y = freq, x = var2, fill  = gene_haplo)) +
-        geom_col()+
-        facet_grid(var1 ~ gene_names)+
-        scale_fill_manual(values = colors)+
-        theme_bw()+
-        theme(axis.text.x = element_text(angle = 45, vjust = 0.5))+
-        labs(y = 'Frequency in population',
-             x = 'Date of Collection',
-             fill = 'Gene: Haplotype')
+      if(string_style == 'compact'){
+        
+        haplo_freq_plot = haplotype_counts %>%
+          ggplot(aes(y = freq, x = var2, fill  = gene_haplo_compact)) +
+          geom_col()+
+          facet_grid(var1 ~ gene_names)+
+          scale_fill_manual(values = colors)+
+          theme_bw()+
+          theme(axis.text.x = element_text(angle = 45, vjust = 0.5))+
+          labs(y = 'Frequency in population',
+               x = 'Date of Collection',
+               fill = 'Gene: Haplotype')
+        
+      }else if(string_style == 'full'){
+        
+        haplo_freq_plot = haplotype_counts%>%
+          ggplot(aes(y = freq, x = var2, fill  = gene_haplo)) +
+          geom_col()+
+          facet_grid(var1 ~ gene_names)+
+          scale_fill_manual(values = colors)+
+          theme_bw()+
+          theme(axis.text.x = element_text(angle = 45, vjust = 0.5))+
+          labs(y = 'Frequency in population',
+               x = 'Date of Collection',
+               fill = 'Gene: Haplotype')
+      }
       
       names(haplotype_counts) = c(names(haplotype_counts)[1], variables[2:3], names(haplotype_counts)[-1:-3])
       
@@ -6469,6 +6767,7 @@ haplotypes_respect_to_reference = function(ampseq_object,
   return(haplotypes_respect_to_reference)
   
 }
+
 
 
 ### drug_resistant_haplotypes----
@@ -9945,19 +10244,19 @@ plot_ggnetwork = function(pairwise_relatedness,
   
   
   if(!is.null(color_by)){
-    relatedness_network %v% color_by = metadata[[color_by]]
+    relatedness_network %v% color_by = as.character(metadata[[color_by]])
   }else{
     color_by = 'gray75'
   }
   
   if(!is.null(shape_by)){
-    relatedness_network %v% shape_by = metadata[[shape_by]]  
+    relatedness_network %v% shape_by = as.character(metadata[[shape_by]])  
   }else{
     shape_by = 16
   }
   
   if(!is.null(alpha_by)){
-    relatedness_network %v% alpha_by = metadata[[alpha_by]]
+    relatedness_network %v% alpha_by = as.character(metadata[[alpha_by]])
   }else if(!is.null(alpha)){
     alpha_by = alpha
   }else{
@@ -13816,6 +14115,18 @@ get_cigar_alleles = function(ampseq_object,
       if(ncol(gt) == 1){
         alleles = list(c(alleles))
         names(alleles) = colnames(gt)
+      }else if(ncol(gt) > 1){
+        
+        allele_list = NULL
+        
+        for(amplicon in colnames(alleles)){
+          
+          allele_list[[amplicon]] = alleles[,amplicon]
+          
+        }
+        
+        alleles = allele_list
+        
       }
     }
     
@@ -15088,7 +15399,9 @@ setMethod("get_TajimasD", signature(obj = "rGenome"),
                 print(paste0('Analysing ', pop, ' population...'))
                 
                 # if population has at least two samples (min_samp_size can be modified)
-                if(populations[pop,][['nsamples']] >= min_samp_size){
+                Pop_Sample_size = populations[pop,][['nsamples']]
+                
+                if(Pop_Sample_size >= min_samp_size){
                   
                   samples = metadata[metadata[[by]] == pop & !is.na(metadata[[by]]),][['Sample_id']]
                   temp_pop = filter_samples(obj = obj, v = samples)
@@ -15252,10 +15565,11 @@ setMethod("get_TajimasD", signature(obj = "rGenome"),
                     
                   }
                   
-                  temp_dna_regions_pi = data.frame(nVSites, nSNVSites, pi, var, khat, var_khat, TajimaD)
+                  temp_dna_regions_pi = data.frame(SampSize = Pop_Sample_size, nVSites, nSNVSites, pi, var, khat, var_khat, TajimaD)
                   
                   
-                  names(temp_dna_regions_pi) = c(paste0(pop, '_nVSites'),
+                  names(temp_dna_regions_pi) = c(paste0(pop, '_SampSize'),
+                                                 paste0(pop, '_nVSites'),
                                                  paste0(pop, '_nSNVSites'),
                                                  paste0(pop, '_pi'),
                                                  paste0(pop, '_pi_var'),
@@ -15284,6 +15598,7 @@ setMethod("get_TajimasD", signature(obj = "rGenome"),
               gt3 = handle_ploidy(gt, monoclonals = monoclonals, polyclonals = polyclonals)
               gt3 = as.data.frame(gt3)
               
+              Sample_size = ncol(gt)
               pi = NULL
               var = NULL
               khat = NULL
@@ -15420,7 +15735,8 @@ setMethod("get_TajimasD", signature(obj = "rGenome"),
               }
               
               dna_regions = cbind(dna_regions, 
-                                  data.frame(Total_nVSites = nVSites, 
+                                  data.frame(Total_SampSize = Sample_size,
+                                             Total_nVSites = nVSites, 
                                              Total_nSNVSites = nSNVSites, 
                                              Total_pi = pi, 
                                              Total_pi_var = var,
@@ -15442,6 +15758,7 @@ setMethod("get_TajimasD", signature(obj = "rGenome"),
               gt3 = handle_ploidy(gt, monoclonals = monoclonals, polyclonals = polyclonals)
               gt3 = as.data.frame(gt3)
               
+              SampSize = ncol(gt)
               pi = NULL
               var = NULL
               khat = NULL
@@ -15578,6 +15895,7 @@ setMethod("get_TajimasD", signature(obj = "rGenome"),
                 
               }
               
+              dna_regions$SampSize = Sample_size
               dna_regions$nVSites = nVSites
               dna_regions$nSNVSites = nSNVSites
               dna_regions$pi = pi
