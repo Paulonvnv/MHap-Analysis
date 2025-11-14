@@ -835,7 +835,7 @@ join_ampseq = function(ampseq_obj_list = NULL, remove_replicates = TRUE){
         
         # Confirm that sorting is correct
         if(sum(names(shared_asv_seqs_2add) != names(shared_asv_seqs_inCurrentData)) > 0){
-          stop('hapids of Fasta sequences not prperly sorted')
+          stop('hapids of Fasta sequences not properly sorted')
         }
         
         # Update the read counts, the sample counts, and the bimera status
@@ -955,17 +955,26 @@ join_ampseq = function(ampseq_obj_list = NULL, remove_replicates = TRUE){
       }
       
       temp_asv_table_2add = temp_asv_table_2add[!(as.character(temp_asv_seqs_2add) %in% as.character(asv_seqs)),]
-      temp_asv_seqs_2add = temp_asv_seqs_2add[!(as.character(temp_asv_seqs_2add) %in% as.character(asv_seqs))]
       
-      names(temp_asv_seqs_2add) = paste0('ASV',(1 + length(asv_seqs)):(length(temp_asv_seqs_2add) + length(asv_seqs)))
-      temp_asv_table_2add$hapid = names(temp_asv_seqs_2add)
+      if(nrow(temp_asv_table_2add) > 0){
+        
+        temp_asv_seqs_2add = temp_asv_seqs_2add[!(as.character(temp_asv_seqs_2add) %in% as.character(asv_seqs))]
+        
+        names(temp_asv_seqs_2add) = paste0('ASV',(1 + length(asv_seqs)):(length(temp_asv_seqs_2add) + length(asv_seqs)))
+        temp_asv_table_2add$hapid = names(temp_asv_seqs_2add)
+        
+        # merging asv_seqs
+        asv_seqs = DNAStringSet(c(as.character(asv_seqs), as.character(temp_asv_seqs_2add)))
+        
+        # merging asv_table
+        asv_table = rbind(asv_table, temp_asv_table_2add)
+        asv_table = asv_table[order(as.integer(gsub('ASV','',asv_table$hapid))),]
+        
+      }else{
+        
+        asv_table = asv_table[order(as.integer(gsub('ASV','',asv_table$hapid))),]
+      }
       
-      # merging asv_seqs
-      asv_seqs = DNAStringSet(c(as.character(asv_seqs), as.character(temp_asv_seqs_2add)))
-      
-      # merging asv_table
-      asv_table = rbind(asv_table, temp_asv_table_2add)
-      asv_table = asv_table[order(as.integer(gsub('ASV','',asv_table$hapid))),]
       
       # merging marker table
       unshared_attributes = names(temp_markers_2add)[!(names(temp_markers_2add) %in% names(markers))]
@@ -1071,35 +1080,37 @@ join_ampseq = function(ampseq_obj_list = NULL, remove_replicates = TRUE){
   # Remove duplicates
   if(remove_replicates){
     
-    print("Duplicated samples are being removed...")
-    
-    duplicated_samples = metadata[duplicated(metadata$Sample_id),][['Sample_id']]
-    
-    gt_replicates = gt[duplicated(metadata$Sample_id),]
-    gt = gt[!duplicated(metadata$Sample_id),]
-    
-    metadata_replicates = metadata[duplicated(metadata$Sample_id),]
-    metadata = metadata[!duplicated(metadata$Sample_id),]
-    
-    rownames(metadata) = metadata[['Sample_id']]
-    rownames(gt) = metadata[['Sample_id']]
-    
-    rownames(metadata_replicates) = metadata_replicates[['Sample_id']]
-    rownames(gt_replicates) = metadata_replicates[['Sample_id']]
-    
-    for(sample in duplicated_samples){
+    if(sum(duplicated(metadata$Sample_id)) > 0){
+      print("Duplicated samples are being removed...")
       
-      temp_data = rbind(gt[sample,],
-                        gt_replicates[sample,])
+      duplicated_samples = metadata[duplicated(metadata$Sample_id),][['Sample_id']]
       
-      temp_metadata = rbind(metadata[metadata$Sample_id == sample, ],
-                            metadata_replicates[metadata_replicates$Sample_id == sample, ])
+      gt_replicates = gt[duplicated(metadata$Sample_id),]
+      gt = gt[!duplicated(metadata$Sample_id),]
       
-      temp_test = rowSums(!is.na(temp_data), na.rm = T)
+      metadata_replicates = metadata[duplicated(metadata$Sample_id),]
+      metadata = metadata[!duplicated(metadata$Sample_id),]
       
-      gt[sample,] = temp_data[which.max(temp_test),]
-      metadata[metadata$Sample_id == sample, ] = temp_metadata[which.max(temp_test),]
+      rownames(metadata) = metadata[['Sample_id']]
+      rownames(gt) = metadata[['Sample_id']]
       
+      rownames(metadata_replicates) = metadata_replicates[['Sample_id']]
+      rownames(gt_replicates) = metadata_replicates[['Sample_id']]
+      
+      for(sample in duplicated_samples){
+        
+        temp_data = rbind(gt[sample,],
+                          gt_replicates[sample,])
+        
+        temp_metadata = rbind(metadata[metadata$Sample_id == sample, ],
+                              metadata_replicates[metadata_replicates$Sample_id == sample, ])
+        
+        temp_test = rowSums(!is.na(temp_data), na.rm = T)
+        
+        gt[sample,] = temp_data[which.max(temp_test),]
+        metadata[metadata$Sample_id == sample, ] = temp_metadata[which.max(temp_test),]
+        
+      }
     }
     
   }
@@ -9432,7 +9443,10 @@ plot_relatedness_distribution = function(pairwise_relatedness = pairwise_related
   
   if(!is.null(pop_levels)){
     pairwise_relatedness_l$Pop_comparison = factor(pairwise_relatedness_l$Pop_comparison,
-                                                   levels = pop_levels)
+                                                   levels = c(pop_levels,
+                                                              apply(combn(pop_levels,2), 2, function(x){paste(sort(x), collapse = '_vs_')})
+                                                              )
+                                                   )
   }else{
     pairwise_relatedness_l$Pop_comparison = factor(pairwise_relatedness_l$Pop_comparison,
                                                    levels = c(sort(unique(metadata[!is.na(metadata[[Population]]),][[Population]])),
@@ -9929,16 +9943,25 @@ plot_frac_highly_related_over_time = function(pairwise_relatedness = pairwise_re
 
 
 
-sort_Long_matrix = function(pairwise_relatedness_l, Var1, Var2){
+sort_Long_matrix = function(pairwise_relatedness_l, Var1, Var2, pop_levels = NULL){
   
-  pairwise_relatedness_l = pairwise_relatedness_l[,c('Yi', 'Yj', 'khat', 'rhat', Var1, Var2)]
+  pairwise_relatedness_l = pairwise_relatedness_l[,c('Yi', 'Yj', 'rhat', Var1, Var2)]
   
   pairwise_relatedness_l_sorted = NULL
   
-  comparisons = cbind(rbind(
-    sort(unique(c(unique(pairwise_relatedness_l[[Var1]]), unique(pairwise_relatedness_l[[Var2]])))),
-    sort(unique(c(unique(pairwise_relatedness_l[[Var1]]), unique(pairwise_relatedness_l[[Var2]]))))),
-    combn(sort(unique(c(unique(pairwise_relatedness_l[[Var1]]), unique(pairwise_relatedness_l[[Var2]])))), 2))
+  if(is.null(pop_levels)){
+    comparisons = cbind(rbind(
+      sort(unique(c(unique(pairwise_relatedness_l[[Var1]]), unique(pairwise_relatedness_l[[Var2]])))),
+      sort(unique(c(unique(pairwise_relatedness_l[[Var1]]), unique(pairwise_relatedness_l[[Var2]]))))),
+      combn(sort(unique(c(unique(pairwise_relatedness_l[[Var1]]), unique(pairwise_relatedness_l[[Var2]])))), 2))  
+  }else{
+    
+    comparisons = cbind(rbind(
+      pop_levels,
+      pop_levels),
+      combn(pop_levels, 2))
+  }
+  
   
   for(comparison in 1:ncol(comparisons)){
     var1 = comparisons[,comparison][1]
@@ -10161,8 +10184,9 @@ plot_ggnetwork = function(pairwise_relatedness,
                           metadata,
                           sample_id,
                           color_by = NULL,
-                          #color_palette = NULL, 
+                          palette = 'Paired', 
                           shape_by = NULL,
+                          shape_levels = NULL,
                           alpha_by = NULL,
                           alpha = NULL,
                           vertex.size = 4,
@@ -10250,7 +10274,13 @@ plot_ggnetwork = function(pairwise_relatedness,
   }
   
   if(!is.null(shape_by)){
-    relatedness_network %v% shape_by = as.character(metadata[[shape_by]])  
+    
+    if(!is.null(shape_levels)){
+      relatedness_network %v% shape_by = factor(metadata[[shape_by]], levels = shape_levels)
+    }else{
+      relatedness_network %v% shape_by = as.character(metadata[[shape_by]])  
+    }
+      
   }else{
     shape_by = 16
   }
@@ -10263,15 +10293,46 @@ plot_ggnetwork = function(pairwise_relatedness,
     alpha_by = 1
   }
   
+  if('AUTO' %in% toupper(palette)){
+    
+    qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+    col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
+    
+    palette = col_vector[1:length(unique(metadata[[color_by]]))]
+    
+  }
   
-  plot_network = ggnet2(relatedness_network,
-                        size = vertex.size,
-                        color = color_by,
-                        #color.palette = color_palette,
-                        shape = shape_by,
-                        palette = 'Paired',
-                        alpha = alpha_by,
-                        mode = mode)
+  if(length(palette) > 1){
+    
+    plot_network = ggnet2(relatedness_network,
+                          size = vertex.size,
+                          color = color_by,
+                          #color.palette = color_palette,
+                          shape = shape_by,
+                          #palette = 'Paired',
+                          #color.label = TRUE,
+                          alpha = alpha_by,
+                          mode = mode)
+    
+    
+    plot_network = plot_network +
+      scale_color_manual(values = palette)
+    
+  }else{
+    
+    plot_network = ggnet2(relatedness_network,
+                          size = vertex.size,
+                          color = color_by,
+                          #color.palette = color_palette,
+                          shape = shape_by,
+                          palette = palette,
+                          #color.label = TRUE,
+                          alpha = alpha_by,
+                          mode = mode)
+    
+  }
+  
+  
 
   
   return(list(network_object = relatedness_network,
@@ -11069,21 +11130,27 @@ rGenome2ampseq = function(rGenome_object,
                  dimnames = list(
                    rownames(rGenome_object@loci_table[rGenome_object@loci_table[['CHROM']] == amplicon_chromosome &
                                                 rGenome_object@loci_table[['POS']] %in% amplicon_positions,]),
-                   names(rGenome_object@gt[rGenome_object@loci_table[['CHROM']] == amplicon_chromosome &
-                                                rGenome_object@loci_table[['POS']] %in% amplicon_positions,])
+                   colnames(rGenome_object@gt)
+                   # names(rGenome_object@gt[rGenome_object@loci_table[['CHROM']] == amplicon_chromosome &
+                   #                              rGenome_object@loci_table[['POS']] %in% amplicon_positions,])
                  )
           )
         
       }else if(length(rGenome_positions) >1){
+        
+        samples_names = colnames(rGenome_object@gt)
+        position_names = rownames(rGenome_object@gt)
+        
         rGenome_gt_amplicon = 
           matrix(rGenome_object@gt[rGenome_object@loci_table[['CHROM']] == amplicon_chromosome &
                                      rGenome_object@loci_table[['POS']] %in% amplicon_positions,],
                  nrow = length(rGenome_positions),
                  dimnames = list(
-                   rownames(rGenome_object@gt[rGenome_object@loci_table[['CHROM']] == amplicon_chromosome &
-                                                rGenome_object@loci_table[['POS']] %in% amplicon_positions,]),
-                   colnames(rGenome_object@gt[rGenome_object@loci_table[['CHROM']] == amplicon_chromosome &
-                                                rGenome_object@loci_table[['POS']] %in% amplicon_positions,])
+                   position_names[rGenome_object@loci_table[['CHROM']] == amplicon_chromosome &
+                                                rGenome_object@loci_table[['POS']] %in% amplicon_positions],
+                   colnames(rGenome_object@gt)
+                   # names(rGenome_object@gt[rGenome_object@loci_table[['CHROM']] == amplicon_chromosome &
+                   #                              rGenome_object@loci_table[['POS']] %in% amplicon_positions,])
                  )
           )
         
@@ -11120,7 +11187,9 @@ rGenome2ampseq = function(rGenome_object,
         
         for(alt_allele in 1:length(alt_alleles)){
           
-          if(nchar(ref_allele) == 1 & nchar(alt_alleles[alt_allele]) == 1 & alt_alleles[alt_allele] != '*'){# it is an SNV
+          if(is.na(alt_alleles[alt_allele])){ # site is monomorphic and sample has the reference allele
+            
+          }else if(nchar(ref_allele) == 1 & nchar(alt_alleles[alt_allele]) == 1 & alt_alleles[alt_allele] != '*'){# it is an SNV
             
             # For monoclonals
             rGenome_gt_amplicon_alleles[which(rGenome_loci_table_amplicon$POS == amplicon_position),
@@ -11798,7 +11867,7 @@ rGenome2ampseq = function(rGenome_object,
   
   asv_table$hapid = paste0('ASV', 1:nrow(asv_table))
   
-  asv_seqs = cigar_strings2fasta(obj = asv_table, ref_fasta = ref_fasta, cigar_string_col = 'CIGAR', amplicon_col = 'Amplicon', format = 'DNAStringSet')
+  asv_seqs = cigar_strings2fasta(obj = asv_table, ref_fasta = ref_seqs, cigar_string_col = 'CIGAR', amplicon_col = 'Amplicon', format = 'DNAStringSet')
   
   names(asv_seqs) = asv_table$hapid
   #asv = 'ASV4780'
