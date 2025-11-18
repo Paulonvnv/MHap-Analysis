@@ -9135,7 +9135,7 @@ fs_checks <- function(fs, warn,
 ### estimate_r_and_k----
 
 estimate_r_and_k <- function(fs, ds, Ys, epsilon = 0.001, rho = 7.4 * 10 ^ (-7),
-                             kinit = 50, rinit = 0.5, warn_fs = TRUE) {
+                             kinit = 5, rinit = 0.5, warn_fs = TRUE, max_k = 200) {
   
   # Convert to a into matrix if not already (loglikelihood_cpp expects a matrix)
   # and perform some checks
@@ -9157,7 +9157,7 @@ estimate_r_and_k <- function(fs, ds, Ys, epsilon = 0.001, rho = 7.4 * 10 ^ (-7),
   # }
   
   # Define the function to pass to optim()
-  ll <- function(k, r) loglikelihood_cpp(k, r, Ys, fs, ds, epsilon, rho)
+  ll <- function(k, r) loglikelihood_cpp(k, r, Ys, fs, ds, epsilon, rho, max_k)
   
   # Optimise the negative log likelihood
   optimization <- optim(par = c(kinit, rinit), fn = function(x) - ll(x[1], x[2]))
@@ -9174,18 +9174,26 @@ estimate_r_and_k <- function(fs, ds, Ys, epsilon = 0.001, rho = 7.4 * 10 ^ (-7),
 }
 
 
+rGenome2loci = function(rGenome_object){
+  
+}
+
+
 ### pairwise_hmmIBD----
 
-
-pairwise_hmmIBD = function(obj = NULL, parallel = TRUE, w = 1, n = 1){
+pairwise_hmmIBD = function(obj = NULL, parallel = TRUE, w = 1, n = 1, max_k = 200, pairs = NULL){
   library(parallel)
   library(doMC)
   library(svMisc)
   
   if(class(obj) == 'ampseq'){
-    loci_object = ampseq2loci(ampseq_object)
+    loci_object = ampseq2loci(obj)
   }else if(class(obj) == 'loci'){
     loci_object = obj
+  }else if(class(obj) == 'rGenome'){
+    gt = t(obj@gt)
+    gt = gsub('/', '_', gt)
+    gt[grepl('\\.:\\.', gt)] = NA
   }else{
     stop("This function requires an object of the class loci or ampseq")
   }
@@ -9200,7 +9208,9 @@ pairwise_hmmIBD = function(obj = NULL, parallel = TRUE, w = 1, n = 1){
   freq_table = freq_table[polymorphic_sites,]
   markers = markers[polymorphic_sites,]
   
-  pairs = as.data.frame(t(combn(rownames(loci_table), 2)))
+  if(is.null(pairs)){
+    pairs = as.data.frame(t(combn(rownames(loci_table), 2)))  
+  }
   
   s = round(seq(1,nrow(pairs)+1, length.out=n+1))
   low = s[w]
@@ -9208,7 +9218,7 @@ pairwise_hmmIBD = function(obj = NULL, parallel = TRUE, w = 1, n = 1){
   
   pairs = pairs[low:high,]
   
-  fx_get_relatedness = function(Yi, Yj, freq_table, markers){
+  fx_get_relatedness = function(Yi, Yj, freq_table, markers, max_k){
     
     Ys = cbind(Yi, Yj)
     
@@ -9244,12 +9254,13 @@ pairwise_hmmIBD = function(obj = NULL, parallel = TRUE, w = 1, n = 1){
     }
     
     ds = no_na_markers$distance
-
+    
     
     estimate = estimate_r_and_k(fs = fs,
                                 ds = ds,
                                 Ys = Ys,
-                                warn_fs = F)
+                                warn_fs = F, 
+                                max_k = max_k)
     
     return(estimate)
   }
@@ -9289,7 +9300,7 @@ pairwise_hmmIBD = function(obj = NULL, parallel = TRUE, w = 1, n = 1){
           
           if(sum(is.na(Yi[haplotype_i,] - Yj[haplotype_j,]))/length(Yi[haplotype_i,]) < 1){
             
-            estimate = rbind(estimate, fx_get_relatedness(Yi[haplotype_i,], Yj[haplotype_j,], freq_table, markers))
+            estimate = rbind(estimate, fx_get_relatedness(Yi[haplotype_i,], Yj[haplotype_j,], freq_table, markers, max_k = max_k))
             
           }else{
             
@@ -9351,7 +9362,9 @@ pairwise_hmmIBD = function(obj = NULL, parallel = TRUE, w = 1, n = 1){
           
           if(sum(is.na(Yi[haplotype_i,] - Yj[haplotype_j,]))/length(Yi[haplotype_i,]) < 1){
             
-            estimate = rbind(estimate, fx_get_relatedness(Yi[haplotype_i,], Yj[haplotype_j,], freq_table, markers))
+            estimate = rbind(estimate, fx_get_relatedness(Yi = Yi[haplotype_i,], 
+                                                          Yj = Yj[haplotype_j,], 
+                                                          freq_table, markers, max_k = max_k))
             
           }else{
             
@@ -9384,6 +9397,7 @@ pairwise_hmmIBD = function(obj = NULL, parallel = TRUE, w = 1, n = 1){
   return(pairwise_df)
   
 }
+
 
 ### plot_relatedness_distribution----
 
@@ -10051,27 +10065,61 @@ plot_network = function(pairwise_relatedness,
     library(ggnet)
   }else{library(ggnet)}
   
+  library(parallel)
+  library(doMC)
   
-  edges = NULL
+  registerDoMC(detectCores())
+  
+  print('Defining edges ...')
+  
+  edges_start = Sys.time()
+  
   
   selected_edges <- pairwise_relatedness_l[pairwise_relatedness_l[[variable]] >= threshold,][,cols]
-  for(edge in 1:nrow(selected_edges)){
-    edges = c(edges,unlist(selected_edges[edge,]))
+  
+  # edges = NULL
+  # for(edge in 1:nrow(selected_edges)){
+  #   edges = c(edges,unlist(selected_edges[edge,]))
+  # }
+  
+  edges = foreach(edge = 1:nrow(selected_edges), .combine = 'c') %dopar%{
+
+    unlist(selected_edges[edge,])
   }
   
   isolates = unique(unlist(pairwise_relatedness_l[,cols]))[!(unique(unlist(pairwise_relatedness_l[,cols])) %in% unique(edges))]
   
+  edges_end = Sys.time()
+  print('Identification of samples conected by edges and singletons took:')
+  print(edges_end - edges_start)
+  
+  
+  print('Creating network object ...')
+  
+  network_start = Sys.time()
   network_object = graph(edges = edges, isolates = isolates, directed=F)
+  network_end = Sys.time()
   
+  print('Generiation of the network object took: ')
+  print(network_end - network_start)
+  
+  print('Adding colors to nodes ...')
+  
+  painting_start = Sys.time()
   node_colors = c(unique(edges), isolates)
-  
   names(node_colors) = node_colors
   
   for(level in 1:length(levels)){
     node_colors[node_colors %in% metadata[metadata[[group_by]] == levels[level],][[sample_id]]] = colors[level]
   }
   
+  painting_end = Sys.time()
+  print('Coloring nodes took:')
+  print(painting_end - painting_start)
   
+  print('Ploting network ...')
+  
+  ploting_start = Sys.time()
   if(method %in% c('msn', 'mst')){
     
     network_object <- mst(network_object)
@@ -10104,6 +10152,14 @@ plot_network = function(pairwise_relatedness,
     
   }
   
+  ploting_end = Sys.time()
+  
+  print('Ploting took:')
+  print(ploting_end - ploting_start)
+  
+  print('Identifying clusters in network ...')
+    
+  clusters_start = Sys.time()
   clusters = NULL
   for(node in 1:length(network_object)){
     
@@ -10169,6 +10225,13 @@ plot_network = function(pairwise_relatedness,
     
     cluster_df = rbind(cluster_df, data.frame(Cluster = cluster_name, Sample_id = clusters[[cluster]]))
   }
+  
+  
+  clusters_end = Sys.time()
+  
+  print('Identification of clusters took:')
+  
+  print(clusters_end - clusters_start)
   
   return(list(network_object = network_object,
               plot_network = plot_network,

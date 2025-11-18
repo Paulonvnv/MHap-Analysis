@@ -58,12 +58,13 @@ using namespace Rcpp;
 // [[Rcpp::export]]
 double loglikelihood_cpp(double k, double r,
                          const IntegerMatrix & Ys,
-                         const NumericMatrix & f, const NumericVector & gendist,
-                         double epsilon, double rho){
+                         const NumericMatrix & f, 
+                         const NumericVector & gendist,
+                         double epsilon, double rho, double max_k){
   // loglikelihood to be computed
   double loglikelihood_value = 0.;
   double l_idata, lk0, lk1, exp_, a01, a11, incr; // temporary quantities used to break down calculations
-  if (r < 0 || r > 1 || k < 0){ // if r or k are not in the feasible range, return -infinity.
+  if (r < 0 || r > 1 || k > max_k){ // if r or k are not in the feasible range, return -infinity.
     return(log(0.));
   }
   // predictive distribution of latent chain given past observations
