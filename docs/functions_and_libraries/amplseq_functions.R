@@ -2312,7 +2312,7 @@ ampseq2loci = function(ampseq_object){
 
 ## ampseq2vcf----
 
-ampseq2vcf = function(ampseq_object, monoclonals = NULL, polyclonals = NULL, ref_fasta){
+ampseq2vcf = function(ampseq_object, monoclonals = NULL, polyclonals = NULL, ref_fasta, ploidy = 2){
   
   markers = ampseq_object@markers
   asv_table = ampseq_object@asv_table
@@ -2379,6 +2379,7 @@ ampseq2vcf = function(ampseq_object, monoclonals = NULL, polyclonals = NULL, ref
           
         }
         
+        
         if(sum(grepl('D', ALT_alleles)) > 0 & sum(grepl('I', ALT_alleles)) == 0){
           
           REF = gsub('D=', '', ALT_alleles[which.max(nchar(ALT_alleles))])
@@ -2397,9 +2398,9 @@ ampseq2vcf = function(ampseq_object, monoclonals = NULL, polyclonals = NULL, ref
           
         }else if(sum(grepl('I', ALT_alleles)) == 0 & sum(grepl('D', ALT_alleles)) == 0){
           
-          REF = Biostrings::substr(reference_genome[[unique(cigar_position_variants$CHROM)]],
+          REF = as.character(Biostrings::substr(reference_genome[[unique(cigar_position_variants$CHROM)]],
                                    start = unique(cigar_position_variants[cigar_position_variants$amplicon_POS == position,][['POS']]),
-                                   stop = unique(cigar_position_variants[cigar_position_variants$amplicon_POS == position,][['POS']]))
+                                   stop = unique(cigar_position_variants[cigar_position_variants$amplicon_POS == position,][['POS']])))
           
         }else if(sum(grepl('I', ALT_alleles)) > 0 & sum(grepl('D', ALT_alleles)) > 0){
           
@@ -2415,6 +2416,9 @@ ampseq2vcf = function(ampseq_object, monoclonals = NULL, polyclonals = NULL, ref
           
         }
         
+        #ALT_alleles = ALT_alleles[ALT_alleles != REF]
+        
+        
         amplicon_loci_table = rbind(amplicon_loci_table,
                                     data.frame(CHROM = unique(cigar_position_variants$CHROM),
                                                POS = unique(cigar_position_variants[cigar_position_variants$amplicon_POS == position,][['POS']]),
@@ -2425,6 +2429,14 @@ ampseq2vcf = function(ampseq_object, monoclonals = NULL, polyclonals = NULL, ref
                                                FILTER = NA,
                                                INFO = NA, 
                                                FORMAT = NA))
+        
+        test = sapply(rownames(amplicon_loci_table), function(pos){
+          amplicon_loci_table[pos,][['REF']] %in% unlist(strsplit(amplicon_loci_table[pos,][['ALT']], ','))
+        }, simplify = T)
+        
+        # ERROR HERE
+        # if(sum(test) > 0){
+        #   stop('ALT contains REF allele')}
         
 
         if(sum(duplicated(paste(amplicon_loci_table$CHROM, amplicon_loci_table$POS, sep = '_'))) > 0){stop()}
@@ -2663,6 +2675,8 @@ ampseq2vcf = function(ampseq_object, monoclonals = NULL, polyclonals = NULL, ref
   loci_table[['FORMAT']] = 'GT:AD:DP'
   
   VCF_object = cbind(loci_table, gt)
+  
+  VCF_object = correct_vcf_file(VCF_object)
   
   return(VCF_object)
   
@@ -8718,7 +8732,7 @@ get_polygenomic = function(ampseq_object, strata = NULL, update_popsummary = T, 
 
 ### draw_haplotypes----
 
-draw_haplotypes = function(ampseq_object = NULL, comparison_list = NULL, max_coi = NULL, combine_lists = F){
+draw_haplotypes = function(obj = NULL, comparison_list = NULL, max_coi = NULL, combine_lists = F){
   
   if(!combine_lists){
     
@@ -8726,9 +8740,15 @@ draw_haplotypes = function(ampseq_object = NULL, comparison_list = NULL, max_coi
     
     for(comparison in 1:length(comparison_list)){
       
-      temp_ampseq = filter_samples(ampseq_object, comparison_list[[comparison]], update_cigars = FALSE)
+      temp_ampseq = filter_samples(obj, obj@metadata$Sample_id %in% comparison_list[[comparison]], update_cigars = FALSE)
+      
       
       gt = temp_ampseq@gt
+      
+      if(class(temp_ampseq) == 'rGenome'){
+        gt = t(gt)
+      }
+      
       gt = gsub(':\\d+', '', gt)
       
       for(mhap in 1:ncol(gt)){
@@ -8845,9 +8865,15 @@ draw_haplotypes = function(ampseq_object = NULL, comparison_list = NULL, max_coi
       
       colnames(coded_haplotypes_temp) = c('Marker', rownames(gt_final))
       
-      coded_haplotypes_temp = left_join(coded_haplotypes_temp, 
-                                        ampseq_object@markers[,c('amplicon', 'chromosome', 'pos')],
-                                        by = join_by('Marker' == 'amplicon'))
+      if(class(obj) == 'ampseq'){
+        coded_haplotypes_temp = left_join(coded_haplotypes_temp, 
+                                          obj@markers[,c('amplicon', 'chromosome', 'pos')],
+                                          by = join_by('Marker' == 'amplicon'))
+      }else if(class(obj) == 'rGenome'){
+        coded_haplotypes_temp %<>% mutate(chromosome = gsub('_\\d+$', '', Marker),
+                                          pos = as.integer(gsub('.+_', '', Marker)))
+      }
+      
       
       coded_haplotypes_temp %<>% pivot_longer(cols = all_of(rownames(gt_final)), names_to = 'Haplotype', values_to = 'Allele')
       
@@ -8894,7 +8920,7 @@ draw_haplotypes = function(ampseq_object = NULL, comparison_list = NULL, max_coi
       rep(Strata, length(comparison_list[[Strata]]))})),
                Sample =unlist(comparison_list))
     
-    temp_ampseq = filter_samples(ampseq_object, comparison_df[['Sample']], update_cigars = FALSE)
+    temp_ampseq = filter_samples(obj, comparison_df[['Sample']], update_cigars = FALSE)
     
     gt = temp_ampseq@gt
     gt = gsub(':\\d+', '', gt)
@@ -9016,7 +9042,7 @@ draw_haplotypes = function(ampseq_object = NULL, comparison_list = NULL, max_coi
     colnames(coded_haplotypes) = c('Marker', rownames(gt_final))
     
     coded_haplotypes = left_join(coded_haplotypes, 
-                                 ampseq_object@markers[,c('amplicon', 'chromosome', 'pos')],
+                                 obj@markers[,c('amplicon', 'chromosome', 'pos')],
                                  by = join_by('Marker' == 'amplicon'))
     
     coded_haplotypes %<>% pivot_longer(cols = all_of(rownames(gt_final)), names_to = 'Haplotype', values_to = 'Allele')
@@ -9173,15 +9199,58 @@ estimate_r_and_k <- function(fs, ds, Ys, epsilon = 0.001, rho = 7.4 * 10 ^ (-7),
   return(rkhats)
 }
 
+# rGenome2loci----
 
 rGenome2loci = function(rGenome_object){
+  
+  loci_table = t(gsub(':\\d+', '', rGenome_object@gt))
+  
+  allele_counts = get_AC(rGenome_object)
+  
+  allele_freq_list = NULL
+  
+  for(locus in rownames(allele_counts)){
+    
+    allele_freq_list[[locus]] = as.numeric(gsub('^\\d+:', '', unlist(strsplit(allele_counts[locus, ][['Allele_Counts']], ','))))
+    allele_freq_list[[locus]] = allele_freq_list[[locus]]/sum(allele_freq_list[[locus]])
+    names(allele_freq_list[[locus]]) = unlist(strsplit(allele_counts[locus, ][['Alleles']], ','))
+    
+  }
+  
+  freq_table = matrix(NA, nrow = length(allele_freq_list), ncol = max(sapply(allele_freq_list, length)),
+                      dimnames = list(names(allele_freq_list),
+                                      paste("Allele",seq(0,max(sapply(allele_freq_list, length)) - 1,1), sep = "_")))
+  
+  for (locus in names(allele_freq_list)){
+    for(allele in 1:length(allele_freq_list[[locus]])){
+      freq_table[locus, allele] = allele_freq_list[[locus]][allele]
+    }
+  }
+  
+  freq_table[is.na(freq_table)] = 0
+  
+  markers = rGenome_object@loci_table
+  
+  markers %<>% mutate(chromosome = CHROM,
+                      pos = POS) %>%
+    select(chromosome, pos, REF, ALT)
+  
+  
+  loci_object = create_loci(
+    loci_table = loci_table,
+    metadata = rGenome_object@metadata,
+    freq_table = freq_table,
+    ampseq_alleles_per_locus = allele_freq_list,
+    markers = markers)
+  
+  return(loci_object)
   
 }
 
 
 ### pairwise_hmmIBD----
 
-pairwise_hmmIBD = function(obj = NULL, parallel = TRUE, w = 1, n = 1, max_k = 200, pairs = NULL){
+pairwise_hmmIBD = function(obj = NULL, parallel = TRUE, w = 1, n = 1, max_k = 200, pairs = NULL, viterbi = F){
   library(parallel)
   library(doMC)
   library(svMisc)
@@ -9222,7 +9291,7 @@ pairwise_hmmIBD = function(obj = NULL, parallel = TRUE, w = 1, n = 1, max_k = 20
     
     Ys = cbind(Yi, Yj)
     
-    rownames(Ys) = colnames(loci_table)
+    rownames(Ys) = rownames(freq_table)
     
     fs = freq_table[!is.na(Ys[,"Yi"]) & !is.na(Ys[,"Yj"]),]
     
@@ -9397,6 +9466,442 @@ pairwise_hmmIBD = function(obj = NULL, parallel = TRUE, w = 1, n = 1, max_k = 20
   return(pairwise_df)
   
 }
+
+# pairwise_hmmIBD_viterbi----
+pairwise_hmmIBD_viterbi = function(obj = NULL, parallel = TRUE, w = 1, n = 1, max_k = 200, pairs = NULL, viterbi = F){
+  library(parallel)
+  library(doMC)
+  library(svMisc)
+  
+  if(class(obj) == 'ampseq'){
+    loci_object = ampseq2loci(obj)
+  }else if(class(obj) == 'loci'){
+    loci_object = obj
+  }else if(class(obj) == 'rGenome'){
+    gt = t(obj@gt)
+    gt = gsub('/', '_', gt)
+    gt[grepl('\\.:\\.', gt)] = NA
+  }else{
+    stop("This function requires an object of the class loci or ampseq")
+  }
+  
+  loci_table = loci_object@loci_table
+  freq_table = loci_object@freq_table
+  markers = loci_object@markers
+  
+  polymorphic_sites = which(rowSums(freq_table == 1) == 0)
+  
+  loci_table = loci_table[,polymorphic_sites]
+  freq_table = freq_table[polymorphic_sites,]
+  markers = markers[polymorphic_sites,]
+  
+  if(is.null(pairs)){
+    pairs = as.data.frame(t(combn(rownames(loci_table), 2)))  
+  }
+  
+  s = round(seq(1,nrow(pairs)+1, length.out=n+1))
+  low = s[w]
+  high = s[w+1]-1
+  
+  pairs = pairs[low:high,]
+  
+  fx_get_relatedness = function(Yi, Yj, freq_table, markers, max_k){
+    
+    Ys = cbind(Yi, Yj)
+    
+    rownames(Ys) = rownames(freq_table)
+    
+    fs = freq_table[!is.na(Ys[,"Yi"]) & !is.na(Ys[,"Yj"]),]
+    
+    no_na_markers = markers[!is.na(Ys[,"Yi"]) & !is.na(Ys[,"Yj"]),]
+    
+    Ys =Ys[!is.na(Ys[,"Yi"]) & !is.na(Ys[,"Yj"]),]
+    fs = fs[Ys[,1] <= 9 & Ys[,2] <= 9,]
+    no_na_markers = no_na_markers[Ys[,1] <= 9 & Ys[,2] <= 9,]
+    Ys = Ys[Ys[,1] <= 9 & Ys[,2] <= 9,]
+    
+    no_na_markers[["distance"]] = Inf
+    no_na_markers = no_na_markers[fs[,1] != 1,]
+    Ys = Ys[fs[,1] != 1,]
+    fs = fs[fs[,1] != 1,]
+    
+    for(chromosome in levels(as.factor(no_na_markers[["chromosome"]]))){
+      for(amplicon in 1:(nrow(no_na_markers[no_na_markers[["chromosome"]] == chromosome,])-1)){
+        no_na_markers[no_na_markers[["chromosome"]] == chromosome,][amplicon, "distance"] = 
+          no_na_markers[no_na_markers[["chromosome"]] == chromosome,][amplicon + 1, "pos"] - no_na_markers[no_na_markers[["chromosome"]] == chromosome,][amplicon, "pos"]
+      }
+    }
+    
+    if(sum(is.na(no_na_markers$distance)) > 0){
+      no_na_markers[is.na(no_na_markers$distance),][['distance']] = Inf  
+    }
+    
+    if(sum(no_na_markers$distance < 0) > 0){
+      no_na_markers$distance[no_na_markers$distance < 0 ] = Inf
+    }
+    
+    ds = no_na_markers$distance
+    
+    
+    estimate = estimate_r_and_k(fs = fs,
+                                ds = ds,
+                                Ys = Ys,
+                                warn_fs = F, 
+                                max_k = max_k)
+    
+    return(estimate)
+  }
+  
+  
+  get_hmmibd_viterbi_normalized = function(freq_table,
+                                           markers,
+                                           Yi,
+                                           Yj,
+                                           rhat = 0.4929262,
+                                           khat = 20,
+                                           epsilon = 1e-4,
+                                           rho = 7.4 * 10^(-7)){
+    
+    
+    Ys = cbind(Yi, Yj)
+    
+    rownames(Ys) = rownames(freq_table)
+    
+    fs = freq_table[!is.na(Ys[,"Yi"]) & !is.na(Ys[,"Yj"]),]
+    
+    no_na_markers = markers[!is.na(Ys[,"Yi"]) & !is.na(Ys[,"Yj"]),]
+    
+    Ys =Ys[!is.na(Ys[,"Yi"]) & !is.na(Ys[,"Yj"]),]
+    fs = fs[Ys[,1] <= 9 & Ys[,2] <= 9,]
+    no_na_markers = no_na_markers[Ys[,1] <= 9 & Ys[,2] <= 9,]
+    Ys = Ys[Ys[,1] <= 9 & Ys[,2] <= 9,]
+    
+    no_na_markers[["distance"]] = Inf
+    no_na_markers = no_na_markers[fs[,1] != 1,]
+    Ys = Ys[fs[,1] != 1,]
+    fs = fs[fs[,1] != 1,]
+    
+    
+    for(chromosome in levels(as.factor(no_na_markers[["chromosome"]]))){
+      for(amplicon in 1:(nrow(no_na_markers[no_na_markers[["chromosome"]] == chromosome,])-1)){
+        no_na_markers[no_na_markers[["chromosome"]] == chromosome,][amplicon, "distance"] = 
+          no_na_markers[no_na_markers[["chromosome"]] == chromosome,][amplicon + 1, "pos"] - no_na_markers[no_na_markers[["chromosome"]] == chromosome,][amplicon, "pos"]
+      }
+    }
+    
+    if(sum(is.na(no_na_markers$distance)) > 0){
+      no_na_markers[is.na(no_na_markers$distance),][['distance']] = Inf  
+    }
+    
+    if(sum(no_na_markers$distance < 0) > 0){
+      no_na_markers$distance[no_na_markers$distance < 0 ] = Inf
+    }
+    
+    ds = no_na_markers$distance
+    
+    
+    pi_j_t = matrix(NA, nrow = nrow(fs), ncol = 2,
+                    dimnames = list(rownames(fs), c("IBD0","IBD1")))
+    
+    pi_j_t[1,] = c(1 - rhat, rhat)
+    
+    ## alpha
+    
+    alpha_j_t = matrix(NA, nrow = nrow(fs), ncol = 7,
+                       dimnames = list(rownames(fs), c("IBD0","IBD1", "Marker","Yi", "Yj","Yi_freq", "Yj_freq")))
+    
+    
+    alpha_j_t = as.data.frame(alpha_j_t)
+    
+    # Recursion
+    for(obs in 1:nrow(Ys)){
+      
+      #if(obs == 10){stop()}
+      # Emission probabilities 
+      alleles = fs[obs,][fs[obs,]!=0]
+      
+      ## Emission probability given IBD is 0
+      b0_ot = 0
+      incr_0 = 0
+      for(allele_i in names(alleles)){
+        for(allele_j in names(alleles)){
+          
+          incr_0 = alleles[allele_i]
+          if(as.integer(str_extract(allele_i, '\\d+$')) == Ys[obs, 1]){
+            incr_0 = incr_0*(1 - epsilon)
+          }else{
+            incr_0 = incr_0*(epsilon/(length(alleles) - 1))
+          }
+          
+          incr_0 = incr_0*alleles[allele_j]
+          if(as.integer(str_extract(allele_j, '\\d+$')) == Ys[obs,2]){
+            incr_0 = incr_0*(1-epsilon)
+          }else{
+            incr_0 = incr_0*(epsilon/(length(alleles) - 1))
+          }
+          b0_ot = b0_ot + incr_0
+        }
+      }
+      
+      ## Emission probability given IBD is 1
+      b1_ot = 0
+      incr_1 = 0
+      for(allele_i in names(alleles)){
+        
+        incr_1 = alleles[allele_i]
+        if(as.integer(str_extract(allele_i, '\\d+$')) == Ys[obs, 'Yi']){
+          incr_1 = incr_1*(1 - epsilon)
+        }else{
+          incr_1 = incr_1*(epsilon/(length(alleles) - 1))
+        }
+        
+        if(as.integer(str_extract(allele_i, '\\d+')) == Ys[obs, 'Yj']){
+          incr_1 = incr_1*(1 - epsilon)
+        }else{
+          incr_1 = incr_1*(epsilon/(length(alleles) - 1))
+        }
+        b1_ot = b1_ot + incr_1
+      }
+      
+      
+      alpha_j_t[obs, ] = rownames(fs)[obs]
+      alpha_j_t[obs, 'Yi'] = Ys[obs, 'Yi']
+      alpha_j_t[obs, 'Yj'] = Ys[obs, 'Yj']
+      
+      alpha_j_t[obs, 'Yi_freq'] = fs[obs, paste0('Allele_', Ys[obs, 'Yi'])]
+      alpha_j_t[obs, 'Yj_freq'] = fs[obs, paste0('Allele_', Ys[obs, 'Yj'])]
+      
+      # Probability of IBD = 0 after seen 1 observations
+      alpha_j_t[obs, "IBD0"] =  pi_j_t[obs, "IBD0"]*b0_ot
+      
+      # Probability of IBD = 1 after seen 1 observations
+      alpha_j_t[obs, "IBD1"] =  pi_j_t[obs, "IBD1"]*b1_ot
+      
+      
+      if(obs < nrow(Ys)){
+        
+        # normalize filtering distribution
+        norm_alpha = as.numeric(alpha_j_t[obs,c('IBD0', 'IBD1')])/sum(as.numeric(alpha_j_t[obs,c('IBD0', 'IBD1')]))
+        
+        # Transition probabilities
+        # next, obtain the next predictive distribution using the formula
+        # P(IBD_t = 1 | past data) = P(IBD_{t-1} = 1 | past data) a_11(t) +
+        #                            P(IBD_{t-1} = 0 | past data) a_01(t)
+        # i.e. using filtering distribution and transition matrix
+        # where a_{jl}(t) is proba to transition from j at site t-1 to l at site t
+        exp_ = exp(- khat * rho * ds[obs])
+        a_01 = rhat * (1 - exp_)
+        a_11 = rhat + (1 - rhat) * exp_
+        
+        pi_j_t[obs + 1, 2] = norm_alpha[1] * a_01 + norm_alpha[2] * a_11
+        # the other probability has to be one minus the above one
+        pi_j_t[obs + 1, 1] = 1 - pi_j_t[obs + 1, 2]
+        
+      }
+      
+    }
+    
+    alpha_j_t = data.frame(alpha_j_t,
+                           IBD_status = apply(alpha_j_t[,c('IBD0', 'IBD1')], 1, which.min)-1)
+    
+    return(alpha_j_t)
+    
+  }
+  
+  if(parallel){
+    registerDoMC(detectCores())
+    pairwise_df = foreach(pair = 1:nrow(pairs), .combine = 'rbind') %dopar% {
+      
+      Yi_id = pairs[pair, 1]
+      Yj_id = pairs[pair, 2]
+      
+      Yi = split_clones(loci_table[Yi_id,], Yi_id)
+      
+      Yi = matrix(as.integer(Yi), 
+                  nrow = nrow(Yi),
+                  ncol = ncol(Yi),
+                  dimnames = list(
+                    rownames(Yi),
+                    colnames(Yi)
+                  ))
+      
+      Yj = split_clones(loci_table[Yj_id,], Yj_id)
+      
+      
+      Yj = matrix(as.integer(Yj), 
+                  nrow = nrow(Yj),
+                  ncol = ncol(Yj),
+                  dimnames = list(
+                    rownames(Yj),
+                    colnames(Yj)
+                  ))
+      
+      estimate = NULL
+      
+      for(haplotype_i in 1:nrow(Yi)){
+        for(haplotype_j in 1:nrow(Yj)){
+          
+          if(sum(is.na(Yi[haplotype_i,] - Yj[haplotype_j,]))/length(Yi[haplotype_i,]) < 1){
+            
+            estimate = rbind(estimate, fx_get_relatedness(Yi[haplotype_i,], Yj[haplotype_j,], freq_table, markers, max_k = max_k))
+            
+          }else{
+            
+            estimate = c(NA,NA)
+            names(estimate) = c('khat', 'rhat')
+            
+          }
+          
+        }
+      }
+      
+      if(sum(is.na(estimate[,'rhat'])) > 0){
+        
+        estimate = estimate[1,]
+        
+      }else{
+        
+        estimate = estimate[which.min(estimate[,'rhat']),]
+        
+      }
+      
+      
+      data.frame(Yi = Yi_id, Yj = Yj_id, t(estimate))
+    }
+    
+  }else{
+    
+    
+    pairwise_viterbi = NULL
+    pairwise_df = NULL
+    
+    for(pair in 1:nrow(pairs)){
+      
+      Yi_id = pairs[pair, 1]
+      Yj_id = pairs[pair, 2]
+      
+      Yi = split_clones(loci_table[Yi_id,], Yi_id)
+      
+      Yi = matrix(as.integer(Yi), 
+                  nrow = nrow(Yi),
+                  ncol = ncol(Yi),
+                  dimnames = list(
+                    rownames(Yi),
+                    colnames(Yi)
+                  ))
+      
+      Yj = split_clones(loci_table[Yj_id,], Yj_id)
+      
+      Yj = matrix(as.integer(Yj), 
+                  nrow = nrow(Yj),
+                  ncol = ncol(Yj),
+                  dimnames = list(
+                    rownames(Yj),
+                    colnames(Yj)
+                  ))
+      
+      estimate = NULL
+      
+      for(haplotype_i in 1:nrow(Yi)){
+        for(haplotype_j in 1:nrow(Yj)){
+          
+          if(sum(is.na(Yi[haplotype_i,] - Yj[haplotype_j,]))/length(Yi[haplotype_i,]) < 1){
+            
+            estimate = rbind(estimate, fx_get_relatedness(Yi = Yi[haplotype_i,], 
+                                                          Yj = Yj[haplotype_j,], 
+                                                          freq_table, markers, max_k = max_k))
+            
+          }else{
+            
+            estimate = c(NA,NA)
+            names(estimate) = c('khat', 'rhat')
+            
+          }
+          
+        }
+      }
+      
+      if(sum(is.na(estimate[,'rhat'])) > 0){
+        
+        estimate = estimate[1,]
+        
+        pairwise_viterbi_temp = 
+          get_hmmibd_viterbi_normalized(
+            Yi = Yi[1,], 
+            Yj = Yj[1,], 
+            freq_table = freq_table, 
+            markers = markers, 
+            rhat = estimate[,'rhat'],
+            khat = estimate[,'khat'])
+        
+        pairwise_viterbi_temp$Yi_id = Yi_id
+        pairwise_viterbi_temp$Yj_id = Yj_id
+        
+      }else{
+        
+        comparisons = NULL
+        
+        for(i in 1:nrow(Yi)){
+          for(j in 1:nrow(Yj)){
+            
+            comparisons = rbind(comparisons,
+                                data.frame(Yi = i,
+                                           Yj = j)
+            )
+          } 
+        }
+        
+        pairwise_viterbi_temp = 
+          get_hmmibd_viterbi_normalized(
+            Yi = Yi[comparisons[which.min(estimate[,'rhat']),'Yi'],], 
+            Yj = Yj[comparisons[which.min(estimate[,'rhat']),'Yj'],], 
+            freq_table = freq_table, 
+            markers = markers, 
+            rhat = estimate[which.min(estimate[,'rhat']),'rhat'],
+            khat = estimate[which.min(estimate[,'rhat']),'khat'])
+        
+        pairwise_viterbi_temp$Yi_id = Yi_id
+        pairwise_viterbi_temp$Yj_id = Yj_id
+        
+        estimate = estimate[which.min(estimate[,'rhat']),]
+        
+      }
+      
+      progress(round(100*pair/nrow(pairs)))
+      
+      pairwise_viterbi = rbind(pairwise_viterbi, pairwise_viterbi_temp)
+      pairwise_df = rbind(pairwise_df, data.frame(Yi = Yi_id, Yj = Yj_id, t(estimate)))
+      
+    }
+    
+  }
+  
+  
+  if(viterbi){
+    
+    if('amplicon' %in% colnames(markers)){
+      pairwise_viterbi = left_join(pairwise_viterbi,
+                                   markers[, c('amplicon', 'chromosome', 'start', 'end', 'pos')],
+                                   by = join_by('Marker' == 'amplicon'))
+    }else{
+      
+      markers %<>% mutate(Marker = paste(chromosome, pos, sep = '_'))
+      
+      pairwise_viterbi = left_join(pairwise_viterbi,
+                                   markers,
+                                   by = 'Marker')
+      
+    }
+    
+    return(list(pairwise_viterbi = pairwise_viterbi,
+                pairwise_df = pairwise_df))
+  }else{
+    return(pairwise_df)
+  }
+  
+  
+}
+
 
 
 ### plot_relatedness_distribution----
@@ -16537,5 +17042,399 @@ get_codon_change = function(genome_ref_fasta,
   return(output)
 }
 
+# correct_vcf_file----
+# Correct rows where the REF alllele is also present in the ALT alleles
+correct_vcf_file = function(vcf_object){
+  
+  test = sapply(rownames(vcf_object), function(pos){
+    vcf_object[pos,][['REF']] %in% unlist(strsplit(vcf_object[pos,][['ALT']], ','))
+  }, simplify = T)
+  
+  
+  erroneous_positions = which(test)
+  
+  
+  for(erroneous_position in erroneous_positions){
+    ALT = unlist(strsplit(vcf_object[erroneous_position, ][['ALT']], ','))
+    REF = vcf_object[erroneous_position, ][['REF']]
+    
+    erroneous_alt_lable = which(ALT == REF)
+    
+    wrong_genotypes = t(combn(0:length(ALT), 2))
+    
+    wrong_genotypes = rbind(matrix(rep(erroneous_alt_lable:length(ALT), 2), ncol = 2),
+                            wrong_genotypes,
+                            wrong_genotypes[,c(2,1)]
+    )
+    
+    wrong_genotypes = wrong_genotypes[wrong_genotypes[,1] >= erroneous_alt_lable | wrong_genotypes[,2] >= erroneous_alt_lable,]
+    
+    wrong_genotypes = wrong_genotypes[order(wrong_genotypes[,1], wrong_genotypes[, 2], decreasing = F),]
+    
+    corrected_genotypes = wrong_genotypes
+    
+    corrected_genotypes[,1] = ifelse(corrected_genotypes[,1] < erroneous_alt_lable, corrected_genotypes[,1], corrected_genotypes[,1] - 1)
+    
+    corrected_genotypes[,2] = ifelse(corrected_genotypes[,2] < erroneous_alt_lable, corrected_genotypes[,2], corrected_genotypes[,2] - 1)
+    
+    
+    wrong_genotypes = apply(wrong_genotypes, 1, function(x){paste(x[1], x[2], sep = '/')})
+    corrected_genotypes = apply(corrected_genotypes, 1, function(x){paste(x[1], x[2], sep = '/')})
+    
+    for(wrong_genotype_index in 1:length(wrong_genotypes)){
+      
+      wrong_genotype = wrong_genotypes[wrong_genotype_index]
+      corrected_genotype = corrected_genotypes[wrong_genotype_index]
+      
+      vcf_object[erroneous_position, 
+                 grepl(paste0('^', wrong_genotype), vcf_object[erroneous_position,])] = 
+        gsub(paste0('^', wrong_genotype), 
+             corrected_genotype, 
+             vcf_object[erroneous_position, grepl(paste0('^', wrong_genotype), vcf_object[erroneous_position,])])
+    }
+    
+    vcf_object[erroneous_position, ][['ALT']] = paste(ALT[!(ALT %in% REF)], collapse = ',')
+  }
+  
+  return(vcf_object)
+  
+}
+
+
+## admixture S4class and create_admixture----
+
+## admixture S4 class
+
+setClass('admixture', slots = c(
+  sample_ancestries = 'ANY',
+  cross_valitadtion = "ANY",
+  pop_allele_frequencies = 'ANY'
+))
+
+## cigar constructor
+create_admixture = function(sample_ancestries = NULL,
+                            cross_valitadtion = NULL,
+                            pop_allele_frequencies = NULL
+){
+  
+  obj = new('admixture')
+  obj@sample_ancestries = sample_ancestries
+  obj@cross_valitadtion = cross_valitadtion
+  obj@pop_allele_frequencies = pop_allele_frequencies
+  
+  return(obj)
+}
+
+# run_admixture----
+
+run_admixture = function(obj = NULL,
+                         monoclonals = NULL,
+                         polyclonals = NULL,
+                         plink_address = '~/Documents/Github/Plasmodium_WGS_analysis/plink',
+                         admixture_address = '~/Documents/Github/Plasmodium_WGS_analysis/ADMIXTURE',
+                         k_values = 2:4,
+                         cross_validation = 10,
+                         bootstrap = 200, 
+                         save_output = TRUE,
+                         zip_output = TRUE,
+                         output = 'admixture_test_1',
+                         ncores = 7,
+                         sliding_window_size = 35,
+                         step_size = 9,
+                         max_r2 = 0.1,
+                         chromosome_prefix = 'PvP01_',
+                         chromosome_sufix = '_v1'
+){
+  
+  vcf_object = obj
+  names(vcf_object) = c('#CHROM',names(vcf_object)[-1])
+  
+  vcf_object %<>%
+    mutate(`#CHROM` = gsub('^0', '', gsub('_', '', unlist(str_extract(`#CHROM`, '_\\d+_')))))
+  
+  if(!is.null(output)){
+    
+    output_name = output
+    
+  }else{
+    
+    output_name = 'temp_file'
+    
+  }
+  
+  system('mkdir ADMIXTURE_inputs')
+  system('mkdir ADMIXTURE_outputs')
+  
+  write.table(vcf_object, paste0('./ADMIXTURE_inputs/', output_name, '.vcf'), row.names = F, quote = F, sep = '\t')
+  
+  wd = getwd()
+  
+  if(!is.null(sliding_window_size) & is.numeric(sliding_window_size) &
+     !is.null(step_size) & is.numeric(step_size) &
+     !is.null(max_r2) & is.numeric(max_r2)){
+    
+    plink_pruning = c(paste0('./plink2 --bfile ', 
+                             output_name, 
+                             ' --set-missing-var-ids @:#  --indep-pairwise ', sliding_window_size, ' ', step_size, ' ', max_r2, ' --out ', output_name, '.pruned'),
+                      paste0('./plink2 --bfile ', 
+                             output_name, ' --set-missing-var-ids @:# --extract ', output_name,  '.pruned.prune.in --make-bed --out ', output_name, '.pruned'))
+    
+  }else{
+    
+    plink_pruning = NULL
+    print('all set of SNPs will be tested')
+    
+  }
+  
+  
+  
+  plink_run_file = c('#!/bin/bash',
+                     paste0('cd ', plink_address),
+                     paste0('./plink2 --vcf ', 
+                            file.path(wd, paste0('ADMIXTURE_inputs/', output_name, '.vcf')), 
+                            ' --make-bed --out ', output_name, ''),
+                     if(!is.null(plink_pruning)){plink_pruning},
+                     paste0('mv ', output_name, '* ', file.path(wd, 'ADMIXTURE_inputs')),
+                     paste0('cd ', wd)
+  )
+  
+  write.table(plink_run_file, 'run_plink.sh', row.names = FALSE, quote = FALSE, col.names = FALSE)
+  
+  system('chmod 777 run_plink.sh')
+  system('./run_plink.sh')
+  system('rm run_plink.sh')
+  
+  
+  admixture_run_file = c(
+    '#!/bin/bash',
+    paste0('cd ', admixture_address))
+  
+  for(k in k_values){
+    
+    admixture_run_file = c(admixture_run_file,
+                           paste0("echo 'running admixture for K=", k, "...'"),
+                           paste0('./admixture --cv=', cross_validation, #' -B', bootstrap, 
+                                  paste0(' ', file.path(wd, 'ADMIXTURE_inputs', output_name), ifelse(!is.null(plink_pruning), '.pruned.bed ','.bed ')), k, ' -j', ncores, ' > ',
+                                  output_name, '_log_K', k, '.out'
+                           ),
+                           paste0('mv ', output_name, '*', k, '* ', file.path(wd, 'ADMIXTURE_outputs'))
+    )
+    
+  }
+  
+  write.table(admixture_run_file, 'run_admixture.sh', row.names = FALSE, quote = FALSE, col.names = FALSE)
+  system('chmod 777 run_admixture.sh')
+  system('./run_admixture.sh')
+  system('rm run_admixture.sh')
+  
+  
+  system(paste0('grep -h CV ', paste0(file.path('ADMIXTURE_outputs', output_name), '_log_K*.out'), ' > ', 'ADMIXTURE_outputs/CV_error.tsv'))
+  
+  
+  admixture_cv_error = read.table('ADMIXTURE_outputs/CV_error.tsv', header = F, sep = ' ')[,3:4]
+  colnames(admixture_cv_error) = c('K', 'CV_error')
+  admixture_cv_error$K = as.integer(gsub('(\\(|\\)|:|=|K)', '', admixture_cv_error$K))
+  
+  Pop_frequencies = NULL
+  Q_values = NULL
+  
+  if(!is.null(plink_pruning)){
+    
+    sites_in = read.table(paste0('ADMIXTURE_inputs/', output_name, '.pruned.prune.in'), 
+                          header = F, sep = ' ')
+    
+    sites_in %<>% mutate(CHROM = gsub(':\\d+$', "", V1),
+                         POS = as.integer(gsub('^\\d+:', '', V1)))
+    
+    sites_in %<>% mutate(CHROM = case_when(
+      nchar(CHROM) == 2 ~ paste0(chromosome_prefix, CHROM, chromosome_sufix),
+      nchar(CHROM) == 1 ~ paste0(chromosome_prefix, '0', CHROM, chromosome_sufix)
+      )
+      )
+      
+    
+  }
+  
+  for(k in k_values){
+    Pop_frequencies[[paste0('K_', k)]] = read.table(paste0('ADMIXTURE_outputs/', output_name, ifelse(!is.null(plink_pruning), '.pruned.','.'), k, '.P'), 
+                                                    header = F, sep = ' ')
+    
+    colnames(Pop_frequencies[[paste0('K_', k)]]) = paste0('K', k, '_Pop_',1:k)
+    
+    
+    if(!is.null(plink_pruning)){
+      
+      Pop_frequencies[[paste0('K_', k)]] = cbind(sites_in[,-1],
+                                                 Pop_frequencies[[paste0('K_', k)]])
+      
+      Pop_frequencies[[paste0('K_', k)]] = left_join(obj[, c(1, 2, 4, 5)],
+                                                 Pop_frequencies[[paste0('K_', k)]],
+                                                 by = join_by('#CHROM' == 'CHROM', 'POS' == 'POS')
+      )
+      
+      
+      
+    }else{
+      Pop_frequencies[[paste0('K_', k)]] = cbind(obj[, c(1, 2, 4, 5)],
+                                                 Pop_frequencies[[paste0('K_', k)]]
+      )
+    }
+    
+    Q_values[[paste0('K_', k)]] = read.table(paste0('ADMIXTURE_outputs/', output_name, ifelse(!is.null(plink_pruning), '.pruned.','.'), k, '.Q'), 
+                                             header = F, sep = ' ')
+    
+    colnames(Q_values[[paste0('K_', k)]]) = paste0('K', k, '_Pop_',1:k)
+    
+    Q_values[[paste0('K_', k)]] = data.frame(Sample_id = colnames(vcf_object)[-1:-9],
+                                             Q_values[[paste0('K_', k)]])
+    
+  }
+  
+  admixture_object = 
+    create_admixture(sample_ancestries = Q_values,
+                     cross_valitadtion = admixture_cv_error,
+                     pop_allele_frequencies = Pop_frequencies
+    )
+  
+  if(save_output){
+    
+    system(paste0('mkdir ', output_name))
+    system(paste0('mv -f ADMIXTURE_inputs ', output_name))
+    system(paste0('mv -f ADMIXTURE_outputs ', output_name))
+    
+    if(zip_output){
+      
+      system(paste0('zip -r ', output_name, '.zip ', output_name, '/*'))
+      system(paste0('rm -r ', output_name))
+      
+    }
+    
+  }else{
+    system('rm -r ADMIXTURE_inputs')
+    system('rm -r ADMIXTURE_outputs')
+  }
+  
+  return(admixture_object)
+  
+}
+
+
+# update_allele_lables----
+
+update_allele_lables = function(rGenome_object){
+  
+  Allele_counts = get_AC(rGenome_object, update_alleles = T)
+  
+  
+  ALT = gsub(':\\d+', '', gsub('.+:0,', '', Allele_counts$Alleles))
+  
+  
+  wrong_gts = Allele_counts %>% mutate(max_allele = as.integer(gsub('.+:', '', Alleles))) %>%
+    filter(max_allele > Cardinality - 1) %>% rownames()
+  
+  wrong_gt = wrong_gts[1]
+  
+  
+  for(wrong_gt in wrong_gts){
+    alleles = unlist(strsplit(gsub(':\\d+', '', Allele_counts[wrong_gt, ][['Alleles']]), ','))
+    allele_counts = gsub('\\d+:', '', unlist(strsplit(Allele_counts[wrong_gt, ][['Allele_Counts']], ',')))
+    old_allele_lables = gsub('.+:', '', unlist(strsplit(Allele_counts[wrong_gt, ][['Alleles']], ',')))
+    new_allele_lables = 0:(length(alleles) - 1)
+    wrong_lables = old_allele_lables[old_allele_lables != new_allele_lables]
+    for(wrong_lable in wrong_lables){
+      wrong_lable_index = which(old_allele_lables == wrong_lable)
+      rGenome_object@gt[wrong_gt,] = 
+        gsub(paste0('^', wrong_lable, ':'), paste0(new_allele_lables[wrong_lable_index], ':'), rGenome_object@gt[wrong_gt,])
+      rGenome_object@gt[wrong_gt,] = 
+        gsub(paste0('_', wrong_lable, ':'), paste0('_', new_allele_lables[wrong_lable_index], ':'), rGenome_object@gt[wrong_gt,])
+    }
+  }
+  
+  rGenome_object@loci_table$ALT = ALT
+  
+  if('Cardinality' %in% colnames(rGenome_object@loci_table)){
+    rGenome_object@loci_table[['Cardinality']] = NULL
+  }
+  
+  if('Alleles' %in% colnames(rGenome_object@loci_table)){
+    rGenome_object@loci_table[['Alleles']] = NULL
+  }
+  
+  if('Alleles_Counts' %in% colnames(rGenome_object@loci_table)){
+    rGenome_object@loci_table[['Alleles_Counts']] = NULL
+  }
+  
+  rGenome_object@loci_table = cbind(rGenome_object@loci_table, Allele_counts)
+  
+  return(rGenome_object)
+  
+}
+
+# get_physical_distance----
+
+get_physical_distance = function(obj, chromosome_col, position_col){
+  
+  obj[["distance"]] = Inf
+  
+  for(chromosome in levels(as.factor(obj[[chromosome_col]]))){
+    for(amplicon in 1:(nrow(obj[obj[[chromosome_col]] == chromosome,])-1)){
+      obj[obj[[chromosome_col]] == chromosome,][amplicon, "distance"] = 
+        obj[obj[[chromosome_col]] == chromosome,][amplicon + 1, position_col] - obj[obj[[chromosome_col]] == chromosome,][amplicon, position_col]
+    }
+  }
+  
+  if(sum(is.na(obj$distance)) > 0){
+    obj[is.na(obj$distance),][['distance']] = Inf  
+  }
+  
+  if(sum(obj$distance < 0) > 0){
+    obj$distance[obj$distance < 0 ] = Inf
+  }
+  
+  ds = obj$distance
+  
+  return(ds)
+  
+}
+
+get_nSNVs_per_marker = function(ampseq_object){
+  
+  ampseq_object@asv_table
+  
+  amplicon = unique(ampseq_object@asv_table$Amplicon)[3]
+  
+  output = NULL
+  
+  for(amplicon in unique(ampseq_object@asv_table$Amplicon)){
+    
+    cigar_strings = ampseq_object@asv_table %>%
+      filter(Amplicon == amplicon) %>%
+      select(CIGAR_masked) %>% unlist() %>% unique()
+    
+    cigar_strings = cigar_strings[cigar_strings != '.']
+    
+    VS = unique(unlist(str_extract_all(cigar_strings, '\\d+((I|D)=)?[ATCG]+')))
+    
+    SNVs = VS[!grepl('=', VS)]
+    INDELs = VS[grepl('=', VS)]
+    
+    output = rbind(output,
+                   data.frame(Amplicon = amplicon,
+                              nVSites = length(unique(unlist(str_extract_all(VS, '\\d+')))),
+                              nSNVs = length(unique(unlist(str_extract_all(SNVs, '\\d+')))),
+                              nINDELs = length(unique(unlist(str_extract_all(INDELs, '\\d+'))))
+                              ))
+    
+  }
+  
+  return(output)
+  
+}
+
 
 # END ----
+
+
+
+
+
