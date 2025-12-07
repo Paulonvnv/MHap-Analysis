@@ -146,7 +146,7 @@ drug_resistant_haplotypes_plot = drug_resistant_haplotypes(
   filters = c(
     'Subnational_level2;Buenaventura,Quibdó,Guapi,Tumaco,Puerto Inírida',
     'Quarter_of_Collection;2020-Q4,2021-Q1,2021-Q2,2021-Q3,2021-Q4,2022-Q1,2022-Q2,2022-Q3'),
-  hap_color_palette = 'auto')
+  hap_color_palette = 'auto', skip_errors = TRUE)
 
 ```
 
@@ -471,7 +471,7 @@ drug_resistant_haplotypes_plot$drug_phenotype_barplot
 drug_resistant_haplotypes_plot$drug_phenotyope_lineplot
 ```
 
-```{r, fig.width=10, fig.height=10, fig.cap = "**Figure 5:** Map showing the frequency of haplotypes carrying mutations associated with resistance to antimalarial drugs (panels). Dots represent study areas, color gradient represents the frequency, and the size of dots represents log-scaled sample size. The user can change the map's background layer by clicking the layer icon and zoom in/out by clicking the +/- symbol. If no resistance-associated polymorphism has been found for a particular drug, a map corrsponding to that drug is not generated."}
+```{r, fig.width=10, fig.height=10, fig.cap = "**Figure 5:** Map showing the frequency of haplotypes carrying mutations associated with resistance to antimalarial drugs (panels). Dots represent study areas, color gradient represents the frequency, and the size of dots represents log-scaled sample size. The user can change the map's background layer by clicking the layer icon and zoom in/out by clicking the +/- symbol. If no resistance-associated polymorphism has been found for a particular drug, a map corrsponding to that drug is not generated.", eval = FALSE}
 library(tmap)
 tmap_mode('view')
 drug_resistant_haplotypes_plot$i_drug_map 

@@ -2686,7 +2686,7 @@ ampseq2vcf = function(ampseq_object, monoclonals = NULL, polyclonals = NULL, ref
 
 ## filter_samples----
 
-filter_samples = function(obj, v, update_cigars = TRUE){
+filter_samples = function(obj, v, update_cigars = TRUE, skip_errors = F){
   
   if(class(obj) == 'ampseq'){
     obj2 = obj
@@ -2730,26 +2730,44 @@ filter_samples = function(obj, v, update_cigars = TRUE){
                    '\n'
         ))
         
-        stop('There are cigar strings that are different in the gt and the asv_table')
-
-        #cigar_strings_to_remove = cigars_asvtab[!(cigars_asvtab %in% cigars_gt)]
-                
-        #for(cigar_string_to_remove in cigar_strings_to_remove){
-
-        #  Amplicon = gsub(';.+$', '', cigar_string_to_remove)
-        #  CIGAR = gsub('^.+;', '', cigar_string_to_remove)
-
-        #  obj2@asv_table = 
-        #    obj2@asv_table[!(obj2@asv_table[['Amplicon']] == Amplicon &
-        #                       obj2@asv_table[['CIGAR_masked']] == CIGAR),]
-
-        #  obj2@asv_seqs = obj2@asv_seqs[
-        #    names(obj2@asv_seqs) %in% obj2@asv_table$hapid]
-
-        #  obj2@asv_table$hapid = paste0('ASV', 1:nrow(obj2@asv_table))
-        #  names(obj2@asv_seqs) = obj2@asv_table$hapid
-
-        #}
+        if(skip_errors){
+          
+          warning('There are cigar strings that are different in the gt and the asv_table, only discrepancies in gt will be fixed')
+          
+          cigar_strings_to_remove = cigars_asvtab[!(cigars_asvtab %in% cigars_gt)]
+          
+          for(cigar_string_to_remove in cigar_strings_to_remove){
+            
+            Amplicon = gsub(';.+$', '', cigar_string_to_remove)
+            CIGAR = gsub('^.+;', '', cigar_string_to_remove)
+            
+            obj2@asv_table = 
+              obj2@asv_table[!(obj2@asv_table[['Amplicon']] == Amplicon &
+                                 obj2@asv_table[['CIGAR_masked']] == CIGAR) &
+                               !is.na(obj2@asv_table[['Amplicon']]) &
+                               !is.na(obj2@asv_table[['CIGAR_masked']])
+                             
+                               ,]
+            
+            obj2@asv_seqs = obj2@asv_seqs[
+              names(obj2@asv_seqs) %in% obj2@asv_table$hapid]
+            
+            obj2@asv_seqs_masked = obj2@asv_seqs_masked[
+              names(obj2@asv_seqs_masked) %in% obj2@asv_table$hapid]
+            
+            obj2@asv_table$hapid = paste0('ASV', 1:nrow(obj2@asv_table))
+            names(obj2@asv_seqs) = obj2@asv_table$hapid
+            
+            if(!is.null(names(obj2@asv_seqs_masked) )){
+              names(obj2@asv_seqs_masked) = obj2@asv_table$hapid
+            }
+          }
+          
+        }else{
+          
+          stop('There are cigar strings that are different in the gt and the asv_table')
+          
+        }
         
       }else if(sum(!(cigars_gt %in% cigars_asvtab)) > 0){
         
@@ -2757,7 +2775,14 @@ filter_samples = function(obj, v, update_cigars = TRUE){
                    paste(cigars_gt[!(cigars_gt %in% cigars_asvtab)], collapse = '\n'),
                    '\n'))
         
-        stop('There are cigar strings in the gt that are not present in the asv_table')
+        if(skip_errors){
+          warning('There are cigar strings in the gt that are not present in the asv_table')
+          
+        }else{
+          stop('There are cigar strings in the gt that are not present in the asv_table')
+          
+        }
+        
         
       }else if(sum(!(cigars_asvtab %in% cigars_gt)) > 0){
         
@@ -2777,7 +2802,9 @@ filter_samples = function(obj, v, update_cigars = TRUE){
           
           obj2@asv_table = 
             obj2@asv_table[!(obj2@asv_table[['Amplicon']] == Amplicon &
-                               obj2@asv_table[['CIGAR_masked']] == CIGAR),]
+                               obj2@asv_table[['CIGAR_masked']] == CIGAR) &
+                             !is.na(obj2@asv_table[['Amplicon']])&
+                             !is.na(obj2@asv_table[['CIGAR_masked']]),]
           
           obj2@asv_seqs = obj2@asv_seqs[
             names(obj2@asv_seqs) %in% obj2@asv_table$hapid]
@@ -2787,8 +2814,10 @@ filter_samples = function(obj, v, update_cigars = TRUE){
           
           obj2@asv_table$hapid = paste0('ASV', 1:nrow(obj2@asv_table))
           names(obj2@asv_seqs) = obj2@asv_table$hapid
-          names(obj2@asv_seqs_masked) = obj2@asv_table$hapid
           
+          if(!is.null(names(obj2@asv_seqs_masked))){
+            names(obj2@asv_seqs_masked) = obj2@asv_table$hapid
+          }
         }
         
         
@@ -2796,7 +2825,7 @@ filter_samples = function(obj, v, update_cigars = TRUE){
         print('cigar strings are consistent between gt and asv_table')
       }
       
-      consistency_between_gt_and_asvtab(obj2)
+      consistency_between_gt_and_asvtab(obj2, skip_errors = skip_errors)
       
     }
     
@@ -2839,7 +2868,7 @@ filter_samples = function(obj, v, update_cigars = TRUE){
 
 ## filter_loci----
 
-filter_loci = function(obj, v, update_cigars = TRUE){
+filter_loci = function(obj, v, update_cigars = TRUE, skip_errors = FALSE){
   
   if(class(obj) == 'ampseq'){
     
@@ -2910,7 +2939,46 @@ filter_loci = function(obj, v, update_cigars = TRUE){
                    '\n'
         ))
         
-        stop('There are cigar strings that are different in the gt and the asv_table')
+        if(skip_errors){
+          
+          warning('There are cigar strings that are different in the gt and the asv_table, only discrepancies in gt will be fixed')
+          
+          # Next lines skip the problem of having discrepancies but do not solve the problem
+          
+          cigar_strings_to_remove = cigars_asvtab[!(cigars_asvtab %in% cigars_gt)]
+          
+          for(cigar_string_to_remove in cigar_strings_to_remove){
+            
+            Amplicon = gsub(';.+$', '', cigar_string_to_remove)
+            CIGAR = gsub('^.+;', '', cigar_string_to_remove)
+            
+            obj2@asv_table = 
+              obj2@asv_table[!(obj2@asv_table[['Amplicon']] == Amplicon &
+                                 obj2@asv_table[['CIGAR_masked']] == CIGAR) &
+                               !is.na(obj2@asv_table[['Amplicon']]) &
+                               !is.na(obj2@asv_table[['CIGAR_masked']]),]
+            
+            obj2@asv_seqs = obj2@asv_seqs[
+              names(obj2@asv_seqs) %in% obj2@asv_table$hapid]
+            
+            obj2@asv_seqs_masked = obj2@asv_seqs_masked[
+              names(obj2@asv_seqs_masked) %in% obj2@asv_table$hapid]
+            
+            obj2@asv_table$hapid = paste0('ASV', 1:nrow(obj2@asv_table))
+            names(obj2@asv_seqs) = obj2@asv_table$hapid
+            
+            if(!is.null(names(obj2@asv_seqs_masked))){
+              names(obj2@asv_seqs_masked) = obj2@asv_table$hapid
+            }
+            
+            
+          }
+          
+        }else{
+          
+          stop('There are cigar strings that are different in the gt and the asv_table')
+          
+        }
         
       }else if(sum(!(cigars_gt %in% cigars_asvtab)) > 0){
         
@@ -2918,7 +2986,13 @@ filter_loci = function(obj, v, update_cigars = TRUE){
                    paste(cigars_gt[!(cigars_gt %in% cigars_asvtab)], collapse = '\n'),
                    '\n'))
         
-        stop('There are cigar strings in the gt that are not present in the asv_table')
+        if(skip_errors){
+          
+          warning('There are cigar strings in the gt that are not present in the asv_table')
+          
+        }else{
+          stop('There are cigar strings in the gt that are not present in the asv_table')  
+        }
         
       }else if(sum(!(cigars_asvtab %in% cigars_gt)) > 0){
         
@@ -2937,7 +3011,9 @@ filter_loci = function(obj, v, update_cigars = TRUE){
           
           obj2@asv_table = 
             obj2@asv_table[!(obj2@asv_table[['Amplicon']] == Amplicon &
-                               obj2@asv_table[['CIGAR_masked']] == CIGAR),]
+                               obj2@asv_table[['CIGAR_masked']] == CIGAR) &
+                             !is.na(obj2@asv_table[['Amplicon']]) &
+                             !is.na(obj2@asv_table[['CIGAR_masked']]),]
           
           obj2@asv_seqs = obj2@asv_seqs[
             names(obj2@asv_seqs) %in% obj2@asv_table$hapid]
@@ -2947,7 +3023,10 @@ filter_loci = function(obj, v, update_cigars = TRUE){
           
           obj2@asv_table$hapid = paste0('ASV', 1:nrow(obj2@asv_table))
           names(obj2@asv_seqs) = obj2@asv_table$hapid
-          names(obj2@asv_seqs_masked) = obj2@asv_table$hapid
+          
+          if(!is.null(names(obj2@asv_seqs_masked))){
+            names(obj2@asv_seqs_masked) = obj2@asv_table$hapid
+          }
           
         }
         
@@ -2955,7 +3034,7 @@ filter_loci = function(obj, v, update_cigars = TRUE){
         print('cigar strings are consistent between gt and asv_table')
       }
       
-      consistency_between_gt_and_asvtab(obj2)
+      consistency_between_gt_and_asvtab(obj2, skip_errors = skip_errors)
       
     }
     
@@ -4357,7 +4436,7 @@ get_ReadDepth_coverage = function(ampseq_object, variable = NULL, plot = TRUE){
 
 ## locus_amplification_rate----
 
-locus_amplification_rate = function(ampseq_object, threshold = .65, update_loci = TRUE, strata = NULL, based_on_strata = FALSE, chr_lengths = NULL){
+locus_amplification_rate = function(ampseq_object, threshold = .65, update_loci = TRUE, strata = NULL, based_on_strata = FALSE, chr_lengths = NULL, skip_errors = FALSE){
   
   # , chr_lengths = c(640851,
   #                   947102,
@@ -4395,7 +4474,8 @@ locus_amplification_rate = function(ampseq_object, threshold = .65, update_loci 
       
       temp_ampseq_object = filter_samples(obj = ampseq_object,
                                           v = (ampseq_object@metadata[['Strata']] == pop),
-                                          update_cigars = FALSE
+                                          update_cigars = FALSE,
+                                          skip_errors = skip_errors
       )
       
       if(sum((ampseq_object@metadata[['Strata']] == pop)) == 1){
@@ -4549,7 +4629,44 @@ locus_amplification_rate = function(ampseq_object, threshold = .65, update_loci 
                    '\n'
         ))
         
-        stop('There are cigar strings that are different in the gt and the asv_table')
+        if(skip_errors){
+          
+          warning('There are cigar strings that are different in the gt and the asv_table, only discrepancies in gt will be fixed')
+          
+          cigar_strings_to_remove = cigars_asvtab[!(cigars_asvtab %in% cigars_gt)]
+          
+          for(cigar_string_to_remove in cigar_strings_to_remove){
+            
+            Amplicon = gsub(';.+$', '', cigar_string_to_remove)
+            CIGAR = gsub('^.+;', '', cigar_string_to_remove)
+            
+            ampseq_object@asv_table = 
+              ampseq_object@asv_table[!(ampseq_object@asv_table[['Amplicon']] == Amplicon &
+                                          ampseq_object@asv_table[['CIGAR_masked']] == CIGAR) &
+                                        !is.na(ampseq_object@asv_table[['Amplicon']]) &
+                                        !is.na(ampseq_object@asv_table[['CIGAR_masked']]),]
+            
+            ampseq_object@asv_seqs = ampseq_object@asv_seqs[
+              names(ampseq_object@asv_seqs) %in% ampseq_object@asv_table$hapid]
+            
+            ampseq_object@asv_seqs_masked = ampseq_object@asv_seqs_masked[
+              names(ampseq_object@asv_seqs_masked) %in% ampseq_object@asv_table$hapid]
+            
+            ampseq_object@asv_table$hapid = paste0('ASV', 1:nrow(ampseq_object@asv_table))
+            names(ampseq_object@asv_seqs) = ampseq_object@asv_table$hapid
+            
+            if(!is.null(names(ampseq_object@asv_seqs_masked))){
+              names(ampseq_object@asv_seqs_masked) = ampseq_object@asv_table$hapid  
+            }
+            
+          } 
+          
+        }else{
+        
+          stop('There are cigar strings that are different in the gt and the asv_table')  
+        }
+        
+        
         
       }else if(sum(!(cigars_gt %in% cigars_asvtab)) > 0){
         
@@ -4557,7 +4674,13 @@ locus_amplification_rate = function(ampseq_object, threshold = .65, update_loci 
                    paste(cigars_gt[!(cigars_gt %in% cigars_asvtab)], collapse = '\n'),
                    '\n'))
         
-        stop('There are cigar strings in the gt that are not present in the asv_table')
+        if(skip_errors){
+          
+          warning('There are cigar strings in the gt that are not present in the asv_table')
+          
+        }else{
+          stop('There are cigar strings in the gt that are not present in the asv_table')  
+        }
         
       }else if(sum(!(cigars_asvtab %in% cigars_gt)) > 0){
         
@@ -4574,7 +4697,9 @@ locus_amplification_rate = function(ampseq_object, threshold = .65, update_loci 
           
           ampseq_object@asv_table = 
             ampseq_object@asv_table[!(ampseq_object@asv_table[['Amplicon']] == Amplicon &
-                               ampseq_object@asv_table[['CIGAR_masked']] == CIGAR),]
+                               ampseq_object@asv_table[['CIGAR_masked']] == CIGAR) &
+                                 !is.na(ampseq_object@asv_table[['Amplicon']]) &
+                                 !is.na(ampseq_object@asv_table[['CIGAR_masked']]),]
           
           ampseq_object@asv_seqs = ampseq_object@asv_seqs[
             names(ampseq_object@asv_seqs) %in% ampseq_object@asv_table$hapid]
@@ -4584,7 +4709,9 @@ locus_amplification_rate = function(ampseq_object, threshold = .65, update_loci 
           
           ampseq_object@asv_table$hapid = paste0('ASV', 1:nrow(ampseq_object@asv_table))
           names(ampseq_object@asv_seqs) = ampseq_object@asv_table$hapid
-          names(ampseq_object@asv_seqs_masked) = ampseq_object@asv_table$hapid
+          if(!is.null(names(ampseq_object@asv_seqs_masked))){
+            names(ampseq_object@asv_seqs_masked) = ampseq_object@asv_table$hapid  
+          }
           
         }
         
@@ -4593,7 +4720,7 @@ locus_amplification_rate = function(ampseq_object, threshold = .65, update_loci 
         print('cigar strings are consistent between gt and asv_table')
       }
       
-      consistency_between_gt_and_asvtab(ampseq_object)
+      consistency_between_gt_and_asvtab(ampseq_object, skip_errors = skip_errors)
       
       
       return(ampseq_object)
@@ -4724,7 +4851,7 @@ locus_amplification_rate = function(ampseq_object, threshold = .65, update_loci 
         print('cigar strings are consistent between gt and asv_table')
       }
       
-      consistency_between_gt_and_asvtab(ampseq_object)
+      consistency_between_gt_and_asvtab(ampseq_object, skip_errors = skip_errors)
       
       
       
@@ -4745,7 +4872,7 @@ locus_amplification_rate = function(ampseq_object, threshold = .65, update_loci 
 
 ## sample_amplification_rate----
 
-sample_amplification_rate = function(ampseq_object, threshold = .8, update_samples = TRUE, strata = NULL){
+sample_amplification_rate = function(ampseq_object, threshold = .8, update_samples = TRUE, strata = NULL, skip_errors = FALSE){
   
   metadata = ampseq_object@metadata
   ampseq_loci_abd_table = ampseq_object@gt
@@ -4858,7 +4985,41 @@ sample_amplification_rate = function(ampseq_object, threshold = .8, update_sampl
                  '\n'
       ))
       
-      stop('There are cigar strings that are different in the gt and the asv_table')
+      if(skip_errors){
+        
+        warning('There are cigar strings that are different in the gt and the asv_table, only discrepancies in gt will be fixed')
+        
+        cigar_strings_to_remove = cigars_asvtab[!(cigars_asvtab %in% cigars_gt)]
+        
+        for(cigar_string_to_remove in cigar_strings_to_remove){
+          
+          Amplicon = gsub(';.+$', '', cigar_string_to_remove)
+          CIGAR = gsub('^.+;', '', cigar_string_to_remove)
+          
+          ampseq_object@asv_table = 
+            ampseq_object@asv_table[!(ampseq_object@asv_table[['Amplicon']] == Amplicon &
+                                        ampseq_object@asv_table[['CIGAR_masked']] == CIGAR) &
+                                      !is.na(ampseq_object@asv_table[['Amplicon']]) &
+                                      !is.na(ampseq_object@asv_table[['CIGAR_masked']]),]
+          
+          ampseq_object@asv_seqs = ampseq_object@asv_seqs[
+            names(ampseq_object@asv_seqs) %in% ampseq_object@asv_table$hapid]
+          
+          ampseq_object@asv_seqs_masked = ampseq_object@asv_seqs_masked[
+            names(ampseq_object@asv_seqs_masked) %in% ampseq_object@asv_table$hapid]
+          
+          ampseq_object@asv_table$hapid = paste0('ASV', 1:nrow(ampseq_object@asv_table))
+          names(ampseq_object@asv_seqs) = ampseq_object@asv_table$hapid
+          
+          if(!is.null(names(ampseq_object@asv_seqs_masked))){
+            names(ampseq_object@asv_seqs_masked) = ampseq_object@asv_table$hapid
+          }
+          
+        }
+        
+      }else{
+        stop('There are cigar strings that are different in the gt and the asv_table')  
+      }
       
     }else if(sum(!(cigars_gt %in% cigars_asvtab)) > 0){
       
@@ -4866,7 +5027,14 @@ sample_amplification_rate = function(ampseq_object, threshold = .8, update_sampl
                  paste(cigars_gt[!(cigars_gt %in% cigars_asvtab)], collapse = '\n'),
                  '\n'))
       
-      stop('There are cigar strings in the gt that are not present in the asv_table')
+      if(skip_errors){
+        
+        warning('There are cigar strings in the gt that are not present in the asv_table')
+        
+      }else{
+        stop('There are cigar strings in the gt that are not present in the asv_table')  
+      }
+      
       
     }else if(sum(!(cigars_asvtab %in% cigars_gt)) > 0){
       
@@ -4883,7 +5051,9 @@ sample_amplification_rate = function(ampseq_object, threshold = .8, update_sampl
         
         ampseq_object@asv_table = 
           ampseq_object@asv_table[!(ampseq_object@asv_table[['Amplicon']] == Amplicon &
-                                      ampseq_object@asv_table[['CIGAR_masked']] == CIGAR),]
+                                      ampseq_object@asv_table[['CIGAR_masked']] == CIGAR) &
+                                    !is.na(ampseq_object@asv_table[['Amplicon']]) & 
+                                    !is.na(ampseq_object@asv_table[['CIGAR_masked']]),] 
         
         ampseq_object@asv_seqs = ampseq_object@asv_seqs[
           names(ampseq_object@asv_seqs) %in% ampseq_object@asv_table$hapid]
@@ -4893,7 +5063,11 @@ sample_amplification_rate = function(ampseq_object, threshold = .8, update_sampl
         
         ampseq_object@asv_table$hapid = paste0('ASV', 1:nrow(ampseq_object@asv_table))
         names(ampseq_object@asv_seqs) = ampseq_object@asv_table$hapid
-        names(ampseq_object@asv_seqs_masked) = ampseq_object@asv_table$hapid
+        
+        if(!is.null(names(ampseq_object@asv_seqs_masked))){
+          names(ampseq_object@asv_seqs_masked) = ampseq_object@asv_table$hapid  
+        }
+        
         
       }
       
@@ -4902,7 +5076,7 @@ sample_amplification_rate = function(ampseq_object, threshold = .8, update_sampl
       print('cigar strings are consistent between gt and asv_table')
     }
     
-    consistency_between_gt_and_asvtab(ampseq_object)
+    consistency_between_gt_and_asvtab(ampseq_object, skip_errors = skip_errors)
     
     return(ampseq_object)
     
@@ -6819,7 +6993,8 @@ drug_resistant_haplotypes = function(ampseq_object,
                                                  'quarter_of_collection;2020-Q4,2021-Q1,2021-Q2,2021-Q3,2021-Q4'),
                                      na.var.rm = FALSE,
                                      na.hap.rm = TRUE,
-                                     hap_color_palette = 'random'){
+                                     hap_color_palette = 'random',
+                                     skip_errors = FALSE){
   
   
   # Call reference alleles
@@ -6835,8 +7010,10 @@ drug_resistant_haplotypes = function(ampseq_object,
     filters = strsplit(filters,';')
     for(temp_filter in 1:length(filters)){
       
-      ampseq_object = filter_samples(ampseq_object,
-                                     ampseq_object@metadata[[filters[[temp_filter]][1]]] %in% strsplit(filters[[temp_filter]][2],',')[[1]])
+      ampseq_object = filter_samples(obj = ampseq_object,
+                                     v = ampseq_object@metadata[[filters[[temp_filter]][1]]] %in% strsplit(filters[[temp_filter]][2],',')[[1]],
+                                     skip_errors = skip_errors
+                                     )
     }
   }
   
@@ -8478,7 +8655,7 @@ get_Fws = function(ampseq_object = NULL){
 
 ### get_polygenomic----
 
-get_polygenomic = function(ampseq_object, strata = NULL, update_popsummary = T, na.rm = FALSE, filters = NULL, poly_quantile = .75, poly_formula = "NHetLoci >= 1 & Fws < 1"){
+get_polygenomic = function(ampseq_object, strata = NULL, update_popsummary = T, na.rm = FALSE, filters = NULL, poly_quantile = .75, poly_formula = "NHetLoci >= 1 & Fws < 1", skip_errors = FALSE){
   
   
   if(grepl("(NHetLoci|Frac_HetLoci|max_nAlleles|Fws)(<|>|!|=)+", poly_formula)){
@@ -8556,13 +8733,18 @@ get_polygenomic = function(ampseq_object, strata = NULL, update_popsummary = T, 
   
   if(!is.null(strata)){
     if(na.rm){
-      ampseq_object = filter_samples(ampseq_object, v = !(is.na(ampseq_object@metadata[[strata]]) | grepl('NA',ampseq_object@metadata[[strata]])), update_cigars = F)
+      ampseq_object = filter_samples(ampseq_object, 
+                                     v = !(is.na(ampseq_object@metadata[[strata]]) | grepl('NA',ampseq_object@metadata[[strata]])), 
+                                     update_cigars = F,
+                                     skip_errors = skip_errors)
     }else if(length(ampseq_object@metadata[is.na(ampseq_object@metadata[[strata]]) | grepl('NA',ampseq_object@metadata[[strata]]),][[strata]])>0){
       ampseq_object@metadata[is.na(ampseq_object@metadata[[strata]]) | grepl('NA',ampseq_object@metadata[[strata]]),][[strata]] = 'missing data'
     }
     
     if(!is.null(filters)){
-      ampseq_object = filter_samples(ampseq_object, v = grepl(filters,ampseq_object@metadata[[strata]]), update_cigars = F)
+      ampseq_object = filter_samples(ampseq_object, v = grepl(filters,ampseq_object@metadata[[strata]]), 
+                                     update_cigars = F,
+                                     skip_errors = skip_errors)
     }
     
   }
@@ -8732,7 +8914,7 @@ get_polygenomic = function(ampseq_object, strata = NULL, update_popsummary = T, 
 
 ### draw_haplotypes----
 
-draw_haplotypes = function(obj = NULL, comparison_list = NULL, max_coi = NULL, combine_lists = F){
+draw_haplotypes = function(obj = NULL, comparison_list = NULL, max_coi = NULL, combine_lists = F, skip_errors = FALSE){
   
   if(!combine_lists){
     
@@ -8740,7 +8922,8 @@ draw_haplotypes = function(obj = NULL, comparison_list = NULL, max_coi = NULL, c
     
     for(comparison in 1:length(comparison_list)){
       
-      temp_ampseq = filter_samples(obj, obj@metadata$Sample_id %in% comparison_list[[comparison]], update_cigars = FALSE)
+      temp_ampseq = filter_samples(obj, obj@metadata$Sample_id %in% comparison_list[[comparison]], update_cigars = FALSE,
+                                   skip_errors = skip_errors)
       
       
       gt = temp_ampseq@gt
@@ -8920,7 +9103,7 @@ draw_haplotypes = function(obj = NULL, comparison_list = NULL, max_coi = NULL, c
       rep(Strata, length(comparison_list[[Strata]]))})),
                Sample =unlist(comparison_list))
     
-    temp_ampseq = filter_samples(obj, comparison_df[['Sample']], update_cigars = FALSE)
+    temp_ampseq = filter_samples(obj, comparison_df[['Sample']], update_cigars = FALSE, skip_errors = skip_errors)
     
     gt = temp_ampseq@gt
     gt = gsub(':\\d+', '', gt)
@@ -11541,7 +11724,7 @@ get_gene_description = function(obj = NULL, gff = NULL){
   return(data[, c('gene_id', 'gene_name', 'gene_description')])
 }
 
-remove_replicates = function(ampseq_object, v){
+remove_replicates = function(ampseq_object, v, skip_errors = FALSE){
   
   gt = ampseq_object@gt
   metadata = ampseq_object@metadata
@@ -11597,7 +11780,40 @@ remove_replicates = function(ampseq_object, v){
                '\n'
     ))
     
-    stop('There are cigar strings that are different in the gt and the asv_table')
+    if(skip_errors){
+      warning('There are cigar strings that are different in the gt and the asv_table, only discrepancies in gt will be fixed')
+      
+      cigar_strings_to_remove = cigars_asvtab[!(cigars_asvtab %in% cigars_gt)]
+      
+      for(cigar_string_to_remove in cigar_strings_to_remove){
+        
+        Amplicon = gsub(';.+$', '', cigar_string_to_remove)
+        CIGAR = gsub('^.+;', '', cigar_string_to_remove)
+        
+        ampseq_object@asv_table = 
+          ampseq_object@asv_table[!(ampseq_object@asv_table[['Amplicon']] == Amplicon &
+                                      ampseq_object@asv_table[['CIGAR_masked']] == CIGAR) &
+                                    !is.na(ampseq_object@asv_table[['Amplicon']]) &
+                                    !is.na(ampseq_object@asv_table[['CIGAR_masked']]),]
+        
+        ampseq_object@asv_seqs = ampseq_object@asv_seqs[
+          names(ampseq_object@asv_seqs) %in% ampseq_object@asv_table$hapid]
+        
+        ampseq_object@asv_seqs_masked = ampseq_object@asv_seqs_masked[
+          names(ampseq_object@asv_seqs_masked) %in% ampseq_object@asv_table$hapid]
+        
+        ampseq_object@asv_table$hapid = paste0('ASV', 1:nrow(ampseq_object@asv_table))
+        names(ampseq_object@asv_seqs) = ampseq_object@asv_table$hapid
+        
+        if(!is.null(names(ampseq_object@asv_seqs_masked))){
+          names(ampseq_object@asv_seqs_masked) = ampseq_object@asv_table$hapid  
+        }
+        
+      }
+      
+    }else{
+      stop('There are cigar strings that are different in the gt and the asv_table') 
+    }
     
   }else if(sum(!(cigars_gt %in% cigars_asvtab)) > 0){
     
@@ -11605,7 +11821,13 @@ remove_replicates = function(ampseq_object, v){
                paste(cigars_gt[!(cigars_gt %in% cigars_asvtab)], collapse = '\n'),
                '\n'))
     
-    stop('There are cigar strings in the gt that are not present in the asv_table')
+    if(skip_errors){
+      
+      warning('There are cigar strings in the gt that are not present in the asv_table')
+      
+    }else{
+      stop('There are cigar strings in the gt that are not present in the asv_table')  
+    }
     
   }else if(sum(!(cigars_asvtab %in% cigars_gt)) > 0){
     
@@ -11622,7 +11844,9 @@ remove_replicates = function(ampseq_object, v){
       
       ampseq_object@asv_table = 
         ampseq_object@asv_table[!(ampseq_object@asv_table[['Amplicon']] == Amplicon &
-                                ampseq_object@asv_table[['CIGAR_masked']] == CIGAR),]
+                                ampseq_object@asv_table[['CIGAR_masked']] == CIGAR) &
+                                  !is.na(ampseq_object@asv_table[['Amplicon']]) &
+                                  !is.na(ampseq_object@asv_table[['CIGAR_masked']]),]
       
       ampseq_object@asv_seqs = ampseq_object@asv_seqs[
         names(ampseq_object@asv_seqs) %in% ampseq_object@asv_table$hapid]
@@ -11632,7 +11856,11 @@ remove_replicates = function(ampseq_object, v){
       
       ampseq_object@asv_table$hapid = paste0('ASV', 1:nrow(ampseq_object@asv_table))
       names(ampseq_object@asv_seqs) = ampseq_object@asv_table$hapid
-      names(ampseq_object@asv_seqs_masked) = ampseq_object@asv_table$hapid
+      
+      if(!is.null(names(ampseq_object@asv_seqs_masked))){
+        names(ampseq_object@asv_seqs_masked) = ampseq_object@asv_table$hapid  
+      }
+      
       
     }
     
@@ -11641,7 +11869,7 @@ remove_replicates = function(ampseq_object, v){
     print('cigar strings are consistent between gt and asv_table')
   }
   
-  consistency_between_gt_and_asvtab(ampseq_object)
+  consistency_between_gt_and_asvtab(ampseq_object, skip_errors = skip_errors)
   
   rownames(ampseq_object@gt) = ampseq_object@metadata$Sample_id
   
@@ -14110,13 +14338,13 @@ cigar_strings2fasta = function(obj,
 
 
 # pairwise_euclidean----
-pairwise_euclidean = function(obj = NULL, parallel = TRUE, w = 1, n = 100, alpha = 0.05, method = 'exact', pairs = NULL, Filter_loci = NULL){
+pairwise_euclidean = function(obj = NULL, parallel = TRUE, w = 1, n = 100, alpha = 0.05, method = 'exact', pairs = NULL, Filter_loci = NULL, skip_errors){
   library(parallel)
   library(doMC)
   library(svMisc)
   
   if(!is.null(Filter_loci)){
-    obj = filter_loci(obj, v = Filter_loci)
+    obj = filter_loci(obj, v = Filter_loci, skip_errors = skip_errors)
   }
   
   if(class(obj) == 'loci'){
@@ -14838,7 +15066,7 @@ get_cigar_alleles = function(ampseq_object,
 }
 
 
-consistency_between_gt_and_asvtab = function(ampseq_object, col = 'CIGAR_masked'){
+consistency_between_gt_and_asvtab = function(ampseq_object, col = 'CIGAR_masked', skip_errors = FALSE){
   
   cigars_gt = get_cigar_alleles(ampseq_object, 
                                     from = 'gt',
@@ -14862,15 +15090,25 @@ consistency_between_gt_and_asvtab = function(ampseq_object, col = 'CIGAR_masked'
                  '\n'
     ))
     
-    stop('There are cigar strings that are different in the gt and the asv_table')
+    if(skip_errors){
+      warning('There are cigar strings that are different in the gt and the asv_table')  
+    }else{
+      stop('There are cigar strings that are different in the gt and the asv_table')
+    }
+    
+    
     
   }else if(sum(!(cigars_gt %in% cigars_asvtab)) > 0){
     
     cat(paste0('Cigar strings in gt matrix that are not present in asv_table are:\n',
                  paste(cigars_gt[!(cigars_gt %in% cigars_asvtab)], collapse = '\n'),
                  '\n'))
+    if(skip_errors){
+      warning('There are cigar strings in the gt that are not present in the asv_table')
+    }else{
+      stop('There are cigar strings in the gt that are not present in the asv_table')  
+    }
     
-    stop('There are cigar strings in the gt that are not present in the asv_table')
     
   }else if(sum(!(cigars_asvtab %in% cigars_gt)) > 0){
     
@@ -14878,7 +15116,12 @@ consistency_between_gt_and_asvtab = function(ampseq_object, col = 'CIGAR_masked'
                  paste(cigars_asvtab[!(cigars_asvtab %in% cigars_gt)], collapse = '\n'),
                  '\n'))
     
-    stop('There are cigar strings in the asv_table that are not present in the gt')
+    if(skip_errors){
+      warning('There are cigar strings in the asv_table that are not present in the gt')
+    }else{
+      stop('There are cigar strings in the asv_table that are not present in the gt')  
+    }
+    
     
   }else{
     print('cigar strings are consistent between gt and asv_table')
@@ -15398,10 +15641,10 @@ setMethod("get_AC", signature(obj = "rGenome"),
 
 # get_nuc_div----
 
-setGeneric("get_nuc_div", function(obj = NULL, monoclonals = NULL, polyclonals = NULL, gff = NULL, dna_regions = NULL, type_of_region = NULL, window = NULL, by = NULL, min_samp_size = 2) standardGeneric("get_nuc_div"))
+setGeneric("get_nuc_div", function(obj = NULL, monoclonals = NULL, polyclonals = NULL, gff = NULL, dna_regions = NULL, type_of_region = NULL, window = NULL, by = NULL, min_samp_size = 2, skip_errors = FALSE) standardGeneric("get_nuc_div"))
 
 setMethod("get_nuc_div", signature(obj = "rGenome"),
-          function(obj = NULL, monoclonals = NULL, polyclonals = NULL, gff = NULL, dna_regions = NULL, type_of_region = NULL,  window = NULL, by = NULL, min_samp_size = 2){
+          function(obj = NULL, monoclonals = NULL, polyclonals = NULL, gff = NULL, dna_regions = NULL, type_of_region = NULL,  window = NULL, by = NULL, min_samp_size = 2, skip_errors = FALSE){
             
             loci = obj@loci_table
             metadata = obj@metadata
@@ -15528,7 +15771,7 @@ setMethod("get_nuc_div", signature(obj = "rGenome"),
                 if(populations[pop,][['nsamples']] >= min_samp_size){
                   
                   samples = metadata[metadata[[by]] == pop & !is.na(metadata[[by]]),][['Sample_id']]
-                  temp_pop = filter_samples(obj = obj, v = samples)
+                  temp_pop = filter_samples(obj = obj, v = samples, skip_errors = skip_errors)
                   
                   temp_monoclonals = monoclonals[monoclonals %in% samples]
                   if(length(temp_monoclonals) == 0){
@@ -15541,7 +15784,7 @@ setMethod("get_nuc_div", signature(obj = "rGenome"),
                   
                   allele_counts = get_AC(obj = temp_pop, w = 1, n = 1, update_alleles = T, monoclonals = temp_monoclonals, polyclonals = temp_polyclonals)
                   
-                  temp_pop = filter_loci(obj = temp_pop, v = allele_counts$Cardinality > 1)
+                  temp_pop = filter_loci(obj = temp_pop, v = allele_counts$Cardinality > 1, skip_errors = skip_errors)
                   
                   gt = temp_pop@gt
                   pop_loci = temp_pop@loci_table
@@ -15671,7 +15914,7 @@ setMethod("get_nuc_div", signature(obj = "rGenome"),
               
               allele_counts = get_AC(obj = obj, w = 1, n = 1, update_alleles = T, monoclonals = monoclonals, polyclonals = polyclonals)
               
-              totalpop_rGenome = filter_loci(obj = obj, v = allele_counts$Cardinality > 1)
+              totalpop_rGenome = filter_loci(obj = obj, v = allele_counts$Cardinality > 1,  skip_errors = skip_errors)
               
               gt = totalpop_rGenome@gt
               pop_loci = totalpop_rGenome@loci_table
@@ -15787,7 +16030,7 @@ setMethod("get_nuc_div", signature(obj = "rGenome"),
               
               allele_counts = get_AC(obj = obj, w = 1, n = 1, update_alleles = T, monoclonals = monoclonals, polyclonals = polyclonals)
               
-              totalpop_rGenome = filter_loci(obj = obj, v = allele_counts$Cardinality > 1)
+              totalpop_rGenome = filter_loci(obj = obj, v = allele_counts$Cardinality > 1, skip_errors = skip_errors)
               
               gt = totalpop_rGenome@gt
               pop_loci = totalpop_rGenome@loci_table
@@ -16756,7 +16999,7 @@ get_mhap_NucDiv = function(ampseq_object,
 
 
 
-merge_replicates = function(ampseq_object, v, min_ratio = 0.1){
+merge_replicates = function(ampseq_object, v, min_ratio = 0.1, skip_errors = FALSE){
   
   gt = ampseq_object@gt
   metadata = ampseq_object@metadata
@@ -16898,7 +17141,7 @@ merge_replicates = function(ampseq_object, v, min_ratio = 0.1){
     print('cigar strings are consistent between gt and asv_table')
   }
   
-  consistency_between_gt_and_asvtab(ampseq_object)
+  consistency_between_gt_and_asvtab(ampseq_object, skip_errors = skip_errors)
   
   return(ampseq_object)
   
