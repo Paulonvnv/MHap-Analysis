@@ -2127,11 +2127,11 @@ read_ampseq = function(file = NULL, format = 'excel', sep = '\t'){
           
       }else if(sheet %in% c('vcf_like.tsv')){
         
-        temp_sheet = read.csv(file.path(file, sheet))
+        temp_sheet = read.table(file.path(file, sheet), header = T, sep = sep)
         temp_sheet_rownames = paste0(temp_sheet[,1], '_', temp_sheet[,2])
         rownames(temp_sheet) = temp_sheet_rownames
         
-        slot(ampseq_object, gsub('.csv','',sheet), check = TRUE) = temp_sheet
+        slot(ampseq_object, gsub('.tsv','',sheet), check = TRUE) = temp_sheet
         
       }else if(sheet == 'markers.tsv'){
         
@@ -2258,6 +2258,246 @@ create_loci = function(loci_table = NULL,
   return(obj)
 }
 
+# get_allele_freq----
+
+get_allele_freq = function(obj, by = NULL, keep = NULL, remove = NULL, pairwise = TRUE){
+  
+  library(svMisc)
+  
+  if(is.null(by)){
+    
+    if(class(obj) == 'ampseq'){
+      loci_abd_table = obj@gt
+      
+      
+      allele_freq= NULL
+      
+      for(locus in colnames(loci_abd_table)){
+        alleles = levels(as.factor(unlist(strsplit(gsub(":[0-9]+", "", loci_abd_table[,locus]), "_"))))
+        allele_freq[[locus]] = sort(sapply(alleles, function(allele){
+          sum(grepl(paste("(^|_)", allele, ":", sep = ""), loci_abd_table[,locus]))/sum(!is.na(unlist(strsplit(loci_abd_table[,locus], "_"))))
+        }), decreasing = T)
+      }
+      
+      freq_table = matrix(NA, nrow = length(allele_freq), ncol = max(sapply(allele_freq, length)),
+                          dimnames = list(names(allele_freq),
+                                          paste("Allele",seq(1,max(sapply(allele_freq, length)),1), sep = "_")))
+      
+      for (locus in names(allele_freq)){
+        for(allele in 1:length(allele_freq[[locus]])){
+          freq_table[locus, allele] = allele_freq[[locus]][allele]
+        }
+      }
+      
+      freq_table[is.na(freq_table)] = 0
+      
+    }else if(class(obj) == 'loci'){
+      loci_abd_table = obj@loci_table
+      
+      loci_abd_table = gsub('/', '_', loci_abd_table)
+      
+      
+      allele_freq = NULL
+      
+      for(locus in colnames(loci_abd_table)){
+        
+        alleles = levels(as.factor(unlist(strsplit(loci_abd_table[,locus], "_"))))
+        allele_freq[[locus]] = sort(sapply(alleles, function(allele){
+          sum(grepl(paste("(^|_)", allele, "($|_)", sep = ""), loci_abd_table[,locus]))/sum(!is.na(unlist(strsplit(loci_abd_table[,locus], "_"))))
+        }), decreasing = T)
+        
+        progress(round(100*which(colnames(loci_abd_table) == locus)/length(colnames(loci_abd_table))))
+        
+      }
+      
+      freq_table = matrix(NA, nrow = length(allele_freq), ncol = max(sapply(allele_freq, length)),
+                               dimnames = list(names(allele_freq),
+                                               paste("Allele",seq(0,max(sapply(allele_freq, length)) - 1,1), sep = "_")))
+      
+      for(locus in names(allele_freq)){
+        for(allele in 1:length(allele_freq[[locus]])){
+          freq_table[locus, allele] = allele_freq[[locus]][allele]
+        }
+        
+        progress(round(100*which(names(allele_freq) == locus)/length(names(allele_freq))))
+        
+      }
+      
+      freq_table[is.na(freq_table)] = 0
+      
+    }
+    
+    
+  }else{
+    
+    populations = unique(obj@metadata[[by]])
+    
+    freq_table = NULL
+    
+    for(pop in populations){
+      
+      print(paste0('Calculating allele frequency for ', pop, '...'))
+      temp_obj = filter_samples(obj, v = obj@metadata[[by]] == pop)
+      
+      if(class(obj) == 'ampseq'){
+        loci_abd_table = temp_obj@gt  
+        
+        allele_freq = NULL
+        
+        for(locus in colnames(loci_abd_table)){
+          alleles = levels(as.factor(unlist(strsplit(gsub(":[0-9]+", "", loci_abd_table[,locus]), "_"))))
+          allele_freq[[locus]] = sort(sapply(alleles, function(allele){
+            sum(grepl(paste("(^|_)", allele, ":", sep = ""), loci_abd_table[,locus]))/sum(!is.na(unlist(strsplit(loci_abd_table[,locus], "_"))))
+          }), decreasing = T)
+          
+          progress(round(100*which(colnames(loci_abd_table) == locus)/length(colnames(loci_abd_table))))
+        }
+        
+        temp_freq_table = matrix(NA, nrow = length(allele_freq), ncol = max(sapply(allele_freq, length)),
+                                 dimnames = list(names(allele_freq),
+                                                 paste("Allele",seq(1,max(sapply(allele_freq, length)),1), sep = "_")))
+        
+        for (locus in names(allele_freq)){
+          for(allele in 1:length(allele_freq[[locus]])){
+            temp_freq_table[locus, allele] = allele_freq[[locus]][allele]
+          }
+          
+          progress(round(100*which(names(allele_freq) == locus)/length(names(allele_freq))))
+        }
+        
+        temp_freq_table[is.na(temp_freq_table)] = 0
+        
+        freq_table[[pop]] = temp_freq_table
+        
+      }else if(class(obj) == 'loci'){
+        
+        loci_abd_table = temp_obj@loci_table
+        
+        loci_abd_table = gsub('/', '_', loci_abd_table)
+        
+        
+        allele_freq = NULL
+        
+        for(locus in colnames(loci_abd_table)){
+          
+          alleles = levels(as.factor(unlist(strsplit(loci_abd_table[,locus], "_"))))
+          allele_freq[[locus]] = sort(sapply(alleles, function(allele){
+            sum(grepl(paste("(^|_)", allele, "($|_)", sep = ""), loci_abd_table[,locus]))/sum(!is.na(unlist(strsplit(loci_abd_table[,locus], "_"))))
+          }), decreasing = T)
+          
+          progress(round(100*which(colnames(loci_abd_table) == locus)/length(colnames(loci_abd_table))))
+          
+        }
+        
+        temp_freq_table = matrix(NA, nrow = length(allele_freq), ncol = max(sapply(allele_freq, length)),
+                            dimnames = list(names(allele_freq),
+                                            paste("Allele",seq(0,max(sapply(allele_freq, length)) - 1,1), sep = "_")))
+        
+        for(locus in names(allele_freq)){
+          for(allele in 1:length(allele_freq[[locus]])){
+            temp_freq_table[locus, allele] = allele_freq[[locus]][allele]
+          }
+          
+          progress(round(100*which(names(allele_freq) == locus)/length(names(allele_freq))))
+          
+        }
+        
+        temp_freq_table[is.na(temp_freq_table)] = 0
+        
+        freq_table[[pop]] = temp_freq_table
+        
+      }
+      
+      
+    }
+    
+    if(pairwise){
+      
+      pop_combinations = t(combn(populations, 2))
+      
+      for(pop in 1:nrow(pop_combinations)){
+        
+        print(paste0('Calculating allele frequency for ', pop, '...'))
+        
+        temp_obj = filter_samples(obj, v = obj@metadata[[by]] %in% pop_combinations[pop,])
+        
+        if(class(obj) == 'ampseq'){
+          loci_abd_table = temp_obj@gt  
+          
+          allele_freq= NULL
+          
+          for(locus in colnames(loci_abd_table)){
+            alleles = levels(as.factor(unlist(strsplit(gsub(":[0-9]+", "", loci_abd_table[,locus]), "_"))))
+            allele_freq[[locus]] = sort(sapply(alleles, function(allele){
+              sum(grepl(paste("(^|_)", allele, ":", sep = ""), loci_abd_table[,locus]))/sum(!is.na(unlist(strsplit(loci_abd_table[,locus], "_"))))
+            }), decreasing = T)
+            
+            progress(round(100*which(colnames(loci_abd_table) == locus)/length(colnames(loci_abd_table))))
+          }
+          
+          temp_freq_table = matrix(NA, nrow = length(allele_freq), ncol = max(sapply(allele_freq, length)),
+                                   dimnames = list(names(allele_freq),
+                                                   paste("Allele",seq(1,max(sapply(allele_freq, length)),1), sep = "_")))
+          
+          for (locus in names(allele_freq)){
+            for(allele in 1:length(allele_freq[[locus]])){
+              temp_freq_table[locus, allele] = allele_freq[[locus]][allele]
+            }
+            progress(round(100*which(names(allele_freq) == locus)/length(names(allele_freq))))
+          }
+          
+          temp_freq_table[is.na(temp_freq_table)] = 0
+          
+          freq_table[[paste(pop_combinations[pop,], collapse = '_vs_')]] = temp_freq_table
+          
+          
+        }else if(class(obj) == 'loci'){
+          loci_abd_table = temp_obj@loci_table
+          
+          loci_abd_table = gsub('/', '_', loci_abd_table)
+          
+          
+          allele_freq = NULL
+          
+          for(locus in colnames(loci_abd_table)){
+            
+            alleles = levels(as.factor(unlist(strsplit(loci_abd_table[,locus], "_"))))
+            allele_freq[[locus]] = sort(sapply(alleles, function(allele){
+              sum(grepl(paste("(^|_)", allele, "($|_)", sep = ""), loci_abd_table[,locus]))/sum(!is.na(unlist(strsplit(loci_abd_table[,locus], "_"))))
+            }), decreasing = T)
+            
+            progress(round(100*which(colnames(loci_abd_table) == locus)/length(colnames(loci_abd_table))))
+            
+          }
+          
+          temp_freq_table = matrix(NA, nrow = length(allele_freq), ncol = max(sapply(allele_freq, length)),
+                                   dimnames = list(names(allele_freq),
+                                                   paste("Allele",seq(0,max(sapply(allele_freq, length)) - 1,1), sep = "_")))
+          
+          for(locus in names(allele_freq)){
+            for(allele in 1:length(allele_freq[[locus]])){
+              temp_freq_table[locus, allele] = allele_freq[[locus]][allele]
+            }
+            
+            progress(round(100*which(names(allele_freq) == locus)/length(names(allele_freq))))
+            
+          }
+          
+          temp_freq_table[is.na(temp_freq_table)] = 0
+          
+          freq_table[[paste(pop_combinations[pop,], collapse = '_vs_')]] = temp_freq_table
+          
+        }
+        
+      }
+      
+    }
+    
+  }
+  
+  return(freq_table)
+  
+}
 
 ## ampseq2loci----
 
@@ -2312,7 +2552,8 @@ ampseq2loci = function(ampseq_object){
 
 ## ampseq2vcf----
 
-ampseq2vcf = function(ampseq_object, monoclonals = NULL, polyclonals = NULL, ref_fasta, ploidy = 2){
+ampseq2vcf = function(ampseq_object, monoclonals = NULL, polyclonals = NULL, ref_fasta#, ploidy = 2
+                      ){
   
   markers = ampseq_object@markers
   asv_table = ampseq_object@asv_table
@@ -2336,7 +2577,7 @@ ampseq2vcf = function(ampseq_object, monoclonals = NULL, polyclonals = NULL, ref
   # 
   # which(markers$amplicon == amplicon)
   # 
-  #amplicon = markers$amplicon[1]
+  amplicon = markers$amplicon[1]
   for(amplicon in markers$amplicon){
     
     print(amplicon)
@@ -2463,7 +2704,7 @@ ampseq2vcf = function(ampseq_object, monoclonals = NULL, polyclonals = NULL, ref
       
       amplicon_gt = NULL
       
-      # Sample_id = rownames(gt_ampseq)[3]
+      Sample_id = rownames(gt_ampseq)[1]
       # which(rownames(gt_ampseq) == Sample_id)
       for(Sample_id in rownames(gt_ampseq)){
         
@@ -2570,6 +2811,7 @@ ampseq2vcf = function(ampseq_object, monoclonals = NULL, polyclonals = NULL, ref
           
             sample_vcf_gt = NULL
           
+            clone =1
             for(clone in 1:nclones){
             
               Clone_amplicon_gt = clones_amplicon_gt[clone]
@@ -2580,11 +2822,11 @@ ampseq2vcf = function(ampseq_object, monoclonals = NULL, polyclonals = NULL, ref
               
                 for(position in amplicon_loci_table$POS){
                   clone_vcf_gt = c(clone_vcf_gt,
-                                   paste0('0:', 
-                                          paste(c(gsub('^\\d+[DI]?=?[ATGC]+:', '', Clone_amplicon_gt),
+                                   paste0('0/0:', 
+                                          paste(c(gsub('^\\.:', '', Clone_amplicon_gt),
                                                   rep(0,
                                                       length(unlist(str_split(amplicon_loci_table[amplicon_loci_table$POS == position,][['ALT']], ',')))
-                                                  )), collapse = ','), ':', gsub('^\\d+[DI]?=?[ATGC]+:', '', Clone_amplicon_gt)))
+                                                  )), collapse = ','), ':', gsub('^\\.:', '', Clone_amplicon_gt)))
                 }
               
               }else{
@@ -2607,24 +2849,29 @@ ampseq2vcf = function(ampseq_object, monoclonals = NULL, polyclonals = NULL, ref
                         cigar_position_variants[['POS']] == sample_positions[sample_positions$POS == position,][['POS']] &
                         cigar_position_variants[['ALT']] == sample_positions[sample_positions$POS == position,][['ALT']],][['ALT_label']]
                   
+                    if(length(GT) == 0){
+                      GT = '.'
+                      print('Cigar string not in Cigar table')
+                    }
+                    
                     AD = rep(0,
                              length(unlist(str_split(amplicon_loci_table[amplicon_loci_table$POS == position,][['ALT']], ','))) + 1)
                   
-                    AD[as.integer(GT) + 1] = gsub('^\\d+[DI]?=?[ATGC]+:', '', Clone_amplicon_gt)
+                    AD[as.integer(GT) + 1] = gsub('^.+:', '', Clone_amplicon_gt)
                   
                   
                     clone_vcf_gt = c(clone_vcf_gt,
-                                     paste0(GT,':', 
-                                            paste(AD, collapse = ','), ':', gsub('^\\d+[DI]?=?[ATGC]+:', '', Clone_amplicon_gt)))
+                                     paste0(GT, '/', GT,':', 
+                                            paste(AD, collapse = ','), ':', gsub('^.+:', '', Clone_amplicon_gt)))
                   
                   }else{
                     
                     clone_vcf_gt = c(clone_vcf_gt,
-                                     paste0('0:', 
-                                            paste(c(gsub('^\\d+[DI]?=?[ATGC]+:', '', Clone_amplicon_gt),
+                                     paste0('0/0:', 
+                                            paste(c(gsub('^.+:', '', Clone_amplicon_gt),
                                                     rep(0,
                                                         length(unlist(str_split(amplicon_loci_table[amplicon_loci_table$POS == position,][['ALT']], ',')))
-                                                    )), collapse = ','), ':', gsub('^\\d+[DI]?=?[ATGC]+:', '', Clone_amplicon_gt)))
+                                                    )), collapse = ','), ':', gsub('^.+:', '', Clone_amplicon_gt)))
                   
                   }
                 
@@ -2666,7 +2913,7 @@ ampseq2vcf = function(ampseq_object, monoclonals = NULL, polyclonals = NULL, ref
     
   }
 
-  if(sum(duplicated(paste(loci_table$CHROM, loci_table$POS, sep = '_'))) > 0 ){stop()}
+  if(sum(duplicated(paste(loci_table$CHROM, loci_table$POS, sep = '_'))) > 0 ){stop('A duplicated position is being detected, which means that there is a wrong representation in the Pseudo-Cigar string')}
   
   loci_table[['ID']] = '.'
   loci_table[['INFO']] = '.'
@@ -2687,8 +2934,28 @@ ampseq2vcf = function(ampseq_object, monoclonals = NULL, polyclonals = NULL, ref
 ## filter_samples----
 
 filter_samples = function(obj, v, update_cigars = TRUE, skip_errors = F){
-  
-  if(class(obj) == 'ampseq'){
+  if(class(obj) == 'loci'){
+    
+    obj2 = obj
+    
+    if(is.logical(v)){
+      n_rows = sum(v)
+      row_names = rownames(obj@loci_table)[v]
+      
+    }else if(is.character(v)){
+      n_rows = length(v)
+      row_names = v
+    }
+    
+    obj2@loci_table = matrix(obj@loci_table[v,],
+                     nrow = n_rows,
+                     ncol = ncol(obj@loci_table),
+                     dimnames = list(row_names,
+                                     colnames(obj@loci_table))
+    )
+    obj2@metadata = obj@metadata[v,, drop = F]
+    
+  }else if(class(obj) == 'ampseq'){
     obj2 = obj
     
     if(is.logical(v)){
@@ -2834,30 +3101,34 @@ filter_samples = function(obj, v, update_cigars = TRUE, skip_errors = F){
     
   }else if(class(obj) == 'rGenome'){
     
-    if(is.logical(v)){
-      if(sum(v) > 1){
-        
-        gt = obj@gt[,v]
-        
-      }else if(sum(v) == 1){
-        
-        gt = matrix(obj@gt[,v], 
-                    ncol = 1,
-                    nrow = nrow(obj@gt),
-                    dimnames = list(rownames(obj@gt),
-                                    obj@metadata$Sample_id[v]))
-        
-      }else if(sum(v) == 0){
-        
-        stop('Any sample meet the filtering criteria')
-        
-      }
-    }
-    
+    # if(is.logical(v)){
+    #   print('here')
+    #   if(sum(v) > 1){
+    #     
+    #     gt = obj@gt[,v]
+    #     
+    #   }else if(sum(v) == 1){
+    #     
+    #     gt = matrix(obj@gt[,v], 
+    #                 ncol = 1,
+    #                 nrow = nrow(obj@gt),
+    #                 dimnames = list(rownames(obj@gt),
+    #                                 obj@metadata$Sample_id[v]))
+    #     
+    #   }else if(sum(v) == 0){
+    #     
+    #     stop('Any sample meet the filtering criteria')
+    #     
+    #   }
+    # }else{
+    #   
+    #   
+    #   
+    # }
     
     obj2 = rGenome(gt = obj@gt[,v],
                    loci_table = obj@loci_table,
-                   metadata = obj@metadata[v,])
+                   metadata = obj@metadata[v,, drop = FALSE])
     
   }else(
     stop('Object should be of class ampseq or rGenome')
@@ -6590,20 +6861,20 @@ haplotypes_respect_to_reference = function(ampseq_object,
     
     
     if(length(gene_ids) > 1){
-      mon_aacigar_table = aacigar_table[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) == 0),]
-      poly_aacigar_table = aacigar_table[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) != 0),]  
+      mon_aacigar_table = aacigar_table[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) == 0), , drop = FALSE]
+      poly_aacigar_table = aacigar_table[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) != 0), , drop = FALSE]  
       
-      mon_dnacigar_table = dnacigar_table[(apply(dnacigar_table, 1, function(i){sum(grepl("\\|",i))}) == 0),]
-      poly_dnacigar_table = dnacigar_table[(apply(dnacigar_table, 1, function(i){sum(grepl("\\|",i))}) != 0),]  
+      mon_dnacigar_table = dnacigar_table[(apply(dnacigar_table, 1, function(i){sum(grepl("\\|",i))}) == 0), , drop = FALSE]
+      poly_dnacigar_table = dnacigar_table[(apply(dnacigar_table, 1, function(i){sum(grepl("\\|",i))}) != 0), , drop = FALSE]  
       
     }else{
-      mon_aacigar_table = aacigar_table[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) == 0),]
+      mon_aacigar_table = aacigar_table[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) == 0), , drop = FALSE]
       mon_aacigar_table = matrix(mon_aacigar_table, ncol = 1,
                                  dimnames = list(
                                    names(mon_aacigar_table),
                                    gene_ids
                                  ))
-      poly_aacigar_table = aacigar_table[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) != 0),]
+      poly_aacigar_table = aacigar_table[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) != 0), , drop = FALSE]
       poly_aacigar_table_sampnames = rownames(aacigar_table)[(apply(aacigar_table, 1, function(i){sum(grepl("\\|",i))}) != 0)]
       
       mon_dnacigar_table = dnacigar_table[(apply(dnacigar_table, 1, function(i){sum(grepl("\\|",i))}) == 0),]
@@ -6612,7 +6883,7 @@ haplotypes_respect_to_reference = function(ampseq_object,
                                     names(mon_dnacigar_table),
                                     gene_ids
                                   ))
-      poly_dnacigar_table = dnacigar_table[(apply(dnacigar_table, 1, function(i){sum(grepl("\\|",i))}) != 0),]
+      poly_dnacigar_table = dnacigar_table[(apply(dnacigar_table, 1, function(i){sum(grepl("\\|",i))}) != 0), , drop = FALSE]
       poly_dnacigar_table_sampnames = rownames(dnacigar_table)[(apply(dnacigar_table, 1, function(i){sum(grepl("\\|",i))}) != 0)]
       
       if(!isEmpty(poly_aacigar_table)){
@@ -6713,7 +6984,7 @@ haplotypes_respect_to_reference = function(ampseq_object,
     
     samples_w_silent_snps = extended_aacigar_table %>% filter(is.na(haplotype)) %>%select(samples) %>% unlist()
     
-    for(silent_sample in samples_w_silent_snps){
+    for(silent_sample in unique(samples_w_silent_snps)){
       
       extended_aacigar_table[extended_aacigar_table$samples == silent_sample &
                                is.na(extended_aacigar_table$haplotype),
@@ -9384,7 +9655,9 @@ estimate_r_and_k <- function(fs, ds, Ys, epsilon = 0.001, rho = 7.4 * 10 ^ (-7),
 
 # rGenome2loci----
 
-rGenome2loci = function(rGenome_object){
+rGenome2loci = function(rGenome_object, allele_counts){
+  
+  library(svMisc)
   
   loci_table = t(gsub(':\\d+', '', rGenome_object@gt))
   
@@ -9398,16 +9671,21 @@ rGenome2loci = function(rGenome_object){
     allele_freq_list[[locus]] = allele_freq_list[[locus]]/sum(allele_freq_list[[locus]])
     names(allele_freq_list[[locus]]) = unlist(strsplit(allele_counts[locus, ][['Alleles']], ','))
     
+    progress(round(100*which(rownames(allele_counts) == locus)/length(rownames(allele_counts))))
+    
   }
   
   freq_table = matrix(NA, nrow = length(allele_freq_list), ncol = max(sapply(allele_freq_list, length)),
                       dimnames = list(names(allele_freq_list),
                                       paste("Allele",seq(0,max(sapply(allele_freq_list, length)) - 1,1), sep = "_")))
   
-  for (locus in names(allele_freq_list)){
+  for(locus in names(allele_freq_list)){
     for(allele in 1:length(allele_freq_list[[locus]])){
       freq_table[locus, allele] = allele_freq_list[[locus]][allele]
     }
+    
+    progress(round(100*which(names(allele_freq_list) == locus)/length(names(allele_freq_list))))
+    
   }
   
   freq_table[is.na(freq_table)] = 0
@@ -9433,7 +9711,8 @@ rGenome2loci = function(rGenome_object){
 
 ### pairwise_hmmIBD----
 
-pairwise_hmmIBD = function(obj = NULL, parallel = TRUE, w = 1, n = 1, max_k = 200, pairs = NULL, viterbi = F){
+pairwise_hmmIBD = function(obj = NULL, parallel = TRUE, w = 1, n = 1, max_k = 200, 
+                           pairs = NULL, by = NULL, freq_table = NULL, max_alleles = NULL){
   library(parallel)
   library(doMC)
   library(svMisc)
@@ -9451,59 +9730,136 @@ pairwise_hmmIBD = function(obj = NULL, parallel = TRUE, w = 1, n = 1, max_k = 20
   }
   
   loci_table = loci_object@loci_table
-  freq_table = loci_object@freq_table
+  metadata = loci_object@metadata
+  
+  if(is.null(freq_table)){
+    freq_table = loci_object@freq_table
+  }
+  
   markers = loci_object@markers
   
-  polymorphic_sites = which(rowSums(freq_table == 1) == 0)
-  
-  loci_table = loci_table[,polymorphic_sites]
-  freq_table = freq_table[polymorphic_sites,]
-  markers = markers[polymorphic_sites,]
+  if(is.data.frame(freq_table) | 'matrix' %in% class(freq_table)){
+    polymorphic_sites = which(rowSums(freq_table == 1) == 0)
+    loci_table = loci_table[,polymorphic_sites]
+    freq_table = freq_table[polymorphic_sites,]
+    markers = markers[polymorphic_sites,]
+  }
   
   if(is.null(pairs)){
     pairs = as.data.frame(t(combn(rownames(loci_table), 2)))  
   }
   
-  s = round(seq(1,nrow(pairs)+1, length.out=n+1))
+  s = round(seq(1, nrow(pairs) + 1, length.out = n + 1))
   low = s[w]
-  high = s[w+1]-1
+  high = s[w + 1] - 1
   
-  pairs = pairs[low:high,]
+  pairs = pairs[low:high, ]
   
-  fx_get_relatedness = function(Yi, Yj, freq_table, markers, max_k){
+  fx_get_relatedness = function(Yi, 
+                                Yj, 
+                                freq_table, 
+                                markers, 
+                                max_k, 
+                                by = NULL, 
+                                metadata = NULL, 
+                                Yi_id, 
+                                Yj_id, 
+                                max_alleles = NULL){
+    
+    if(!is.null(by)){
+      
+      Yi_pop = metadata[metadata[['Sample_id']] == Yi_id,][[by]]
+      Yj_pop = metadata[metadata[['Sample_id']] == Yj_id,][[by]]
+      
+      if(Yi_pop == Yj_pop){
+        
+        pop_freq_table = freq_table[[Yi_pop]]
+        
+      }else{
+        
+        merged_pop = names(freq_table)[grepl(Yi_pop, names(freq_table)) & grepl(Yj_pop, names(freq_table))]
+        pop_freq_table = freq_table[[merged_pop]]
+      
+      }
+      
+      fs = pop_freq_table
+      
+    }else if(is.data.frame(freq_table) | 'matrix' %in% class(freq_table)){
+      
+      fs = freq_table
+      
+    }
     
     Ys = cbind(Yi, Yj)
+    rownames(Ys) = rownames(fs)
     
-    rownames(Ys) = rownames(freq_table)
+    polymorphic_sites = which(rowSums(fs == 1) == 0)
+    Ys = Ys[polymorphic_sites, ]
+    fs = fs[polymorphic_sites,]
+    markers = markers[polymorphic_sites,]
     
-    fs = freq_table[!is.na(Ys[,"Yi"]) & !is.na(Ys[,"Yj"]),]
-    
+    fs = fs[!is.na(Ys[,"Yi"]) & !is.na(Ys[,"Yj"]),]
     no_na_markers = markers[!is.na(Ys[,"Yi"]) & !is.na(Ys[,"Yj"]),]
+    Ys = Ys[!is.na(Ys[,"Yi"]) & !is.na(Ys[,"Yj"]),]
     
-    Ys =Ys[!is.na(Ys[,"Yi"]) & !is.na(Ys[,"Yj"]),]
-    fs = fs[Ys[,1] <= 9 & Ys[,2] <= 9,]
-    no_na_markers = no_na_markers[Ys[,1] <= 9 & Ys[,2] <= 9,]
-    Ys = Ys[Ys[,1] <= 9 & Ys[,2] <= 9,]
+    if(!is.null(max_alleles) & is.numeric(max_alleles)){
+      fs = fs[Ys[,1] <= max_alleles & Ys[,2] <= max_alleles,]
+      no_na_markers = no_na_markers[Ys[,1] <= max_alleles & Ys[,2] <= max_alleles,]
+      Ys = Ys[Ys[,1] <= max_alleles & Ys[,2] <= max_alleles,]  
+    }
     
     no_na_markers[["distance"]] = Inf
-    no_na_markers = no_na_markers[fs[,1] != 1,]
-    Ys = Ys[fs[,1] != 1,]
-    fs = fs[fs[,1] != 1,]
     
+    # no_na_markers = no_na_markers[fs[,1] != 1,]
+    # Ys = Ys[fs[,1] != 1,]
+    # fs = fs[fs[,1] != 1,]
+    
+    #no_na_markers %<>% arrange(chromosome, pos)
+    #chromosome = levels(as.factor(no_na_markers[["chromosome"]]))[1]
+    
+    new_no_na_markers = NULL
     for(chromosome in levels(as.factor(no_na_markers[["chromosome"]]))){
-      for(amplicon in 1:(nrow(no_na_markers[no_na_markers[["chromosome"]] == chromosome,])-1)){
-        no_na_markers[no_na_markers[["chromosome"]] == chromosome,][amplicon, "distance"] = 
-          no_na_markers[no_na_markers[["chromosome"]] == chromosome,][amplicon + 1, "pos"] - no_na_markers[no_na_markers[["chromosome"]] == chromosome,][amplicon, "pos"]
+      
+      n_positions = nrow(no_na_markers[no_na_markers[['chromosome']] == chromosome,])
+      
+      if(n_positions >=  2){
+        
+        temp_no_na_markers = no_na_markers[no_na_markers[['chromosome']] == chromosome,]
+        temp_no_na_markers %<>% arrange((pos))
+        temp_no_na_markers[['distance']] = Inf
+        temp_no_na_markers[1:(n_positions - 1),][['distance']] = 
+          temp_no_na_markers[2:n_positions,][['pos']] - 
+          temp_no_na_markers[1:(n_positions - 1),][['pos']]
+        
+      }else if(n_positions == 1){
+        
+        temp_no_na_markers = no_na_markers[no_na_markers[['chromosome']] == chromosome,]
+        temp_no_na_markers[['distance']] = Inf
+        
       }
+      
+      new_no_na_markers = rbind(new_no_na_markers, temp_no_na_markers)
+      
     }
     
-    if(sum(is.na(no_na_markers$distance)) > 0){
-      no_na_markers[is.na(no_na_markers$distance),][['distance']] = Inf  
-    }
+    no_na_markers = new_no_na_markers
+    rm(list = c('temp_no_na_markers', 'new_no_na_markers'))
     
-    if(sum(no_na_markers$distance < 0) > 0){
-      no_na_markers$distance[no_na_markers$distance < 0 ] = Inf
-    }
+    
+    # for(chromosome in levels(as.factor(no_na_markers[["chromosome"]]))){
+    #   for(amplicon in 1:(nrow(no_na_markers[no_na_markers[["chromosome"]] == chromosome,]) - 1)){
+    #     no_na_markers[no_na_markers[["chromosome"]] == chromosome,][amplicon, "distance"] = 
+    #       no_na_markers[no_na_markers[["chromosome"]] == chromosome,][amplicon + 1, "pos"] - no_na_markers[no_na_markers[["chromosome"]] == chromosome,][amplicon, "pos"]
+    #   }
+    # }
+    # 
+    # if(sum(is.na(no_na_markers$distance)) > 0){
+    #   no_na_markers[is.na(no_na_markers$distance),][['distance']] = Inf  
+    # }
+    # 
+    # if(sum(no_na_markers$distance < 0) > 0){
+    #   no_na_markers$distance[no_na_markers$distance < 0 ] = Inf
+    # }
     
     ds = no_na_markers$distance
     
@@ -9512,7 +9868,8 @@ pairwise_hmmIBD = function(obj = NULL, parallel = TRUE, w = 1, n = 1, max_k = 20
                                 ds = ds,
                                 Ys = Ys,
                                 warn_fs = F, 
-                                max_k = max_k)
+                                max_k = max_k) 
+      
     
     return(estimate)
   }
@@ -9552,7 +9909,14 @@ pairwise_hmmIBD = function(obj = NULL, parallel = TRUE, w = 1, n = 1, max_k = 20
           
           if(sum(is.na(Yi[haplotype_i,] - Yj[haplotype_j,]))/length(Yi[haplotype_i,]) < 1){
             
-            estimate = rbind(estimate, fx_get_relatedness(Yi[haplotype_i,], Yj[haplotype_j,], freq_table, markers, max_k = max_k))
+            estimate = rbind(estimate, fx_get_relatedness(Yi[haplotype_i,], 
+                                                          Yj[haplotype_j,], 
+                                                          freq_table, markers, max_k = max_k, 
+                                                          by = by, 
+                                                          metadata = metadata, 
+                                                          Yi_id = Yi_id, 
+                                                          Yj_id = Yj_id, 
+                                                          max_alleles = max_alleles))
             
           }else{
             
@@ -9616,7 +9980,12 @@ pairwise_hmmIBD = function(obj = NULL, parallel = TRUE, w = 1, n = 1, max_k = 20
             
             estimate = rbind(estimate, fx_get_relatedness(Yi = Yi[haplotype_i,], 
                                                           Yj = Yj[haplotype_j,], 
-                                                          freq_table, markers, max_k = max_k))
+                                                          freq_table, markers, max_k = max_k,
+                                                          by = by, 
+                                                          metadata = metadata, 
+                                                          Yi_id = Yi_id, 
+                                                          Yj_id = Yj_id,
+                                                          max_alleles = max_alleles))
             
           }else{
             
@@ -9651,7 +10020,9 @@ pairwise_hmmIBD = function(obj = NULL, parallel = TRUE, w = 1, n = 1, max_k = 20
 }
 
 # pairwise_hmmIBD_viterbi----
-pairwise_hmmIBD_viterbi = function(obj = NULL, parallel = TRUE, w = 1, n = 1, max_k = 200, pairs = NULL, viterbi = F){
+
+pairwise_hmmIBD_viterbi = function(obj = NULL, parallel = TRUE, w = 1, n = 1, max_k = 200, pairs = NULL, viterbi = F,
+                                   by = NULL, freq_table = NULL, max_alleles = NULL){
   library(parallel)
   library(doMC)
   library(svMisc)
@@ -9669,14 +10040,20 @@ pairwise_hmmIBD_viterbi = function(obj = NULL, parallel = TRUE, w = 1, n = 1, ma
   }
   
   loci_table = loci_object@loci_table
-  freq_table = loci_object@freq_table
+  metadata = loci_object@metadata
+  
+  if(is.null(freq_table)){
+    freq_table = loci_object@freq_table
+  }
+  
   markers = loci_object@markers
   
-  polymorphic_sites = which(rowSums(freq_table == 1) == 0)
-  
-  loci_table = loci_table[,polymorphic_sites]
-  freq_table = freq_table[polymorphic_sites,]
-  markers = markers[polymorphic_sites,]
+  if(is.data.frame(freq_table) | 'matrix' %in% class(freq_table)){
+    polymorphic_sites = which(rowSums(freq_table == 1) == 0)
+    loci_table = loci_table[,polymorphic_sites]
+    freq_table = freq_table[polymorphic_sites,]
+    markers = markers[polymorphic_sites,]
+  }
   
   if(is.null(pairs)){
     pairs = as.data.frame(t(combn(rownames(loci_table), 2)))  
@@ -9688,40 +10065,95 @@ pairwise_hmmIBD_viterbi = function(obj = NULL, parallel = TRUE, w = 1, n = 1, ma
   
   pairs = pairs[low:high,]
   
-  fx_get_relatedness = function(Yi, Yj, freq_table, markers, max_k){
+  fx_get_relatedness = function(Yi, 
+                                Yj, 
+                                freq_table, 
+                                markers, 
+                                max_k, 
+                                by = NULL, 
+                                metadata = NULL, 
+                                Yi_id, 
+                                Yj_id, 
+                                max_alleles = NULL){
+    
+    if(!is.null(by)){
+      
+      Yi_pop = metadata[metadata[['Sample_id']] == Yi_id,][[by]]
+      Yj_pop = metadata[metadata[['Sample_id']] == Yj_id,][[by]]
+      
+      if(Yi_pop == Yj_pop){
+        
+        pop_freq_table = freq_table[[Yi_pop]]
+        
+      }else{
+        
+        merged_pop = names(freq_table)[grepl(Yi_pop, names(freq_table)) & grepl(Yj_pop, names(freq_table))]
+        pop_freq_table = freq_table[[merged_pop]]
+        
+      }
+      
+      fs = pop_freq_table
+      
+    }else if(is.data.frame(freq_table) | 'matrix' %in% class(freq_table)){
+      
+      fs = freq_table
+      
+    }
     
     Ys = cbind(Yi, Yj)
+    rownames(Ys) = rownames(fs)
     
-    rownames(Ys) = rownames(freq_table)
+    polymorphic_sites = which(rowSums(fs == 1) == 0)
+    Ys = Ys[polymorphic_sites, ]
+    fs = fs[polymorphic_sites,]
+    markers = markers[polymorphic_sites,]
     
-    fs = freq_table[!is.na(Ys[,"Yi"]) & !is.na(Ys[,"Yj"]),]
-    
+    fs = fs[!is.na(Ys[,"Yi"]) & !is.na(Ys[,"Yj"]),]
     no_na_markers = markers[!is.na(Ys[,"Yi"]) & !is.na(Ys[,"Yj"]),]
+    Ys = Ys[!is.na(Ys[,"Yi"]) & !is.na(Ys[,"Yj"]),]
     
-    Ys =Ys[!is.na(Ys[,"Yi"]) & !is.na(Ys[,"Yj"]),]
-    fs = fs[Ys[,1] <= 9 & Ys[,2] <= 9,]
-    no_na_markers = no_na_markers[Ys[,1] <= 9 & Ys[,2] <= 9,]
-    Ys = Ys[Ys[,1] <= 9 & Ys[,2] <= 9,]
+    if(!is.null(max_alleles) & is.numeric(max_alleles)){
+      fs = fs[Ys[,1] <= max_alleles & Ys[,2] <= max_alleles,]
+      no_na_markers = no_na_markers[Ys[,1] <= max_alleles & Ys[,2] <= max_alleles,]
+      Ys = Ys[Ys[,1] <= max_alleles & Ys[,2] <= max_alleles,]  
+    }
     
     no_na_markers[["distance"]] = Inf
-    no_na_markers = no_na_markers[fs[,1] != 1,]
-    Ys = Ys[fs[,1] != 1,]
-    fs = fs[fs[,1] != 1,]
     
+    # no_na_markers = no_na_markers[fs[,1] != 1,]
+    # Ys = Ys[fs[,1] != 1,]
+    # fs = fs[fs[,1] != 1,]
+    
+    #no_na_markers %<>% arrange(chromosome, pos)
+    #chromosome = levels(as.factor(no_na_markers[["chromosome"]]))[1]
+    
+    new_no_na_markers = NULL
     for(chromosome in levels(as.factor(no_na_markers[["chromosome"]]))){
-      for(amplicon in 1:(nrow(no_na_markers[no_na_markers[["chromosome"]] == chromosome,])-1)){
-        no_na_markers[no_na_markers[["chromosome"]] == chromosome,][amplicon, "distance"] = 
-          no_na_markers[no_na_markers[["chromosome"]] == chromosome,][amplicon + 1, "pos"] - no_na_markers[no_na_markers[["chromosome"]] == chromosome,][amplicon, "pos"]
+      
+      n_positions = nrow(no_na_markers[no_na_markers[['chromosome']] == chromosome,])
+      
+      if(n_positions >=  2){
+        
+        temp_no_na_markers = no_na_markers[no_na_markers[['chromosome']] == chromosome,]
+        temp_no_na_markers %<>% arrange((pos))
+        temp_no_na_markers[['distance']] = Inf
+        temp_no_na_markers[1:(n_positions - 1),][['distance']] = 
+          temp_no_na_markers[2:n_positions,][['pos']] - 
+          temp_no_na_markers[1:(n_positions - 1),][['pos']]
+        
+      }else if(n_positions == 1){
+        
+        temp_no_na_markers = no_na_markers[no_na_markers[['chromosome']] == chromosome,]
+        temp_no_na_markers[['distance']] = Inf
+        
       }
+      
+      new_no_na_markers = rbind(new_no_na_markers, temp_no_na_markers)
+      
     }
     
-    if(sum(is.na(no_na_markers$distance)) > 0){
-      no_na_markers[is.na(no_na_markers$distance),][['distance']] = Inf  
-    }
-    
-    if(sum(no_na_markers$distance < 0) > 0){
-      no_na_markers$distance[no_na_markers$distance < 0 ] = Inf
-    }
+    no_na_markers = new_no_na_markers
+    rm(list = c('temp_no_na_markers', 'new_no_na_markers'))
     
     ds = no_na_markers$distance
     
@@ -9730,7 +10162,8 @@ pairwise_hmmIBD_viterbi = function(obj = NULL, parallel = TRUE, w = 1, n = 1, ma
                                 ds = ds,
                                 Ys = Ys,
                                 warn_fs = F, 
-                                max_k = max_k)
+                                max_k = max_k) 
+    
     
     return(estimate)
   }
@@ -9743,42 +10176,82 @@ pairwise_hmmIBD_viterbi = function(obj = NULL, parallel = TRUE, w = 1, n = 1, ma
                                            rhat = 0.4929262,
                                            khat = 20,
                                            epsilon = 1e-4,
-                                           rho = 7.4 * 10^(-7)){
+                                           rho = 7.4 * 10^(-7),
+                                           by = NULL, 
+                                           metadata = NULL, 
+                                           Yi_id, 
+                                           Yj_id,
+                                           max_alleles = NULL){
+    
+    if(!is.null(by)){
+      
+      Yi_pop = metadata[metadata[['Sample_id']] == Yi_id,][[by]]
+      Yj_pop = metadata[metadata[['Sample_id']] == Yj_id,][[by]]
+      
+      if(Yi_pop == Yj_pop){
+        
+        pop_freq_table = freq_table[[Yi_pop]]
+        
+      }else{
+        
+        merged_pop = names(freq_table)[grepl(Yi_pop, names(freq_table)) & grepl(Yj_pop, names(freq_table))]
+        pop_freq_table = freq_table[[merged_pop]]
+        
+      }
+      
+      fs = pop_freq_table
+    }else if(is.data.frame(freq_table) | 'matrix' %in% class(freq_table)){
+      fs = freq_table
+    }
     
     
     Ys = cbind(Yi, Yj)
+    rownames(Ys) = rownames(fs)
     
-    rownames(Ys) = rownames(freq_table)
+    polymorphic_sites = which(rowSums(fs == 1) == 0)
+    Ys = Ys[polymorphic_sites, ]
+    fs = fs[polymorphic_sites,]
+    markers = markers[polymorphic_sites,]
     
-    fs = freq_table[!is.na(Ys[,"Yi"]) & !is.na(Ys[,"Yj"]),]
-    
+    fs = fs[!is.na(Ys[,"Yi"]) & !is.na(Ys[,"Yj"]),]
     no_na_markers = markers[!is.na(Ys[,"Yi"]) & !is.na(Ys[,"Yj"]),]
-    
     Ys =Ys[!is.na(Ys[,"Yi"]) & !is.na(Ys[,"Yj"]),]
-    fs = fs[Ys[,1] <= 9 & Ys[,2] <= 9,]
-    no_na_markers = no_na_markers[Ys[,1] <= 9 & Ys[,2] <= 9,]
-    Ys = Ys[Ys[,1] <= 9 & Ys[,2] <= 9,]
+    
+    if(!is.null(max_alleles) & is.numeric(max_alleles)){
+      fs = fs[Ys[,1] <= max_alleles & Ys[,2] <= max_alleles,]
+      no_na_markers = no_na_markers[Ys[,1] <= max_alleles & Ys[,2] <= max_alleles,]
+      Ys = Ys[Ys[,1] <= max_alleles & Ys[,2] <= max_alleles,]  
+    }
     
     no_na_markers[["distance"]] = Inf
-    no_na_markers = no_na_markers[fs[,1] != 1,]
-    Ys = Ys[fs[,1] != 1,]
-    fs = fs[fs[,1] != 1,]
     
-    
+    new_no_na_markers = NULL
     for(chromosome in levels(as.factor(no_na_markers[["chromosome"]]))){
-      for(amplicon in 1:(nrow(no_na_markers[no_na_markers[["chromosome"]] == chromosome,])-1)){
-        no_na_markers[no_na_markers[["chromosome"]] == chromosome,][amplicon, "distance"] = 
-          no_na_markers[no_na_markers[["chromosome"]] == chromosome,][amplicon + 1, "pos"] - no_na_markers[no_na_markers[["chromosome"]] == chromosome,][amplicon, "pos"]
+      
+      n_positions = nrow(no_na_markers[no_na_markers[['chromosome']] == chromosome,])
+      
+      if(n_positions >=  2){
+        
+        temp_no_na_markers = no_na_markers[no_na_markers[['chromosome']] == chromosome,]
+        temp_no_na_markers %<>% arrange((pos))
+        temp_no_na_markers[['distance']] = Inf
+        temp_no_na_markers[1:(n_positions - 1),][['distance']] = 
+          temp_no_na_markers[2:n_positions,][['pos']] - 
+          temp_no_na_markers[1:(n_positions - 1),][['pos']]
+        
+      }else if(n_positions == 1){
+        
+        temp_no_na_markers = no_na_markers[no_na_markers[['chromosome']] == chromosome,]
+        temp_no_na_markers[['distance']] = Inf
+        
       }
+      
+      new_no_na_markers = rbind(new_no_na_markers, temp_no_na_markers)
+      
     }
     
-    if(sum(is.na(no_na_markers$distance)) > 0){
-      no_na_markers[is.na(no_na_markers$distance),][['distance']] = Inf  
-    }
-    
-    if(sum(no_na_markers$distance < 0) > 0){
-      no_na_markers$distance[no_na_markers$distance < 0 ] = Inf
-    }
+    no_na_markers = new_no_na_markers
+    rm(list = c('temp_no_na_markers', 'new_no_na_markers'))
     
     ds = no_na_markers$distance
     
@@ -9926,7 +10399,12 @@ pairwise_hmmIBD_viterbi = function(obj = NULL, parallel = TRUE, w = 1, n = 1, ma
           
           if(sum(is.na(Yi[haplotype_i,] - Yj[haplotype_j,]))/length(Yi[haplotype_i,]) < 1){
             
-            estimate = rbind(estimate, fx_get_relatedness(Yi[haplotype_i,], Yj[haplotype_j,], freq_table, markers, max_k = max_k))
+            estimate = rbind(estimate, fx_get_relatedness(Yi[haplotype_i,], Yj[haplotype_j,], freq_table, markers, max_k = max_k,
+                                                          by = by, 
+                                                          metadata = metadata, 
+                                                          Yi_id = Yi_id, 
+                                                          Yj_id = Yj_id,
+                                                          max_alleles = max_alleles))
             
           }else{
             
@@ -9992,7 +10470,14 @@ pairwise_hmmIBD_viterbi = function(obj = NULL, parallel = TRUE, w = 1, n = 1, ma
             
             estimate = rbind(estimate, fx_get_relatedness(Yi = Yi[haplotype_i,], 
                                                           Yj = Yj[haplotype_j,], 
-                                                          freq_table, markers, max_k = max_k))
+                                                          freq_table,
+                                                          markers,
+                                                          max_k = max_k,
+                                                          by = by, 
+                                                          metadata = metadata, 
+                                                          Yi_id = Yi_id, 
+                                                          Yj_id = Yj_id,
+                                                          max_alleles = max_alleles))
             
           }else{
             
@@ -10015,7 +10500,12 @@ pairwise_hmmIBD_viterbi = function(obj = NULL, parallel = TRUE, w = 1, n = 1, ma
             freq_table = freq_table, 
             markers = markers, 
             rhat = estimate[,'rhat'],
-            khat = estimate[,'khat'])
+            khat = estimate[,'khat'],
+            by = by, 
+            metadata = metadata, 
+            Yi_id = Yi_id, 
+            Yj_id = Yj_id,
+            max_alleles = max_alleles)
         
         pairwise_viterbi_temp$Yi_id = Yi_id
         pairwise_viterbi_temp$Yj_id = Yj_id
@@ -10041,7 +10531,12 @@ pairwise_hmmIBD_viterbi = function(obj = NULL, parallel = TRUE, w = 1, n = 1, ma
             freq_table = freq_table, 
             markers = markers, 
             rhat = estimate[which.min(estimate[,'rhat']),'rhat'],
-            khat = estimate[which.min(estimate[,'rhat']),'khat'])
+            khat = estimate[which.min(estimate[,'rhat']),'khat'],
+            by = by, 
+            metadata = metadata, 
+            Yi_id = Yi_id, 
+            Yj_id = Yj_id,
+            max_alleles = max_alleles)
         
         pairwise_viterbi_temp$Yi_id = Yi_id
         pairwise_viterbi_temp$Yj_id = Yj_id
@@ -10084,7 +10579,6 @@ pairwise_hmmIBD_viterbi = function(obj = NULL, parallel = TRUE, w = 1, n = 1, ma
   
   
 }
-
 
 
 ### plot_relatedness_distribution----
@@ -10645,9 +11139,9 @@ plot_frac_highly_related_over_time = function(pairwise_relatedness = pairwise_re
 
 
 
-sort_Long_matrix = function(pairwise_relatedness_l, Var1, Var2, pop_levels = NULL){
+sort_Long_matrix = function(pairwise_relatedness_l, Yi, Yj, Var1, Var2, pop_levels = NULL){
   
-  pairwise_relatedness_l = pairwise_relatedness_l[,c('Yi', 'Yj', 'rhat', Var1, Var2)]
+  #pairwise_relatedness_l = pairwise_relatedness_l[,c(Yi, Yj, 'rhat', Var1, Var2)]
   
   pairwise_relatedness_l_sorted = NULL
   
@@ -17674,6 +18168,360 @@ get_nSNVs_per_marker = function(ampseq_object){
   
 }
 
+
+# merge_rGenome----
+
+merge_rGenome = function(obj1 = NULL, obj2 = NULL, na.rm = T, inpute_as_REF = T){
+  
+  # Check if the column Alleles is not present in the first data set
+  if(sum(grepl('Alleles', names(obj1@loci_table))) == 0){ # if not generate Alleles and Allele_Counts
+    # count Alleles
+    Locus_info_temp1 = get_AC(obj1, update_alleles = T)
+    Locus_info_temp1 = cbind(obj1@loci_table, Locus_info_temp1)
+  }else{
+    Locus_info_temp1 = obj1@loci_table[, c('CHROM',
+                                           'POS',
+                                           'REF', 
+                                           'ALT',
+                                           'Alleles',
+                                           'Allele_Counts')]
+  }
+  
+  # Check if the column Alleles is not present in the second data set
+  if(sum(grepl('Alleles', names(obj2@loci_table))) == 0){ # if not generate Alleles and Allele_Counts
+    # count Alleles
+    Locus_info_temp2 = get_AC(obj2, update_alleles = T)
+    Locus_info_temp2 = cbind(obj2@loci_table, Locus_info_temp2)
+  }else{
+    Locus_info_temp2 = obj2@loci_table[, c('CHROM',
+                                           'POS',
+                                           'REF', 
+                                           'ALT',
+                                           'Alleles',
+                                           'Allele_Counts')]
+  }
+  
+  # Relabel columns of the first data set
+  
+  Locus_info_temp1 = data.frame(locus_id = rownames(Locus_info_temp1), Locus_info_temp1)
+  names(Locus_info_temp1) = c('locus_id',paste0(names(Locus_info_temp1)[-1], '.temp1'))
+  
+  # Relabel columns of the second data set
+  Locus_info_temp2 = data.frame(locis_id = rownames(Locus_info_temp2), Locus_info_temp2)
+  names(Locus_info_temp2) = c('locus_id',paste0(names(Locus_info_temp2)[-1], '.temp2'))
+  
+  
+  # Store the genotype tables of both data sets
+  gt_temp1 = obj1@gt
+  gt_temp2 = obj2@gt
+  
+  # Merge the loci_table of both data sets
+  Locus_info_merged = merge(Locus_info_temp1, Locus_info_temp2, by = 'locus_id', all = T)
+  
+  # Check if the reference allele is the same for both data sets in each position
+  Locus_info_merged %<>% mutate(
+    REF = case_when(
+      REF.temp1 == REF.temp2 ~ REF.temp1,
+      !is.na(REF.temp1) & is.na(REF.temp2) ~ REF.temp1,
+      is.na(REF.temp1) & !is.na(REF.temp2) ~ REF.temp2,
+      REF.temp1 != REF.temp2 ~ 'ERROR'
+    )
+  )
+  
+  # Check if the alternative alleles  and their labels are the same for both data sets in each position
+  Locus_info_merged$Alleles = apply(Locus_info_merged, 1, function(pos){
+    if(!is.na(pos['Alleles.temp1'])&is.na(pos['Alleles.temp2'])){ # If the second data set is all missing data
+      paste0(pos['Alleles.temp1'], ';Only First data set') 
+    }else if(is.na(pos['Alleles.temp1'])&!is.na(pos['Alleles.temp2'])){ # If the first data set is all missing data
+      paste0(pos['Alleles.temp2'], ';Only Second data set') 
+    }else if(is.na(pos['Alleles.temp1'])&is.na(pos['Alleles.temp2'])){ # If the first and second data sets are all missing data
+      NA
+    }else if(pos['Alleles.temp1'] == pos['Alleles.temp2']){ # If the alternative alleles  and their labels are the same for both data sets
+      pos['Alleles.temp1']
+    }else if(sum(!(unlist(str_split(pos['Alleles.temp2'], ',', simplify = T)) %in% unlist(str_split(pos['Alleles.temp1'], ',', simplify = T)))) == 0){ # If the alternative alleles  and their labels of second data set are contained in the first data set
+      pos['Alleles.temp1']
+    }else if(sum(!(unlist(str_split(pos['Alleles.temp1'], ',', simplify = T)) %in% unlist(str_split(pos['Alleles.temp2'], ',', simplify = T)))) == 0){ # If the alternative alleles  and their labels of first data set are contained in the second data set
+      pos['Alleles.temp2']
+    }else{'ERROR'} # If at least one alternative allele  and its label does not coincide between both data sets
+  })
+  
+  # Split the loci table between:
+  
+  ## loci which reference alleles do not coincide between data sets
+  Locus_info_merged_w_REFdiscrepancies = Locus_info_merged %>% filter(REF == 'ERROR')
+  
+  ## loci which reference alleles coincide but the alternative alleles do not coincide between data sets
+  Locus_info_merged_w_ALTdiscrepancies = Locus_info_merged %>% filter(Alleles == 'ERROR', REF != 'ERROR')
+  
+  ## loci which reference and alternative alleles coincide between data sets and do not have missing data
+  Locus_info_merged_good = Locus_info_merged %>% filter(Alleles != 'ERROR' & REF != 'ERROR' & !grepl('Only',Alleles))
+  
+  ## loci with no amplification in one data set
+  Locus_info_merged_w_missing = Locus_info_merged %>% filter(grepl('Only',Alleles) & REF != 'ERROR')
+  
+  # Add row names for each splited set of loci
+  rownames(Locus_info_merged_w_REFdiscrepancies) = Locus_info_merged_w_REFdiscrepancies$locus_id
+  rownames(Locus_info_merged_w_ALTdiscrepancies) = Locus_info_merged_w_ALTdiscrepancies$locus_id
+  rownames(Locus_info_merged_good) = Locus_info_merged_good$locus_id
+  rownames(Locus_info_merged_w_missing) = Locus_info_merged_w_missing$locus_id
+  
+  # Relabel each position in the set of loci that reference alleles coincide but the alternative alleles do not coincide between data sets
+  
+  if(length(rownames(Locus_info_merged_w_ALTdiscrepancies)) > 0){
+    
+    for(pos in rownames(Locus_info_merged_w_ALTdiscrepancies)){
+      
+      # Get Alleles, allele labels, and allele counts for the first data set
+      Alleles.temp1 = as.character(unlist(str_split(gsub(':\\d+','',Locus_info_merged_w_ALTdiscrepancies[pos,][['Alleles.temp1']]), ',', simplify = T)))
+      Allele_labels.temp1 = unlist(str_split(gsub('([ATGC]+|\\*):','',Locus_info_merged_w_ALTdiscrepancies[pos,][['Alleles.temp1']]), ',', simplify = T))
+      Allele_counts.temp1 = as.integer(unlist(str_split(gsub('\\d+:','',Locus_info_merged_w_ALTdiscrepancies[pos,][['Allele_Counts.temp1']]), ',', simplify = T)))
+      names(Alleles.temp1) = Allele_labels.temp1
+      names(Allele_counts.temp1) = Allele_labels.temp1
+      
+      # Get Alleles, allele labels, and allele counts for the first data set
+      Alleles.temp2 = as.character(unlist(str_split(gsub(':\\d+','',Locus_info_merged_w_ALTdiscrepancies[pos,][['Alleles.temp2']]), ',', simplify = T)))
+      Allele_labels.temp2 = unlist(str_split(gsub('([ATGC]+|\\*):','',Locus_info_merged_w_ALTdiscrepancies[pos,][['Alleles.temp2']]), ',', simplify = T))
+      Allele_counts.temp2 = as.integer(unlist(str_split(gsub('\\d+:','',Locus_info_merged_w_ALTdiscrepancies[pos,][['Allele_Counts.temp2']]), ',', simplify = T)))
+      names(Alleles.temp2) = Allele_labels.temp2
+      names(Allele_counts.temp2) = Allele_labels.temp2
+      
+      # Get the reference and unique alternative alleles observed in both data sets
+      REF.Allele = unique(c(Alleles.temp1[names(Alleles.temp1)[names(Alleles.temp1) == '0']], Alleles.temp2[names(Alleles.temp2)[names(Alleles.temp2) == '0']]))
+      ALT.Alleles = unique(c(Alleles.temp1[names(Alleles.temp1)[names(Alleles.temp1) != '0']], Alleles.temp2[names(Alleles.temp2)[names(Alleles.temp2) != '0']]))
+      
+      # If reference allele is not present in either set
+      if(length(REF.Allele) == 0){
+        REF.Allele = Locus_info_merged_w_ALTdiscrepancies[pos,][['REF']]
+      }
+      
+      # Calculate the total number of samples that have each ealternative allele in both data sets
+      ALT.Allele_counts = NULL
+      
+      for(allele in ALT.Alleles){ # For each alternative allele
+        
+        ALT.Allele_counts = c(ALT.Allele_counts,
+                              
+                              if(allele %in% Alleles.temp1 & allele %in% Alleles.temp2){ # if the allele is present in both data sets
+                                Allele_counts.temp1[names(Alleles.temp1[Alleles.temp1 == allele])] +  
+                                  Allele_counts.temp2[names(Alleles.temp2[Alleles.temp2 == allele])]
+                              }else if(allele %in% Alleles.temp1 & !(allele %in% Alleles.temp2)){ # if allele is present only in the first data set
+                                Allele_counts.temp1[names(Alleles.temp1[Alleles.temp1 == allele])]
+                              }else if(!(allele %in% Alleles.temp1) & allele %in% Alleles.temp2){ # if allele is present only in the second data set
+                                Allele_counts.temp2[names(Alleles.temp2[Alleles.temp2 == allele])]
+                              }
+        )
+      }
+      
+      # name (index) the allele count with the allele
+      names(ALT.Allele_counts) = ALT.Alleles
+      
+      # sort the alternative alleles based on their allele count
+      ALT.Allele_counts = sort(ALT.Allele_counts, decreasing = T)
+      
+      # Calculate the total number of samples that have the reference allele in both data sets
+      REF.Allele_count = if(REF.Allele %in% Alleles.temp1 & REF.Allele %in% Alleles.temp2){ # if the allele is present in both data sets
+        Allele_counts.temp1[names(Alleles.temp1[Alleles.temp1 == REF.Allele])] +  
+          Allele_counts.temp2[names(Alleles.temp2[Alleles.temp2 == REF.Allele])]
+      }else if(REF.Allele %in% Alleles.temp1 & !(REF.Allele %in% Alleles.temp2)){ # if allele is present only in the first data set
+        Allele_counts.temp1[names(Alleles.temp1[Alleles.temp1 == REF.Allele])]
+      }else if(!(REF.Allele %in% Alleles.temp1) & REF.Allele %in% Alleles.temp2){ # if allele is present only in the second data set
+        Allele_counts.temp2[names(Alleles.temp2[Alleles.temp2 == REF.Allele])]
+      }
+      
+      if(!is.null(REF.Allele_count)){
+        
+        # name (index) the allele count with the allele
+        names(REF.Allele_count) = REF.Allele
+        # Combine the reference and the alternative alleles in one object
+        Allele_counts = c(REF.Allele_count, ALT.Allele_counts)
+        Alleles = names(Allele_counts)
+        
+      }else{
+        
+        Allele_counts = ALT.Allele_counts
+        Alleles = names(Allele_counts)
+        
+      }
+      
+      # RELABEL the alleles for the combined data set
+      
+      if(!is.null(REF.Allele_count)){
+        Allele_labels = as.character(0:(length(Alleles) - 1))
+        names(Alleles) = Allele_labels
+      }else{
+        
+        Allele_labels = as.character(1:length(Alleles))
+        names(Alleles) = Allele_labels
+      }
+      
+      # If the alternative alleles  and their labels of First data set are NOT contained in the merged data set
+      if(sum(!(paste(Alleles.temp1, Allele_labels.temp1, sep = ':') %in% paste(Alleles, Allele_labels, sep = ':'))) != 0){
+        
+        # Identify and select the alleles which lables have changed
+        Changed.Alleles.temp1 = Alleles.temp1[!(paste(Alleles.temp1, Allele_labels.temp1, sep = ':') %in% paste(Alleles, Allele_labels, sep = ':'))]
+        
+        # Identify the new labels of the alleles
+        Relabeled.Alleles.temp1 = Alleles[Alleles %in% Changed.Alleles.temp1]
+        
+        # For each changed label, modify the label in the genotype table
+        for(clabel in names(Changed.Alleles.temp1)){
+          
+          rlabel = names(Relabeled.Alleles.temp1[Relabeled.Alleles.temp1 == Changed.Alleles.temp1[clabel]])
+          
+          gt_temp1[pos,] = gsub(paste0(clabel,':'), paste0(rlabel,'R:'), gt_temp1[pos,]) # The R: denotes that that label is been modify and avoids overwriting
+          
+        }
+        
+        # Once screening of all alleles is been completed, delete the R: identifier
+        gt_temp1[pos,] = gsub('R:', ':', gt_temp1[pos,])
+        
+      }
+      
+      # If the alternative alleles  and their labels of Second data set are NOT contained in the merged data set
+      if(sum(!(paste(Alleles.temp2, Allele_labels.temp2, sep = ':') %in% paste(Alleles, Allele_labels, sep = ':'))) != 0){
+        
+        # Identify and select the alleles which lables have changed
+        Changed.Alleles.temp2 = Alleles.temp2[!(paste(Alleles.temp2, Allele_labels.temp2, sep = ':') %in% paste(Alleles, Allele_labels, sep = ':'))]
+        
+        # Identify the new labels of the alleles
+        Relabeled.Alleles.temp2 = Alleles[Alleles %in% Changed.Alleles.temp2]
+        
+        # For each changed label, modify the label in the genotype table
+        for(clabel in names(Changed.Alleles.temp2)){
+          
+          rlabel = names(Relabeled.Alleles.temp2[Relabeled.Alleles.temp2 == Changed.Alleles.temp2[clabel]])
+          
+          gt_temp2[pos,] = gsub(paste0(clabel,':'), paste0(rlabel,'R:'), gt_temp2[pos,]) # The R: denotes that that label is been modify and avoids overwriting
+          
+        }
+        
+        # Once screening of all alleles is been completed, delete the R: identifier
+        gt_temp2[pos,] = gsub('R:', ':', gt_temp2[pos,])
+        
+      }
+      
+      # Update Alleles in the Locus_info_merged_w_ALTdiscrepancies data.frame
+      Locus_info_merged_w_ALTdiscrepancies[pos,][['Alleles']] = paste(paste(Alleles, Allele_labels,sep = ':'), collapse = ',')
+      
+    }
+    
+  }
+  
+  
+  # Filter positions that were able to merge
+  
+  if(na.rm){
+    Locus_info_merged_final = rbind(Locus_info_merged_good, Locus_info_merged_w_ALTdiscrepancies)
+  }else{
+    
+    # adding missing positions in obj2
+    Locus_info_merged_w_missing_temp1 = Locus_info_merged_w_missing[grepl('First', Locus_info_merged_w_missing$Alleles),]
+    
+    if(nrow(Locus_info_merged_w_missing_temp1) > 0){
+      
+      
+      if(inpute_as_REF){
+        gt_temp2 = rbind(gt_temp2, matrix(
+          '0:100', nrow = nrow(Locus_info_merged_w_missing_temp1), ncol = ncol(gt_temp2), dimnames = list(rownames(Locus_info_merged_w_missing_temp1),
+                                                                                                     colnames(gt_temp2))
+        ))
+      }else{
+        gt_temp2 = rbind(gt_temp2, matrix(
+          NA, nrow = nrow(Locus_info_merged_w_missing_temp1), ncol = ncol(gt_temp2), dimnames = list(rownames(Locus_info_merged_w_missing_temp1),
+                                                                                                     colnames(gt_temp2))
+        ))  
+      }
+      
+      
+      
+      
+    }
+    
+    # adding missing positions in obj1
+    
+    Locus_info_merged_w_missing_temp2 = Locus_info_merged_w_missing[grepl('Second', Locus_info_merged_w_missing$Alleles),]
+    
+    if(nrow(Locus_info_merged_w_missing_temp2) > 0){
+      
+      if(inpute_as_REF){
+        
+        gt_temp1 = rbind(gt_temp1, matrix(
+          '0:100', nrow = nrow(Locus_info_merged_w_missing_temp2), ncol = ncol(gt_temp1), dimnames = list(rownames(Locus_info_merged_w_missing_temp2),
+                                                                                                     colnames(gt_temp1))
+        ))
+        
+      }else{
+        
+        gt_temp1 = rbind(gt_temp1, matrix(
+          NA, nrow = nrow(Locus_info_merged_w_missing_temp2), ncol = ncol(gt_temp1), dimnames = list(rownames(Locus_info_merged_w_missing_temp2),
+                                                                                                     colnames(gt_temp1))
+        ))
+        
+      }
+      
+    }
+    
+    
+    Locus_info_merged_w_missing$Alleles = gsub(';Only (First|Second) data set', '', Locus_info_merged_w_missing$Alleles)
+    Locus_info_merged_final = rbind(Locus_info_merged_good, Locus_info_merged_w_ALTdiscrepancies, Locus_info_merged_w_missing)
+  }
+  
+  
+  # Update Alternative Alleles (ALT)
+  Locus_info_merged_final$ALT  = apply(Locus_info_merged_final, 1, function(ALT){
+    gsub(':\\d+', '', gsub(paste0('^',paste(ALT['REF'], '0', sep = ':'), ','), '', ALT['Alleles']))
+  })
+  
+  Locus_info_merged_final %<>% mutate(ALT = case_when(
+    REF ==  gsub(':.+', '',Alleles) ~ NA,
+    REF !=  gsub(':.+', '',Alleles) ~ ALT
+  ))
+  
+  # Sort positions by position and chromosome
+  
+  Locus_info_merged_final %<>% arrange(CHROM.temp1, POS.temp1)
+  # 
+  # 
+  # Locus_info_merged_final = Locus_info_merged_final[order(Locus_info_merged_final$POS.temp1),]
+  # Locus_info_merged_final = Locus_info_merged_final[order(Locus_info_merged_final$CHROM.temp1),]
+  
+  # Select columns that will be returned
+  Locus_info_merged_final = Locus_info_merged_final[,c('CHROM.temp1',
+                                                       'POS.temp1',
+                                                       'REF',
+                                                       'ALT',
+                                                       'Alleles')]
+  
+  colnames(Locus_info_merged_final) = c('CHROM',
+                                        'POS',
+                                        'REF',
+                                        'ALT',
+                                        'Alleles')
+  
+  # Filter and merge the genotype tables
+  gt_final = cbind(gt_temp1[rownames(Locus_info_merged_final),], gt_temp2[rownames(Locus_info_merged_final),])
+  
+  colnames(gt_final) = c(colnames(gt_temp1), colnames(gt_temp2))
+  
+  # Merge the metadata
+  merged_metadata = merge(obj1@metadata, obj2@metadata, by = 'Sample_id', all = T)
+  
+  rownames(merged_metadata) = merged_metadata$Sample_id
+  
+  final_merged_metadata = data.frame(merged_metadata[colnames(gt_final),])
+  
+  colnames(final_merged_metadata) = colnames(merged_metadata)
+  
+  rownames(final_merged_metadata) = merged_metadata$Sample_id
+  
+  # Create the merged rGenome object
+  merged_rGenome = rGenome(gt = gt_final,
+                           loci_table = Locus_info_merged_final,
+                           metadata = final_merged_metadata)
+  
+  return(merged_rGenome)
+  
+}
 
 # END ----
 
