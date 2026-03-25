@@ -5460,8 +5460,6 @@ setMethod("get_ASVs_attributes", signature(obj = "ampseq"),
             
             #mhap = which(colnames(gt) == 'SOD2_1')
             
-            mhap = 2
-            
             for(mhap in 1:ncol(gt)){
               temp_gts = gt[,mhap] # genotypes observed in that site
               alleles = strsplit(alt[mhap], ',')[[1]] # alternative alleles observed in that site
@@ -5788,40 +5786,40 @@ setMethod("get_ASVs_attributes", signature(obj = "ampseq"),
                                     bimera = FALSE
                                   }
                                   
-                                  c(sum(P_ij, na.rm = T), # 2
-                                    sum(H_ij, na.rm = T), # 3
-                                    sum(H_ijminor, na.rm = T), # 4
-                                    sum(H_ij, na.rm = T)/sum(P_ij, na.rm = T), # 5
-                                    ifelse(is.na(sum(H_ijminor, na.rm = T)/sum(H_ij, na.rm = T)), # 6
+                                  c(sum(P_ij, na.rm = T), 
+                                    sum(H_ij, na.rm = T), 
+                                    sum(H_ijminor, na.rm = T),
+                                    sum(H_ij, na.rm = T)/sum(P_ij, na.rm = T),
+                                    ifelse(is.na(sum(H_ijminor, na.rm = T)/sum(H_ij, na.rm = T)), 
                                            0,
                                            sum(H_ijminor, na.rm = T)/sum(H_ij, na.rm = T)),
                                     
-                                    Hetob_j, # 7
+                                    Hetob_j,
                                     
-                                    nVSITES_ij, # 8
-                                    dVSITES_ij, # 9
+                                    nVSITES_ij,
+                                    dVSITES_ij,
                                     
-                                    nSNVs_ij, # 10
-                                    dSNVs_ij, # 11
+                                    nSNVs_ij,
+                                    dSNVs_ij,
                                     
-                                    nINDELs_ij, # 12
-                                    dINDELs_ij, # 13
+                                    nINDELs_ij,
+                                    dINDELs_ij,
                                     
-                                    mhaps[mhap,][['homopolymer_anchors']], # 14
-                                    mhaps[mhap,][['homopolymer_regions']], # 15
+                                    mhaps[mhap,][['homopolymer_anchors']],
+                                    mhaps[mhap,][['homopolymer_regions']],
                                     
-                                    SNV_in_homopolymer, # 16
-                                    SNV_in_homopolymer_pattern, # 17
-                                    SNV_in_homopolymer_replacement, # 18
+                                    SNV_in_homopolymer,
+                                    SNV_in_homopolymer_pattern,
+                                    SNV_in_homopolymer_replacement,
                                     
-                                    INDEL_in_homopolymer, # 19
-                                    INDEL_in_homopolymer_pattern, # 20
-                                    INDEL_in_homopolymer_replacement, # 21
+                                    INDEL_in_homopolymer,
+                                    INDEL_in_homopolymer_pattern,
+                                    INDEL_in_homopolymer_replacement,
                                     
-                                    flanking_INDEL, # 22
-                                    paste(flanking_INDEL_pattern, collapse = '||'), # 23
-                                    paste(flanking_INDEL_replacement, collapse = '||'), # 24
-                                    bimera # 25
+                                    flanking_INDEL,
+                                    paste(flanking_INDEL_pattern, collapse = '||'),
+                                    paste(flanking_INDEL_replacement, collapse = '||'),
+                                    bimera
                                     
                                   )
                                   
@@ -12877,7 +12875,7 @@ rGenome2ampseq = function(rGenome_object,
                       
                     }else if(length(unlist(str_extract_all(position_genotype, 'D'))) >= 2){
                       
-                      warning('Two upstream deletions') # change it to stop to fix it in future
+                      stop('Two upstream deletions')
                       
                     }
                     
@@ -12895,11 +12893,6 @@ rGenome2ampseq = function(rGenome_object,
             clones_rds = list(gsub('/.+', '', rGenome_gt_amplicon_rd[,Sample_id]),
                               gsub('.+/', '', rGenome_gt_amplicon_rd[,Sample_id]))
             #clone = 2
-            
-            # Correct clones with duplicated positions
-            
-
-            
             clone_cigarstring = NULL
             
             for(clone in 1:length(clones)){
@@ -13050,48 +13043,24 @@ rGenome2ampseq = function(rGenome_object,
                             }
                             
                             
+                            
                           }else{
                             
                             stop('4.1 or more duplicated sites with deletions and insertions')
                             
                           }
                           
-                        }else if(
-                          sum(grepl(paste0('^', duplicated_position, '[DIATGC]'),clones[[-clone]][which(grepl(paste0('^', duplicated_position, '[DIATGC]'),clones[[clone]]))])) == 0
-                        ){# Incorrect phasing between clones
+                        }else{
                           
-                          print('Deletion will be removed')
-                            
-                          sample_polymorphic_positions = 
-                            sample_polymorphic_positions[
-                              !grepl(paste0('^', duplicated_position, '[DI]'), sample_polymorphic_positions_alleles)]
+                          stop('4.2 or more duplicated sites with deletions and insertions')
                           
-                          
-                          sample_polymorphic_positions_alleles = 
-                            sample_polymorphic_positions_alleles[
-                              !grepl(paste0('^', duplicated_position, '[DI]'), sample_polymorphic_positions_alleles)]
-                          
-                          
-                          }else{
-                          stop('4.2 or more duplicated sites with deletions and insertions in both clones')
                         }
                           
                         
                         
                       }else{
                         
-                        print('Deletion will be removed')
-                        
-                        sample_polymorphic_positions = 
-                          sample_polymorphic_positions[
-                            !grepl(paste0('^', duplicated_position, '[D]'), sample_polymorphic_positions_alleles)]
-                        
-                        
-                        sample_polymorphic_positions_alleles = 
-                          sample_polymorphic_positions_alleles[
-                            !grepl(paste0('^', duplicated_position, '[D]'), sample_polymorphic_positions_alleles)]
-                        
-                        warning('4.3 or more duplicated sites with deletions and insertions')
+                        stop('4.3 or more duplicated sites with deletions and insertions')
                         
                       }
                       
@@ -13105,16 +13074,6 @@ rGenome2ampseq = function(rGenome_object,
                     
                   }
                   
-                }
-                
-                # Verify and remove duplicated positions that were not solved THIS PART OF CODE SHOULD BE SOLVED IN A MORE PROPER WAY
-                
-                remined_duplicated_position = gsub('[DIATGC].+', '',sample_polymorphic_positions_alleles)[
-                  duplicated(gsub('[DIATGC].+', '',sample_polymorphic_positions_alleles))]
-                
-                if(length(remined_duplicated_position) > 0){
-                  sample_polymorphic_positions_alleles = 
-                    sample_polymorphic_positions_alleles[!grepl(paste0(remined_duplicated_position, '[DIATGC]'), sample_polymorphic_positions_alleles)]
                 }
                 
                 
@@ -13141,12 +13100,6 @@ rGenome2ampseq = function(rGenome_object,
               stop('Problematic string 2')
             }
             
-            if(sum(grepl("44G104G254A345D=CAACA356D=A360T363D=AA363I=AGTGCTG368G370G", paste0(clone_cigarstring, collapse = "_"))) > 0){
-              stop('Problematic string 3')
-            }
-            
-            
-            
             amplicon_cigarstrings = c(amplicon_cigarstrings, paste0(clone_cigarstring, collapse = "_"))
             
           }
@@ -13159,10 +13112,6 @@ rGenome2ampseq = function(rGenome_object,
       } # Finish getting cigarstring for the amplicon in all samples
       
       if(sum(grepl("(3D=CTCGCCTATTTA:23_:5|(^|_):\\d+)", amplicon_cigarstrings)) > 0){
-        stop('Problematic string 3')
-      }
-      
-      if(sum(grepl("44G104G254A345D=CAACA356D=A360T363D=AA363I=AGTGCTG368G370G", paste0(clone_cigarstring, collapse = "_"))) > 0){
         stop('Problematic string 3')
       }
       
@@ -13193,11 +13142,8 @@ rGenome2ampseq = function(rGenome_object,
     
   }
 
-  temp_ampseq = create_ampseq(gt = ampseq_gt_table,
-                              asv_table = asv_table)
-
-  consistency_between_gt_and_asvtab(temp_ampseq)
   
+
   
   asv_table$haplength = NA
   asv_table$total_reads = NA
@@ -13283,105 +13229,88 @@ rGenome2ampseq = function(rGenome_object,
     
   }
   
-  temp_ampseq = create_ampseq(gt = ampseq_gt_table,
-                              asv_table = asv_table)
-  
-  consistency_between_gt_and_asvtab(temp_ampseq)
   
 
   modified_gt = ampseq_gt_table
   
-  duplicated_asvs = names(asv_seqs)[(duplicated(paste(asv_table$Amplicon, as.character(asv_seqs), sep = ':')))]
-  
-  removed_asv_ids = NULL
-  
+  duplicated_asvs = names(asv_seqs)[(duplicated(unlist(as.character(asv_seqs))))]
   
   for(duplicated_asv in duplicated_asvs){
+
+    duplicated_asv_ids = names(asv_seqs)[as.character(asv_seqs) %in% as.character(asv_seqs[duplicated_asv])]
     
-    if(duplicated_asv %in% removed_asv_ids){
-      print(paste0('ASV id ',duplicated_asv, ' was removed in previous iteration'))
+    if(sum(asv_table[asv_table$hapid %in% duplicated_asv_ids,][['total_reads']]) == 0){
+      
+      for(hap_id_to_remove in duplicated_asv_ids){
+        asv_seqs[[hap_id_to_remove]] = NULL
+        asv_table = asv_table[!(asv_table$hapid %in% hap_id_to_remove),]
+      }
       
     }else{
       
-      duplicated_asv_ids = names(asv_seqs)[paste(asv_table$Amplicon, as.character(asv_seqs), sep = ':') %in% 
-                                             paste(asv_table[asv_table$hapid == duplicated_asv,][['Amplicon']], as.character(asv_seqs[duplicated_asv]), sep = ':')]
+      duplicated_asv_ids_with_zero_reads = which(asv_table[asv_table$hapid %in% duplicated_asv_ids,][['total_reads']] == 0)
+      duplicated_asv_ids_with_nozero_reads = which(asv_table[asv_table$hapid %in% duplicated_asv_ids,][['total_reads']] != 0)
       
-      removed_asv_ids = c(removed_asv_ids, duplicated_asv_ids)
-      
-      if(sum(asv_table[asv_table$hapid %in% duplicated_asv_ids,][['total_reads']]) == 0){
+      if(length(duplicated_asv_ids_with_nozero_reads) == 1){
         
-        for(hap_id_to_remove in duplicated_asv_ids){
+        for(hap_id_to_remove in duplicated_asv_ids[duplicated_asv_ids_with_zero_reads]){
           asv_seqs[[hap_id_to_remove]] = NULL
           asv_table = asv_table[!(asv_table$hapid %in% hap_id_to_remove),]
         }
         
       }else{
         
-        duplicated_asv_ids_with_zero_reads = which(asv_table[asv_table$hapid %in% duplicated_asv_ids,][['total_reads']] == 0)
-        duplicated_asv_ids_with_nozero_reads = which(asv_table[asv_table$hapid %in% duplicated_asv_ids,][['total_reads']] != 0)
+        hap_id_to_keep = duplicated_asv_ids[
+          which.max(asv_table[(asv_table$hapid %in% duplicated_asv_ids),][['total_reads']])]
         
-        if(length(duplicated_asv_ids_with_nozero_reads) == 1){
+        hap_ids_to_remove = duplicated_asv_ids[duplicated_asv_ids != hap_id_to_keep]
+        
+        hap_id_to_remove = hap_ids_to_remove[1]
+        
+        for(hap_id_to_remove in hap_ids_to_remove){
           
-          for(hap_id_to_remove in duplicated_asv_ids[duplicated_asv_ids_with_zero_reads]){
-            asv_seqs[[hap_id_to_remove]] = NULL
-            asv_table = asv_table[!(asv_table$hapid %in% hap_id_to_remove),]
-          }
+          reads_in_id_to_remove = asv_table[(asv_table$hapid == hap_id_to_remove),][['total_reads']]
           
-        }else{
           
-          hap_id_to_keep = duplicated_asv_ids[
-            which.max(asv_table[(asv_table$hapid %in% duplicated_asv_ids),][['total_reads']])]
-          
-          hap_ids_to_remove = duplicated_asv_ids[duplicated_asv_ids != hap_id_to_keep]
-          
-          hap_id_to_remove = hap_ids_to_remove[1]
-          
-          for(hap_id_to_remove in hap_ids_to_remove){
+          if(reads_in_id_to_remove > 0){
             
-            reads_in_id_to_remove = asv_table[(asv_table$hapid == hap_id_to_remove),][['total_reads']]
+            amplicon_of_id_to_remove = asv_table[(asv_table$hapid == hap_id_to_remove),][['Amplicon']]
+            samples_in_id_to_remove = asv_table[(asv_table$hapid == hap_id_to_remove),][['total_samples']]
+            cigar_masked_in_id_to_remove = asv_table[(asv_table$hapid == hap_id_to_remove),][['CIGAR_masked']]
+            
+
+            
+            reads_in_id_to_keep = asv_table[(asv_table$hapid == hap_id_to_keep),][['total_reads']]
+            samples_in_id_to_keep = asv_table[(asv_table$hapid == hap_id_to_keep),][['total_samples']]
+            cigar_masked_in_id_to_keep = asv_table[(asv_table$hapid == hap_id_to_keep),][['CIGAR_masked']]
+            
+            modified_gt[grepl(paste0('^', cigar_masked_in_id_to_remove, ':'), modified_gt[,amplicon_of_id_to_remove]),
+                        amplicon_of_id_to_remove
+            ] = gsub(paste0('^', cigar_masked_in_id_to_remove, ':'),
+                     paste0(cigar_masked_in_id_to_keep, ':'),
+                     modified_gt[grepl(paste0('^', cigar_masked_in_id_to_remove, ':'),
+                                       modified_gt[,amplicon_of_id_to_remove]),
+                                 amplicon_of_id_to_remove])
+            
+            modified_gt[grepl(paste0('_', cigar_masked_in_id_to_remove, ':'), modified_gt[,amplicon_of_id_to_remove]),
+                        amplicon_of_id_to_remove
+            ] = gsub(paste0('_', cigar_masked_in_id_to_remove, ':'),
+                     paste0('_',cigar_masked_in_id_to_keep, ':'),
+                     modified_gt[grepl(paste0('_', cigar_masked_in_id_to_remove, ':'),
+                                       modified_gt[,amplicon_of_id_to_remove]),
+                                 amplicon_of_id_to_remove])
             
             
-            if(reads_in_id_to_remove > 0){
-              
-              amplicon_of_id_to_remove = asv_table[(asv_table$hapid == hap_id_to_remove),][['Amplicon']]
-              samples_in_id_to_remove = asv_table[(asv_table$hapid == hap_id_to_remove),][['total_samples']]
-              cigar_masked_in_id_to_remove = asv_table[(asv_table$hapid == hap_id_to_remove),][['CIGAR_masked']]
-              
-              
-              
-              reads_in_id_to_keep = asv_table[(asv_table$hapid == hap_id_to_keep),][['total_reads']]
-              samples_in_id_to_keep = asv_table[(asv_table$hapid == hap_id_to_keep),][['total_samples']]
-              cigar_masked_in_id_to_keep = asv_table[(asv_table$hapid == hap_id_to_keep),][['CIGAR_masked']]
-              
-              modified_gt[grepl(paste0('^', cigar_masked_in_id_to_remove, ':'), modified_gt[,amplicon_of_id_to_remove]),
-                          amplicon_of_id_to_remove
-              ] = gsub(paste0('^', cigar_masked_in_id_to_remove, ':'),
-                       paste0(cigar_masked_in_id_to_keep, ':'),
-                       modified_gt[grepl(paste0('^', cigar_masked_in_id_to_remove, ':'),
-                                         modified_gt[,amplicon_of_id_to_remove]),
-                                   amplicon_of_id_to_remove])
-              
-              modified_gt[grepl(paste0('_', cigar_masked_in_id_to_remove, ':'), modified_gt[,amplicon_of_id_to_remove]),
-                          amplicon_of_id_to_remove
-              ] = gsub(paste0('_', cigar_masked_in_id_to_remove, ':'),
-                       paste0('_',cigar_masked_in_id_to_keep, ':'),
-                       modified_gt[grepl(paste0('_', cigar_masked_in_id_to_remove, ':'),
-                                         modified_gt[,amplicon_of_id_to_remove]),
-                                   amplicon_of_id_to_remove])
-              
-              
-              asv_table[(asv_table$hapid == hap_id_to_keep),][['total_reads']] =
-                reads_in_id_to_keep + reads_in_id_to_remove
-              asv_table[(asv_table$hapid == hap_id_to_keep),][['total_samples']] =
-                samples_in_id_to_keep + samples_in_id_to_remove
-              
-            }
-            
-            asv_seqs[[hap_id_to_remove]] = NULL
-            asv_table = asv_table[!(asv_table$hapid %in% hap_id_to_remove),]
-            
+            asv_table[(asv_table$hapid == hap_id_to_keep),][['total_reads']] =
+              reads_in_id_to_keep + reads_in_id_to_remove
+            asv_table[(asv_table$hapid == hap_id_to_keep),][['total_samples']] =
+              samples_in_id_to_keep + samples_in_id_to_remove
             
           }
+          
+          asv_seqs[[hap_id_to_remove]] = NULL
+          asv_table = asv_table[!(asv_table$hapid %in% hap_id_to_remove),]
+          
           
         }
         
@@ -13389,10 +13318,6 @@ rGenome2ampseq = function(rGenome_object,
       
     }
     
-    temp_ampseq = create_ampseq(gt = modified_gt,
-                                asv_table = asv_table)
-    
-    consistency_between_gt_and_asvtab(temp_ampseq)
     
   }
   
@@ -14740,99 +14665,7 @@ setMethod("remove_filtered_asvs", signature(obj = "ampseq"),
           }
 )
 
-## cigar_string2fasta----
 
-cigar_string2fasta = function(cigar_string, ref_fasta_seq, seq_format = 'compact'){
-  
-  if(is.na(cigar_string)){
-    
-    seq_of_interest = NA
-    
-  }else if(cigar_string == '.'){ # Sequence of interest is equal to the reference
-    
-    if(seq_format == 'split'){
-      
-      seq_of_interest = unlist(strsplit(ref_fasta_seq, ''))
-      
-    }else if(seq_format == 'compact'){
-      
-      seq_of_interest = ref_fasta_seq
-      
-    }
-    
-    
-  }else{ # Sequence of interest is different to the reference
-    
-    positions = unlist(str_extract_all(cigar_string, '\\d+')) # collect all polymorphic positions from the cigar string
-    
-    if(sum(duplicated(positions)) > 0){
-      
-      print(cigar_string)
-      stop('Wrong cigar string pattern, a position is duplicated')
-    }
-    
-    variants = unlist(strsplit(cigar_string, '\\d+'))[-1] # collect all variants from cigar string
-    
-    seq_of_interest = unlist(strsplit(ref_fasta_seq, ''))
-    
-    for(position in positions){
-      
-      if(!grepl('^D', variants[which(positions == position)])){ # If polymorphism is a SNV or an Insertion
-        
-        if(position == '0'){ # Insertion at position 0
-          
-          seq_of_interest[1] = paste0(gsub('^I=', '', variants[which(positions == position)]),
-                                      seq_of_interest[1])
-          
-        }else if(position == '1' & '0' %in% positions){ # SNV at position 1 after an Insertion at position 0
-          
-          substr(seq_of_interest[1], 
-                 start = nchar(seq_of_interest[1]),
-                 stop = nchar(seq_of_interest[1])) = gsub('^I=', '', variants[which(positions == position)])
-          
-        }else{ # SNVs or Insertions at other positions
-          
-          seq_of_interest[as.integer(position)] = gsub('^I=', '', variants[which(positions == position)])
-          
-        }
-        
-      }else{ # If polymorphism is a Deletion
-        
-        if(position == '1' & '0' %in% positions){ # If deletion is at position 1 after an insertion at position 0
-          
-          #stop("Del")
-          seq_of_interest[1] = gsub('.$', '', seq_of_interest[1])
-          
-          if(nchar(variants[which(positions == position)]) - 3 > 0){
-            deletion_starts = as.integer(position) + 1
-            deletion_ends = as.integer(position) + nchar(variants[which(positions == position)]) - 3 # 2 for the "D" and "=" and 1 because is already included at the start
-            seq_of_interest[deletion_starts:deletion_ends] = ''
-          }
-          
-          
-        }else{ # Deletions at other positions
-          
-          deletion_starts = as.integer(position)
-          deletion_ends = as.integer(position) + nchar(variants[which(positions == position)]) - 3 # 2 for the "D" and "=" and 1 because is already included at the start
-          seq_of_interest[deletion_starts:deletion_ends] = ''
-          
-        }
-        
-      }
-      
-    }
-    
-    if(seq_format == 'compact'){
-      
-      seq_of_interest = paste(seq_of_interest, collapse = '')
-      
-    }
-    
-  }
-  
-  return(seq_of_interest)
-  
-}
 
 ## cigar_strings2fasta ----
 
@@ -14999,7 +14832,7 @@ cigar_strings2fasta = function(obj,
 
 
 # pairwise_euclidean----
-pairwise_euclidean = function(obj = NULL, parallel = TRUE, w = 1, n = 100, alpha = 0.05, method = 'exact', pairs = NULL, Filter_loci = NULL, skip_errors=  FALSE){
+pairwise_euclidean = function(obj = NULL, parallel = TRUE, w = 1, n = 100, alpha = 0.05, method = 'exact', pairs = NULL, Filter_loci = NULL, skip_errors){
   library(parallel)
   library(doMC)
   library(svMisc)
@@ -18225,36 +18058,9 @@ run_admixture = function(obj = NULL,
 
 # update_allele_lables----
 
-update_allele_lables = function(rGenome_object, n = 1){
+update_allele_lables = function(rGenome_object){
   
-  if(!is.null(rGenome_object@loci_table$Allele_Counts)){
-    rGenome_object@loci_table$Allele_Counts = NULL
-  }
-  
-  if(!is.null(rGenome_object@loci_table$Alleles)){
-    rGenome_object@loci_table$Alleles = NULL
-  }
-  
-  if(!is.null(rGenome_object@loci_table$Cardinality)){
-    rGenome_object@loci_table$Cardinality = NULL
-  }
-  
-  
-  rGenome_object@loci_table
-  
-  
-  Allele_counts = NULL
-  for(w in 1:n){
-    start_time = Sys.time()
-    temp_Allele_counts = get_AC(rGenome_object, update_alleles = T, w = w, n = n)
-    Allele_counts = rbind(Allele_counts,
-                          temp_Allele_counts)
-    end_time = Sys.time()
-    print(paste0('Window ', w, ' done in:'))
-    print(end_time - start_time)
-    
-  }
-  
+  Allele_counts = get_AC(rGenome_object, update_alleles = T)
   
   
   ALT = gsub(':\\d+', '', gsub('.+:0,', '', Allele_counts$Alleles))
