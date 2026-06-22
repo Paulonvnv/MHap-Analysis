@@ -1,6 +1,6 @@
 #!/bin/bash
 source /broad/software/scripts/useuse
-use UGER
+use R-4.1
 
 function json_extract() {
   # Citation: https://stackoverflow.com/questions/1955505/parsing-json-with-unix-tools
@@ -22,44 +22,35 @@ function json_extract() {
 	}
 
 # Extract variables
-
 json=$1
 
-vmem=$(json_extract vmem "$(cat ${json})")
-cores=$(json_extract cores "$(cat ${json})")
-h_rt1=$(json_extract h_rt1 "$(cat ${json})")
-h_rt2=$(json_extract h_rt2 "$(cat ${json})")
-h_rt3=$(json_extract h_rt3 "$(cat ${json})")
-nTasks=$(json_extract nTasks "$(cat ${json})")
-
-
 wd=$(json_extract wd "$(cat ${json})")
-
 wd=${wd%\"}
 wd=${wd#\"}
 
+echo "wd: "${wd}
 
 fd=$(json_extract fd "$(cat ${json})")
 fd=${fd%\"}
 fd=${fd#\"}
 
-cd ${wd}
-
-# Submit Task Array
-
-if [${nTasks} == 1]; then
-  qsub -l h_vmem=${vmem}G \
-    -l h_rt=${h_rt2} \
-    -j y \
-    -o ${wd}/pairwise_ibd_output \
-    ${fd}/pairwise_ibd.sh ${json}
-else
-  qsub -l h_vmem=${vmem}G \
-    -l h_rt=${h_rt2} \
-    -j y \
-    -o ${wd}/pairwise_ibd_output \
-    -t 1-${nTasks} \
-    ${fd}/pairwise_ibd.sh ${json}
-fi
+echo "fd: "${fd}
 
 
+output=$(json_extract output "$(cat ${json})")
+output=${output%\"}
+output=${output#\"}
+
+echo "output: "${output}
+
+ibd_step="merge"
+
+# Run pre-filtering
+
+Rscript ${fd}/run_pairwise_hmmIBD.R \
+  -wd ${wd} \
+  -fd ${fd} \
+  -o ${output} \
+  -ibd_step ${ibd_step}
+
+  
